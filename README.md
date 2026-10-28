@@ -10,3 +10,4 @@ Le ballon rétrécit à chaque manche.
 Sur iPhone : ouvre le jeu dans Safari, touche Partager, puis « Sur l'écran d'accueil ».
 
 Créé par Virgile, avec Claude.
+Jouer : https://virgilevdc-rgb.github.io/Balloon-Drop/
