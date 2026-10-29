@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Test son</title>
+<style>
+body{font-family:-apple-system,system-ui,sans-serif;background:#12324a;color:#fff;margin:0;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 6px}p{opacity:.8;margin:0 0 16px;font-size:15px}
+button{display:block;width:100%;margin:10px 0 2px;padding:16px;border:0;border-radius:14px;font-size:17px;font-weight:600;background:#ffcf3f;color:#222}
+.r{font-size:14px;min-height:1.2em;opacity:.9;margin-bottom:8px}
+#info{margin-top:18px;font-size:13px;opacity:.7;white-space:pre-wrap}
+</style></head><body>
+<h1>Test du son 🔊</h1>
+<p>Touche chaque bouton, puis dis à Claude lesquels font du bruit (et fais une capture).</p>
+<button id="a">1 · Bip simple</button><div class="r" id="ra"></div>
+<button id="b">2 · Musique, lecteur classique</button><div class="r" id="rb"></div>
+<button id="c">3 · Musique, moteur du jeu</button><div class="r" id="rc"></div>
+<button id="d">4 · Bip après décodage « hors-ligne »</button><div class="r" id="rd"></div>
+<button id="e">5 · Bip, nouveau moteur à 48 kHz</button><div class="r" id="re"></div>
+<div id="info"></div>
+<script>
+const $ = id => document.getElementById(id);
+let ctx = null, el = null;
+const st = () => ctx ? ctx.state + ' · ' + ctx.sampleRate + ' Hz' : 'aucun';
+function getCtx() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state !== 'running') ctx.resume(); return ctx; }
+function beep(a, f) { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.3, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .6); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .65); }
+function later(id, f) { setTimeout(() => { $(id).textContent = f(); }, 900); }
+$('a').onclick = () => { try { const a = getCtx(); beep(a, 660); later('ra', () => 'moteur : ' + st()); } catch (e) { $('ra').textContent = 'erreur : ' + e; } };
+$('b').onclick = () => {
+  if (el && !el.paused) { el.pause(); $('rb').textContent = 'arrêtée'; return; }
+  el = el || new Audio('music/lobby.mp3'); el.loop = true; el.setAttribute('playsinline', '');
+  el.onplaying = () => $('rb').textContent = 'en lecture (touche à nouveau pour arrêter)';
+  el.onerror = () => $('rb').textContent = 'erreur fichier : ' + (el.error && el.error.code);
+  el.play().catch(e => $('rb').textContent = 'refusé : ' + e.name);
+};
+let src = null;
+$('c').onclick = async () => {
+  try {
+    const a = getCtx();
+    if (src) { src.stop(); src = null; $('rc').textContent = 'arrêtée'; return; }
+    $('rc').textContent = 'chargement…';
+    const buf = await fetch('music/w1.mp3', { cache: 'no-store' }).then(r => r.arrayBuffer());
+    const data = await new Promise((ok, ko) => a.decodeAudioData(buf, ok, ko));
+    src = a.createBufferSource(); src.buffer = data; src.loop = true; src.connect(a.destination); src.start();
+    $('rc').textContent = 'lancée · moteur : ' + st() + ' (touche à nouveau pour arrêter)';
+  } catch (e) { $('rc').textContent = 'erreur : ' + (e && (e.name || e.message) || e); }
+};
+$('d').onclick = async () => {
+  try {
+    const O = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const off = new O(2, 44100, 44100);
+    const a = getCtx(); beep(a, 880);
+    later('rd', () => 'moteur : ' + st());
+  } catch (e) { $('rd').textContent = 'erreur : ' + e; }
+};
+$('e').onclick = () => {
+  try { const a2 = new (window.AudioContext || window.webkitAudioContext)(); a2.resume(); beep(a2, 520); later('re', () => 'nouveau moteur : ' + a2.state + ' · ' + a2.sampleRate + ' Hz'); } catch (e) { $('re').textContent = 'erreur : ' + e; }
+};
+$('info').textContent = (navigator.standalone || matchMedia('(display-mode: standalone)').matches ? 'appli' : 'navigateur') + ' · ' + navigator.userAgent.replace(/^.*?\(/, '(').slice(0, 90) + '\nservice worker : ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'actif' : 'non');
+</script>
+</body></html>
