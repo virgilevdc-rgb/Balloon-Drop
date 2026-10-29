@@ -1017,7 +1017,8 @@ try {
   }
 } catch (e) {}
 if (!S.tutoDone && (S.best > 0 || S.coins > 0 || Object.keys(S.story).length > 0 || S.owned.length > 1)) S.tutoDone = true;
-if (S.audioFix !== 24) { S.audioFix = 24; S.muted = false; S.music = true; S.audioMode = 'auto'; }
+if (S.audioFix !== 26) { S.audioFix = 26; S.muted = false; S.music = true; }
+S.audioMode = 'auto';
 let wiped = false;
 function save() { if (wiped) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -1050,10 +1051,22 @@ function silentWavURL() {
 /* À chaque geste : on relance le son (comme dans les premières versions, sans rien en boucle ni recréation) */
 function unlockAudio() {
   if (actx && actx.state === 'closed') actx = null;
+  // le son a été pris par une autre appli (appel, dictée, vidéo…) : on relance un moteur audio neuf, pendant ce toucher
+  if (actx && (AUD.dead || actx.state === 'interrupted')) { AUD.dead = false; newAudioContext(); }
   const a = audio();
   if (AUD.mode === 'html') haudGesture();
   if (!a) { AUD.mode = 'html'; haudGesture(); return; }
   try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {}
+  if (a.state !== 'running' && AUD.mode === 'web' && !AUD.checking) {
+    AUD.checking = true; const tried = a;
+    setTimeout(() => {
+      AUD.checking = false;
+      if (actx !== tried) return;
+      if (tried.state === 'running') { AUD.fails = 0; return; }
+      AUD.dead = true; AUD.fails = (AUD.fails || 0) + 1;
+      if (AUD.fails >= 2 && !AUD.warned && (S.music || !S.muted)) { AUD.warned = true; toast("Pas de son ? Une autre appli utilise peut-être le son (appel, dictée, vidéo…). Ferme-la, puis touche l'écran."); }
+    }, 700);
+  } else if (a.state === 'running') AUD.fails = 0;
 }
 /* ---------- Lecteur audio classique (secours iPhone) : un élément <audio> pour la musique, six pour les bruitages ---------- */
 const HAUD = { pool: [], idx: 0, mel: null, melCur: null, blessed: 0, silent: null, playing: false };
@@ -1105,6 +1118,7 @@ for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) document.addEven
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { AUD.hiddenAt = Date.now(); try { if (AUD.el) AUD.el.pause(); if (HAUD.mel) { HAUD.mel.pause(); HAUD.melCur = null; } } catch (e) {} return; }
   if (actx && actx.state !== 'running' && actx.state !== 'closed') { try { actx.resume().catch(() => {}); } catch (e) {} }
+  if (actx && actx.state === 'interrupted') AUD.dead = true;
 });
 function audioStatus() {
   const st = actx ? actx.state : 'absent';
@@ -7792,7 +7806,7 @@ function soundTest(card) {
   const show = () => {
     const f = OST_FILES[currentSong() || 'menu'], ms = !S.music ? 'musique coupée' : OST.buf[f] ? 'musique chargée' : OST.failed[f] ? 'musique de secours (' + (OST.err[f] || '?') + ')' : 'musique en chargement' + (OST.err[f] ? ' (' + OST.err[f] + ')' : '');
     const html = AUD.mode === 'html', hm = !S.music ? 'musique coupée' : HAUD.mel && HAUD.melCur ? (HAUD.playing ? 'musique en lecture' : HAUD.mel.paused ? 'musique prête (touche l\'écran)' : 'musique lancée, en attente') : 'musique en attente';
-    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v26';
+    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v26c';
   };
   show(); setTimeout(show, 700); setTimeout(show, 2000);
 }
