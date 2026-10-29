@@ -7562,7 +7562,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
 (() => {
   let lastEnd = 0;
   const editable = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
-  document.addEventListener('touchend', e => { const now = performance.now(); if (now - lastEnd < 350 && !editable(e.target)) e.preventDefault(); lastEnd = now; }, { passive: false });
+  document.addEventListener('touchend', e => { const now = performance.now(); if (now - lastEnd < 350 && !editable(e.target)) { e.preventDefault(); const t = e.target, tc = e.changedTouches && e.changedTouches[0]; if (t && !t.disabled && !(t.closest && t.closest('[disabled]'))) t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: tc ? tc.clientX : 0, clientY: tc ? tc.clientY : 0 })); } lastEnd = now; }, { passive: false });
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
   document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
