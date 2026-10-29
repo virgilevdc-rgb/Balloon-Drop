@@ -961,12 +961,22 @@ function save() { if (wiped) return; try { localStorage.setItem(SAVE_KEY, JSON.s
    Son (synthétisé, aucun fichier)
    ========================================================= */
 let actx = null;
+let audioSessionSet = false;
 function audio() {
+  // iPhone : la session audio se règle une seule fois, AVANT de créer le contexte (sinon iOS « interrompt » le son)
+  if (!audioSessionSet) { audioSessionSet = true; try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
   if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
-  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
-  if (actx && actx.state === 'suspended') { actx.resume().catch(() => {}); }
+  // iOS met parfois le contexte en état « interrupted » (appel, appli en arrière-plan) : on le relance aussi
+  if (actx && actx.state !== 'running' && actx.state !== 'closed') { actx.resume().catch(() => {}); }
   return actx;
 }
+/* À chaque geste, tant que le son n'est pas actif : on le relance et on joue un son vide (déblocage iOS) */
+function unlockAudio() {
+  const a = audio(); if (!a || a.state === 'running' && unlockAudio.ok) return;
+  try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); unlockAudio.ok = true; } catch (e) {}
+}
+for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running' && actx.state !== 'closed') actx.resume().catch(() => {}); });
 function tone(f1, f2, dur, type = 'sine', vol = .14, delay = 0) {
   const a = audio(); if (!a || S.muted) return;
   const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
