@@ -954,6 +954,7 @@ try {
   }
 } catch (e) {}
 if (!S.tutoDone && (S.best > 0 || S.coins > 0 || Object.keys(S.story).length > 0 || S.owned.length > 1)) S.tutoDone = true;
+if (S.audioFix !== 21) { S.audioFix = 21; S.muted = false; S.music = true; }
 let wiped = false;
 function save() { if (wiped) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -961,22 +962,55 @@ function save() { if (wiped) return; try { localStorage.setItem(SAVE_KEY, JSON.s
    Son (synthétisé, aucun fichier)
    ========================================================= */
 let actx = null;
-let audioSessionSet = false;
+/* Son : un seul contexte audio, créé et relancé pendant un vrai geste (obligatoire sur iPhone).
+   Pas de navigator.audioSession : sur certaines versions d'iOS, il coupe tout le son des applis web.
+   Si iOS laisse le contexte bloqué (appli remise au premier plan, appel…), on le recrée au geste suivant. */
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const AUD = { needFresh: false, hiddenAt: 0, el: null, gen: 0, lastErr: '' };
+function newAudioContext() {
+  try { if (actx && actx.state !== 'closed') actx.close().catch(() => {}); } catch (e) {}
+  try { actx = new (window.AudioContext || window.webkitAudioContext)(); AUD.gen++; } catch (e) { actx = null; AUD.lastErr = String(e && e.message || e); }
+}
 function audio() {
-  // iPhone : la session audio se règle une seule fois, AVANT de créer le contexte (sinon iOS « interrompt » le son)
-  if (!audioSessionSet) { audioSessionSet = true; try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} }
-  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
-  // iOS met parfois le contexte en état « interrupted » (appel, appli en arrière-plan) : on le relance aussi
-  if (actx && actx.state !== 'running' && actx.state !== 'closed') { actx.resume().catch(() => {}); }
+  if (!actx) newAudioContext();
+  if (actx && actx.state !== 'running' && actx.state !== 'closed') { try { actx.resume().catch(() => {}); } catch (e) {} }
   return actx;
 }
-/* À chaque geste, tant que le son n'est pas actif : on le relance et on joue un son vide (déblocage iOS) */
+/* Petit fichier audio silencieux joué par un élément <audio> : sur iPhone, il permet d'entendre le jeu même en mode silencieux */
+function silentWavURL() {
+  const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => { for (let k = 0; k < t.length; k++) v.setUint8(o + k, t.charCodeAt(k)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  let bin = ''; const u8 = new Uint8Array(b); for (let k = 0; k < u8.length; k++) bin += String.fromCharCode(u8[k]);
+  return 'data:audio/wav;base64,' + btoa(bin);
+}
+function unmuteElement() {
+  if (!IS_IOS) return;
+  try {
+    if (!AUD.el) { const el = document.createElement('audio'); el.setAttribute('x-webkit-airplay', 'deny'); el.setAttribute('playsinline', ''); el.preload = 'auto'; el.loop = true; el.src = silentWavURL(); el.volume = 0.01; AUD.el = el; }
+    if (AUD.el.paused) { const pr = AUD.el.play(); if (pr && pr.catch) pr.catch(() => {}); }
+  } catch (e) {}
+}
+/* À chaque geste : on (re)démarre le son si besoin */
 function unlockAudio() {
-  const a = audio(); if (!a || a.state === 'running' && unlockAudio.ok) return;
-  try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); unlockAudio.ok = true; } catch (e) {}
+  if (AUD.needFresh || (actx && (actx.state === 'interrupted' || actx.state === 'closed'))) { AUD.needFresh = false; newAudioContext(); }
+  const a = audio(); if (!a) return;
+  unmuteElement();
+  try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {}
+  if (a.state !== 'running') { const tried = a; setTimeout(() => { if (actx === tried && tried.state !== 'running') AUD.needFresh = true; }, 450); }
 }
 for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && actx && actx.state !== 'running' && actx.state !== 'closed') actx.resume().catch(() => {}); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { AUD.hiddenAt = Date.now(); try { if (AUD.el) AUD.el.pause(); } catch (e) {} return; }
+  if (actx && actx.state !== 'running' && actx.state !== 'closed') { try { actx.resume().catch(() => {}); } catch (e) {} }
+  // iPhone : après un passage en arrière-plan, le contexte peut rester muet même « running » : on le recrée au prochain geste
+  if (IS_IOS && AUD.hiddenAt && Date.now() - AUD.hiddenAt > 800) AUD.needFresh = true;
+});
+function audioStatus() {
+  const st = actx ? actx.state : 'absent';
+  const lab = { running: 'actif', suspended: 'en pause', interrupted: 'interrompu par iOS', closed: 'fermé', absent: 'pas encore démarré' }[st] || st;
+  return lab;
+}
 function tone(f1, f2, dur, type = 'sine', vol = .14, delay = 0) {
   const a = audio(); if (!a || S.muted) return;
   const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
@@ -1451,6 +1485,7 @@ function ostStart(a, f) {
   OST.src = src; OST.sg = g; OST.cur = f;
 }
 function ostTick(a, id) {
+  if (a && OST.ac && OST.ac !== a) { OST.src = null; OST.sg = null; OST.cur = null; OST.gain = null; }
   if (!id || !a) { if (a) ostStop(a); return false; }
   const f = OST_FILES[id];
   if (!f || OST.failed[f] || typeof fetch !== 'function' || location.protocol === 'file:') { ostStop(a); return false; }
@@ -1464,7 +1499,8 @@ function ostTick(a, id) {
 }
 function musicTick() {
   const a = actx;
-  const id = a && a.state === 'running' && !S.muted && S.music && !document.hidden ? currentSong() : null;
+  if (a && MUSIC.ac && MUSIC.ac !== a) { MUSIC.out = null; MUSIC.on = false; MUSIC.id = null; MUSIC.next = 0; }
+  const id = a && a.state === 'running' && S.music && !document.hidden ? currentSong() : null;
   if (ostTick(a, id)) { if (MUSIC.on) { MUSIC.out.gain.setTargetAtTime(0, a.currentTime, .06); MUSIC.on = false; } MUSIC.next = 0; MUSIC.id = null; return; }
   if (!id) { if (MUSIC.on) { MUSIC.out.gain.setTargetAtTime(0, a.currentTime, .06); MUSIC.on = false; } MUSIC.next = 0; MUSIC.id = null; return; }
   musicGraph(a);
@@ -5992,8 +6028,9 @@ function bumpCoins() {
   for (const id of ['hudCoinPill', 'homeCoinPill']) { const el = $(id); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 }
 function setMuteIcons() {
-  $('muteHome').innerHTML = S.muted ? ICONS.soundOff : ICONS.soundOn;
-  $('muteHome').setAttribute('aria-label', S.muted ? 'Activer le son' : 'Couper le son');
+  const off = S.muted && !S.music;
+  $('muteHome').innerHTML = off ? ICONS.soundOff : ICONS.soundOn;
+  $('muteHome').setAttribute('aria-label', off ? 'Activer le son' : 'Couper le son');
 }
 function refreshHome() {
   refreshCoins();
@@ -6190,14 +6227,17 @@ function showSettings() {
   openModal(`
     <div class="kicker">Balloon Drop</div>
     <h2>Réglages</h2>
-    <div class="sound-row"><button class="btn btn-secondary" data-act="mute">${S.muted ? ICONS.soundOff + 'Son coupé' : ICONS.soundOn + 'Son activé'}</button><button class="btn btn-secondary" data-act="music">${musicLabel()}</button></div>
+    <div class="sound-row"><button class="btn btn-secondary" data-act="mute">${sfxLabel()}</button><button class="btn btn-secondary" data-act="music">${musicLabel()}</button></div>
     <div class="btns">
       <button class="btn btn-secondary" data-act="pseudo">${S.pseudo ? 'Pseudo : ' + esc(S.pseudo) : 'Choisir un pseudo'}</button>
       <button class="btn btn-primary" data-act="back" data-focus><span>Fermer</span></button>
     </div>
+    <button class="btn btn-secondary" data-act="sndtest" style="margin-top:10px">Tester le son</button>
+    <p class="sub" id="sndInfo" style="min-height:1.2em;margin-top:8px"></p>
     <button class="reset-link" data-act="intro">Revoir la cinématique</button>
     <button class="reset-link" data-act="reset">Recommencer à zéro</button>`, card => {
-    on(card, '[data-act=mute]', e => { S.muted = !S.muted; save(); setMuteIcons(); e.currentTarget.innerHTML = S.muted ? ICONS.soundOff + 'Son coupé' : ICONS.soundOn + 'Son activé'; if (!S.muted) sfx.tap(); });
+    on(card, '[data-act=mute]', e => { S.muted = !S.muted; save(); setMuteIcons(); e.currentTarget.innerHTML = sfxLabel(); if (!S.muted) sfx.tap(); });
+    on(card, '[data-act=sndtest]', () => soundTest(card));
     on(card, '[data-act=music]', e => { S.music = !S.music; save(); e.currentTarget.innerHTML = musicLabel(); });
     on(card, '[data-act=pseudo]', () => showPseudoModal());
     on(card, '[data-act=back]', closeModal);
@@ -6661,7 +6701,7 @@ function pause() {
   openModal(`
     <h2>Pause</h2>
     <p class="sub">${cfg.mode === 'story' ? WORLDS[cfg.world - 1].name + ', ' + cfg.lv.name : cfg.mode === 'daily' ? 'Défi du jour' : cfg.mode === 'duel' ? 'Duel' : cfg.mode === 'chrono' ? 'Chrono' : cfg.mode === 'zen' ? 'Mode zen' : 'Mode infini'}, ${G.score} points</p>
-    <div class="sound-row"><button class="btn btn-secondary" data-act="mute">${S.muted ? ICONS.soundOff + 'Son coupé' : ICONS.soundOn + 'Son activé'}</button><button class="btn btn-secondary" data-act="music">${musicLabel()}</button></div>
+    <div class="sound-row"><button class="btn btn-secondary" data-act="mute">${sfxLabel()}</button><button class="btn btn-secondary" data-act="music">${musicLabel()}</button></div>
     <div class="btns">
       <button class="btn btn-primary btn-big" data-act="resume" data-focus><span>Reprendre</span></button>
       <button class="btn btn-secondary" data-act="restart">${restartLabel}</button>
@@ -6672,9 +6712,21 @@ function pause() {
     on(card, '[data-act=resume]', resume);
     on(card, '[data-act=restart]', () => { const m = cfg.mode, o = { world: cfg.world, level: cfg.level }; flushCoins(); save(); startGame(m, o); });
     on(card, '[data-act=quit]', () => { flushCoins(); save(); if (cfg.mode === 'zen') { closeModal(); G.phase = 'play'; endRun(true); return; } const back = cfg.mode === 'story' ? 'story' : 'home'; closeModal(); showScreen(back); });
-    on(card, '[data-act=mute]', e => { S.muted = !S.muted; save(); setMuteIcons(); e.currentTarget.innerHTML = S.muted ? ICONS.soundOff + 'Son coupé' : ICONS.soundOn + 'Son activé'; });
+    on(card, '[data-act=mute]', e => { S.muted = !S.muted; save(); setMuteIcons(); e.currentTarget.innerHTML = sfxLabel(); if (!S.muted) sfx.tap(); });
     on(card, '[data-act=music]', e => { S.music = !S.music; save(); e.currentTarget.innerHTML = musicLabel(); });
   });
+}
+function sfxLabel() { return (S.muted ? ICONS.soundOff : ICONS.soundOn) + (S.muted ? 'Bruitages coupés' : 'Bruitages'); }
+function soundTest(card) {
+  AUD.needFresh = AUD.needFresh || !actx || actx.state !== 'running';
+  unlockAudio();
+  const wasMuted = S.muted; S.muted = false; sfx.goal(); S.muted = wasMuted;
+  const info = card.querySelector('#sndInfo');
+  const show = () => {
+    const f = OST_FILES[currentSong() || 'menu'], ms = !S.music ? 'musique coupée' : OST.failed[f] ? 'musique de secours' : OST.buf[f] ? 'musique chargée' : 'musique en chargement';
+    if (info) info.textContent = 'Son : ' + audioStatus() + ' · ' + ms + (S.muted ? ' · bruitages coupés' : '');
+  };
+  show(); setTimeout(show, 700); setTimeout(show, 2000);
 }
 function musicLabel() { return (S.music ? ICONS.music : ICONS.musicOff) + (S.music ? 'Musique' : 'Sans musique'); }
 function resume() { closeModal(); if (G.phase === 'paused') { G.phase = 'play'; last = performance.now(); acc = 0; } }
@@ -7508,7 +7560,7 @@ $('btnPause').addEventListener('click', pause);
 $('btnPlay').addEventListener('click', () => startGame(S.lastMode === 'chrono' || S.lastMode === 'zen' ? S.lastMode : 'arcade'));
 
 $('btnDaily').addEventListener('click', () => { audio(); showDailyIntro(); });
-$('muteHome').addEventListener('click', () => { S.muted = !S.muted; save(); setMuteIcons(); if (!S.muted) sfx.tap(); });
+$('muteHome').addEventListener('click', () => { const on = !S.muted || S.music; S.muted = on; S.music = !on; save(); setMuteIcons(); if (!on) sfx.tap(); });
 $('modal').addEventListener('click', e => { if (e.target === $('modal') && G.phase === 'paused') resume(); });
 
 function onThemeChange() { readCss(); setView(view); }
