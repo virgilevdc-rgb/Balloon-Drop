@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="Balloon Drop : pose le ballon sur la plateforme avant qu'il ne rétrécisse.">
 <meta name="theme-color" content="#3f9ad6">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1411,9 +1411,51 @@ function currentSong() {
   if (G.phase === 'menu') return INTRO.on ? 'menu' : screen === 'story' && SONGS[view] ? view : 'menu';
   return null;
 }
+/* ---------- v19 : bande originale en fichiers audio (boucles), le moteur synthétisé reste en secours ---------- */
+const OST_FILES = { menu: 'theme', arcade: 'theme', w1: 'w1', w2: 'w2', w3: 'w3', w4: 'w4', w5: 'w5', w6: 'w6', w7: 'w7', w8: 'w8', w9: 'w9', w10: 'w10', w11: 'w11', w12: 'w12' };
+const OST = { buf: {}, loading: {}, failed: {}, lead: {}, cur: null, src: null, sg: null, lp: null, gain: null, ac: null };
+function ostGraph(a) {
+  if (OST.ac === a && OST.gain) return;
+  OST.ac = a; OST.lp = a.createBiquadFilter(); OST.lp.type = 'lowpass'; OST.lp.frequency.value = 20000; OST.lp.Q.value = .5;
+  OST.gain = a.createGain(); OST.gain.gain.value = .8; OST.lp.connect(OST.gain); OST.gain.connect(a.destination);
+}
+function ostLoad(a, f) {
+  if (OST.buf[f] || OST.loading[f] || OST.failed[f]) return;
+  OST.loading[f] = fetch('music/' + f + '.mp3').then(r => { if (!r.ok) throw new Error('http'); return r.arrayBuffer(); })
+    .then(ab => new Promise((res, rej) => a.decodeAudioData(ab, res, rej)))
+    .then(b => { const d = b.getChannelData(0); let i = 0; while (i < 4096 && Math.abs(d[i]) < 1e-4) i++; OST.lead[f] = i < 4096 ? i / b.sampleRate : 0; OST.buf[f] = b; })
+    .catch(() => { OST.failed[f] = 1; }).finally(() => { OST.loading[f] = null; });
+}
+function ostStop(a) {
+  if (!OST.src) { OST.cur = null; return; }
+  const src = OST.src, g = OST.sg, t = a.currentTime;
+  try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + .45); src.stop(t + .5); } catch (e) {}
+  OST.src = null; OST.sg = null; OST.cur = null;
+}
+function ostStart(a, f) {
+  ostStop(a);
+  const b = OST.buf[f], src = a.createBufferSource(), g = a.createGain(), t = a.currentTime, lead = OST.lead[f] || 0;
+  src.buffer = b; src.loop = true; src.loopStart = lead; src.loopEnd = b.duration;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + .6);
+  src.connect(g); g.connect(OST.lp); src.start(t, lead);
+  OST.src = src; OST.sg = g; OST.cur = f;
+}
+function ostTick(a, id) {
+  if (!id || !a) { if (a) ostStop(a); return false; }
+  const f = OST_FILES[id];
+  if (!f || OST.failed[f] || typeof fetch !== 'function' || location.protocol === 'file:') { ostStop(a); return false; }
+  ostGraph(a);
+  if (!OST.buf[f]) { ostLoad(a, f); if (OST.cur !== f) ostStop(a); return true; }
+  if (OST.cur !== f) ostStart(a, f);
+  const play = G.phase === 'play', lvl = play ? musicLevel() : (screen === 'story' && !INTRO.on ? 0 : 3);
+  const k = clamp(lvl, -1, 3) + 1, cut = [1100, 3000, 6000, 12000, 20000][k], vol = [.72, .84, .92, .98, 1][k];
+  OST.lp.frequency.setTargetAtTime(cut, a.currentTime, .4); OST.gain.gain.setTargetAtTime(.82 * vol, a.currentTime, .3);
+  return true;
+}
 function musicTick() {
   const a = actx;
   const id = a && a.state === 'running' && !S.muted && S.music && !document.hidden ? currentSong() : null;
+  if (ostTick(a, id)) { if (MUSIC.on) { MUSIC.out.gain.setTargetAtTime(0, a.currentTime, .06); MUSIC.on = false; } MUSIC.next = 0; MUSIC.id = null; return; }
   if (!id) { if (MUSIC.on) { MUSIC.out.gain.setTargetAtTime(0, a.currentTime, .06); MUSIC.on = false; } MUSIC.next = 0; MUSIC.id = null; return; }
   musicGraph(a);
   const sg = SONGS[id];
@@ -7516,6 +7558,17 @@ function afterSplash() {
 $('introSkip').addEventListener('click', e => { e.stopPropagation(); endIntro(); });
 $('intro').addEventListener('pointerdown', e => { if (e.target.id !== 'introSkip' && INTRO.on && performance.now() - INTRO.t0 > 9600) endIntro(); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measureHome(); });
+/* pas de zoom : ni double-tap, ni pincement (iOS ignore parfois la balise viewport) */
+(() => {
+  let lastEnd = 0;
+  const editable = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  document.addEventListener('touchend', e => { const now = performance.now(); if (now - lastEnd < 350 && !editable(e.target)) e.preventDefault(); lastEnd = now; }, { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  const vp = document.querySelector('meta[name=viewport]');
+  if (vp && !/user-scalable/.test(vp.content)) vp.content += ', maximum-scale=1, user-scalable=no';
+})();
 requestAnimationFrame(t => { last = t; frame(t); });
 initNet();
 
