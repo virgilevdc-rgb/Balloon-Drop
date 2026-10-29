@@ -984,14 +984,8 @@ function silentWavURL() {
   let bin = ''; const u8 = new Uint8Array(b); for (let k = 0; k < u8.length; k++) bin += String.fromCharCode(u8[k]);
   return 'data:audio/wav;base64,' + btoa(bin);
 }
-/* Mode silencieux de l'iPhone : en « playback », le jeu joue même quand le bouton silencieux est activé (iOS 17+) */
-function applyAudioSession() {
-  try { if (navigator.audioSession) { const t = S.silentPlay === false ? 'auto' : 'playback'; if (navigator.audioSession.type !== t) navigator.audioSession.type = t; } } catch (e) {}
-}
-applyAudioSession();
 /* À chaque geste : on relance le son (comme dans les premières versions, sans rien en boucle ni recréation) */
 function unlockAudio() {
-  applyAudioSession();
   if (actx && actx.state === 'closed') actx = null;
   const a = audio();
   if (AUD.mode === 'html') haudGesture();
@@ -1046,7 +1040,7 @@ function htmlMusicTick() {
 }
 for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) document.addEventListener(ev, unlockAudio, { capture: true, passive: true });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { AUD.hiddenAt = Date.now(); try { if (AUD.el) AUD.el.pause(); if (HAUD.mel) { HAUD.mel.pause(); HAUD.melCur = null; } if (actx && actx.state === 'running') actx.suspend().catch(() => {}); } catch (e) {} return; }
+  if (document.hidden) { AUD.hiddenAt = Date.now(); try { if (AUD.el) AUD.el.pause(); if (HAUD.mel) { HAUD.mel.pause(); HAUD.melCur = null; } } catch (e) {} return; }
   if (actx && actx.state !== 'running' && actx.state !== 'closed') { try { actx.resume().catch(() => {}); } catch (e) {} }
 });
 function audioStatus() {
@@ -6294,13 +6288,11 @@ function showSettings() {
     <button class="btn btn-secondary" data-act="sndtest" style="margin-top:10px">Tester le son</button>
     <p class="sub" id="sndInfo" style="min-height:1.2em;margin-top:8px"></p>
     <button class="reset-link" data-act="sndmode">${S.audioMode === 'html' ? 'Revenir au mode son automatique' : "Pas de son ? Essayer le lecteur de l'iPhone"}</button>
-    <button class="reset-link" data-act="silent">${silentLabel()}</button>
     <button class="reset-link" data-act="backup">Sauvegarder ma progression</button>
     <button class="reset-link" data-act="restore">Restaurer une sauvegarde</button>
     <button class="reset-link" data-act="intro">Revoir la cinématique</button>
     <button class="reset-link" data-act="reset">Recommencer à zéro</button>`, card => {
     on(card, '[data-act=backup]', showBackupModal);
-    on(card, '[data-act=silent]', e => { S.silentPlay = S.silentPlay === false; save(); applyAudioSession(); e.currentTarget.textContent = silentLabel(); });
     on(card, '[data-act=restore]', showRestoreModal);
     on(card, '[data-act=mute]', e => { S.muted = !S.muted; save(); setMuteIcons(); e.currentTarget.innerHTML = sfxLabel(); if (!S.muted) sfx.tap(); });
     on(card, '[data-act=sndtest]', () => soundTest(card));
@@ -6831,7 +6823,6 @@ function pause() {
     on(card, '[data-act=music]', e => { S.music = !S.music; save(); e.currentTarget.innerHTML = musicLabel(); });
   });
 }
-function silentLabel() { return S.silentPlay === false ? 'Jouer en mode silencieux : non (ta musique continue)' : 'Jouer en mode silencieux : oui'; }
 function sfxLabel() { return (S.muted ? ICONS.soundOff : ICONS.soundOn) + (S.muted ? 'Bruitages coupés' : 'Bruitages'); }
 function soundTest(card) {
   unlockAudio();
@@ -6840,7 +6831,7 @@ function soundTest(card) {
   const show = () => {
     const f = OST_FILES[currentSong() || 'menu'], ms = !S.music ? 'musique coupée' : OST.buf[f] ? 'musique chargée' : OST.failed[f] ? 'musique de secours (' + (OST.err[f] || '?') + ')' : 'musique en chargement' + (OST.err[f] ? ' (' + OST.err[f] + ')' : '');
     const html = AUD.mode === 'html', hm = !S.music ? 'musique coupée' : HAUD.mel && HAUD.melCur ? (HAUD.playing ? 'musique en lecture' : HAUD.mel.paused ? 'musique prête (touche l\'écran)' : 'musique lancée, en attente') : 'musique en attente';
-    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v25';
+    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v24';
   };
   show(); setTimeout(show, 700); setTimeout(show, 2000);
 }
