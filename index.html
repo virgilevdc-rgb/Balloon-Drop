@@ -737,8 +737,9 @@ body.nav-on .screen { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92
 .hcnode .hc-name { font: 700 30px "BDHand", cursive; color: #22222a; } .hcnode .hc-sub2 { font: 400 19px "BDHand", cursive; color: #22222a; opacity: .7; margin-top: -4px; }
 .hcnode::before { content: ""; position: absolute; top: 2px; left: 50%; width: 120px; height: 120px; margin-left: -60px; border-radius: 50%; background: radial-gradient(circle, rgba(255,216,74,0.35), rgba(255,216,74,0)); pointer-events: none; animation: hcGlow 2.2s ease-in-out infinite; }
 @keyframes hcGlow { 50% { transform: scale(1.12); opacity: .6; } }
-#hcPeek { position: absolute; z-index: 5; width: 75px; height: 90px; pointer-events: none; opacity: 0; }
+#hcPeek { position: absolute; z-index: 5; width: 78px; height: 90px; pointer-events: none; opacity: 0; will-change: transform; }
 #hcPeek canvas { width: 75px; height: 90px; }
+.wtabs { overscroll-behavior-x: none; will-change: transform; }
 #hcPeek.glow { filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 14px rgba(255,220,120,0.95)); animation: hcWob .9s ease-in-out; }
 @keyframes hcWob { 20% { transform: rotate(-10deg) scale(1.08); } 45% { transform: rotate(8deg) scale(1.12); } 70% { transform: rotate(-4deg) scale(1.1); } }
 .trophy-row.sketch .ic { background: #f3ecdb !important; box-shadow: inset 0 0 0 2px rgba(34,34,42,0.5) !important; }
@@ -6899,7 +6900,7 @@ drawBalloon = function (b, skin, th) {
    La découverte : 5 gestes à gauche du Ciel
    ========================================================= */
 const HCG = { n: 0, last: 0, pull: 0, x0: 0, active: false, max: 0, done: false, peek: null };
-function hcCanPull() { return screen === 'story' && !HC.page && !S.hc.won && !S.hc.open && $('wtabs').scrollLeft <= 2 && $('modal').hidden; }
+function hcCanPull() { return screen === 'story' && !HC.page && !S.hc.won && !S.hc.open && $('wtabs').scrollLeft <= 8 && $('modal').hidden; }
 function hcPeekEl() {
   if (HCG.peek) return HCG.peek;
   const el = document.createElement('div'); el.id = 'hcPeek'; el.setAttribute('aria-hidden', 'true');
@@ -6911,44 +6912,68 @@ function hcPeekEl() {
   c.fillStyle = '#22222a'; c.font = '700 36px ' + HAND; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', 37, 53);
   return el;
 }
+const HC_PW = 78;
 function hcPullStart(x) {
   if (!hcCanPull()) return false;
-  if (performance.now() - HCG.last > 3000) HCG.n = 0;
-  HCG.active = true; HCG.x0 = x; HCG.pull = 0; HCG.max = 22 + 20 * Math.min(4, HCG.n);
-  const el = hcPeekEl(), r = $('wtabs').getBoundingClientRect(), sr = $('story').getBoundingClientRect();
-  el.style.top = (r.top - sr.top + r.height / 2 - 45) + 'px'; el.style.left = (r.left - sr.left - 2) + 'px';
+  if (performance.now() - HCG.last > 6000) HCG.n = 0;
+  HCG.active = true; HCG.x0 = x; HCG.pull = 0; HCG.max = 24 + 18 * Math.min(4, HCG.n); HCG.tx = x;
+  const el = hcPeekEl(), box = $('wtabs'), r = box.getBoundingClientRect(), sr = $('story').getBoundingClientRect();
+  el.style.transition = 'none'; box.style.transition = 'none';
+  el.style.top = (r.top - sr.top + r.height / 2 - 45) + 'px'; el.style.left = (r.left - sr.left - HC_PW) + 'px';
+  el.style.opacity = '0'; el.style.transform = 'translateX(0)'; el.style.clipPath = `inset(0 0 0 ${HC_PW}px)`;
   return true;
 }
-function hcPullMove(x) {
+function hcPullApply() {
+  HCG.raf = 0;
   if (!HCG.active) return;
-  const dx = Math.max(0, x - HCG.x0), p = HCG.max * (1 - Math.exp(-dx / HCG.max));
+  const dx = Math.max(0, HCG.tx - HCG.x0), p = HCG.max * (1 - Math.exp(-dx / HCG.max));
   HCG.pull = p;
-  $('wtabs').style.transform = `translateX(${p.toFixed(1)}px)`;
-  const el = hcPeekEl(), vis = [0, .3, .55, .8, 1][Math.min(4, HCG.n)];
-  const shown = clamp(p - 6, 0, 75) * vis;
-  el.style.opacity = shown > 1 ? '1' : '0';
-  el.style.clipPath = `inset(0 0 0 ${Math.max(0, 75 - shown).toFixed(1)}px)`;
+  $('wtabs').style.transform = `translate3d(${p.toFixed(1)}px,0,0)`;
+  const el = hcPeekEl();
+  el.style.transform = `translate3d(${p.toFixed(1)}px,0,0)`;
+  el.style.clipPath = `inset(0 0 0 ${Math.max(0, HC_PW - p).toFixed(1)}px)`;
+  el.style.opacity = String([0, .45, .75, 1, 1][Math.min(4, HCG.n)]);
 }
+function hcPullMove(x) { if (!HCG.active) return; HCG.tx = x; if (!HCG.raf) HCG.raf = requestAnimationFrame(hcPullApply); }
 function hcPullEnd() {
   if (!HCG.active) return;
-  HCG.active = false;
-  const ok = HCG.pull >= HCG.max * .62;
-  const box = $('wtabs'); box.style.transition = 'transform .35s cubic-bezier(.3,1.5,.5,1)'; box.style.transform = ''; setTimeout(() => { box.style.transition = ''; }, 380);
-  const el = hcPeekEl(); el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => { el.style.transition = ''; }, 320);
+  HCG.active = false; if (HCG.raf) { cancelAnimationFrame(HCG.raf); HCG.raf = 0; }
+  const ok = HCG.pull >= HCG.max * .5;
+  const box = $('wtabs'), el = hcPeekEl(), ease = 'cubic-bezier(.3,1.35,.5,1)';
+  box.style.transition = `transform .38s ${ease}`; box.style.transform = '';
+  el.style.transition = `transform .38s ${ease}, opacity .3s`; el.style.transform = 'translate3d(0,0,0)'; el.style.opacity = '0';
+  setTimeout(() => { box.style.transition = ''; el.style.transition = ''; }, 400);
   if (!ok) return;
   HCG.n++; HCG.last = performance.now();
   if (HCG.n >= 2) { sfx.pencil(); buzz(8); }
   if (HCG.n >= 5) {
     HCG.n = 0; sfx.secret(); buzz([20, 40, 20]);
-    el.style.clipPath = 'none'; el.style.transition = 'none'; el.style.opacity = '1'; el.classList.add('glow');
-    setTimeout(() => { el.classList.remove('glow'); el.style.opacity = '0'; hcTrigger(); }, 900);
+    setTimeout(() => {
+      el.style.transition = 'none'; el.style.clipPath = 'none'; el.style.transform = `translate3d(${HC_PW + 6}px,0,0)`; el.style.opacity = '1'; el.classList.add('glow');
+      box.style.transition = 'transform .3s ease-out'; box.style.transform = `translate3d(${HC_PW + 4}px,0,0)`;
+    }, 120);
+    setTimeout(() => { el.classList.remove('glow'); el.style.transition = 'opacity .3s'; el.style.opacity = '0'; box.style.transform = ''; hcTrigger(); }, 1100);
   }
 }
 {
   const box = $('wtabs');
-  box.addEventListener('touchstart', e => { if (e.touches.length === 1) hcPullStart(e.touches[0].clientX); }, { passive: true });
-  box.addEventListener('touchmove', e => { if (!HCG.active) return; const x = e.touches[0].clientX; if (x - HCG.x0 > 2) { if (e.cancelable) e.preventDefault(); hcPullMove(x); } else if (x - HCG.x0 < -8) { HCG.active = false; box.style.transform = ''; } }, { passive: false });
-  box.addEventListener('touchend', hcPullEnd); box.addEventListener('touchcancel', hcPullEnd);
+  let cand = false, owned = null, y0 = 0;
+  box.addEventListener('touchstart', e => {
+    cand = false; owned = null;
+    if (e.touches.length !== 1 || !hcCanPull()) return;
+    cand = true; HCG.x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+  }, { passive: true });
+  box.addEventListener('touchmove', e => {
+    if (!cand || e.touches.length !== 1) return;
+    const t = e.touches[0], dx = t.clientX - HCG.x0, dy = t.clientY - y0;
+    if (owned === null) {
+      if (dx >= 0 && Math.abs(dx) >= Math.abs(dy) * .8 && $('wtabs').scrollLeft <= 8) { owned = true; const x0 = HCG.x0; hcPullStart(x0); }
+      else { owned = false; cand = false; return; }
+    }
+    if (owned) { if (e.cancelable) e.preventDefault(); hcPullMove(t.clientX); }
+  }, { passive: false });
+  const end = () => { if (owned) hcPullEnd(); cand = false; owned = null; };
+  box.addEventListener('touchend', end); box.addEventListener('touchcancel', end);
   let mouse = false;
   box.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; mouse = hcPullStart(e.clientX); });
   addEventListener('pointermove', e => { if (mouse && e.pointerType === 'mouse') hcPullMove(e.clientX); });
