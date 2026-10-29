@@ -963,6 +963,7 @@ function save() { if (wiped) return; try { localStorage.setItem(SAVE_KEY, JSON.s
 let actx = null;
 function audio() {
   if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
   if (actx && actx.state === 'suspended') { actx.resume().catch(() => {}); }
   return actx;
 }
@@ -1225,13 +1226,22 @@ const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 /* Chaque morceau : tonalité, grille de 8 mesures, motifs (16 pas par mesure).
    Mélodie : chiffres = notes de l'accord en cours (0 fondamentale, 1 tierce, 2 quinte, 3 octave…), « - » tient la note.
    Basse : R fondamentale, F quinte, O octave, T tierce. Batterie : x frappe, X accent, g note fantôme. */
+/* Le thème de Balloon Drop : un motif qui rebondit (sol-mi-sol-do), repris dans le menu et en mode Infini.
+   Chiffres = degrés de la gamme (1 = do, 8 = do aigu, 0 = mi aigu), « - » tient la note. */
+const THEME_MEL = ['5-3-5-8---5-3---', '7-5-7-9---7-5---', '8-6-8-0---8-6---', '6---5---4---3---',
+  '5-3-5-8---5-3---', '7-5-7-9---0-9---', '8---6---4-5-6---', '5-------7-------',
+  '6-6-5-6-8---6---', '7-7-5-7-9---7---', '0-9-8-7-5---3---', '6-------8---6---',
+  '6-6-5-6-8---6---', '7-7-5-7-9---0---', '8-------5---3---', '8---------------'];
+const THEME_DEG = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9 };
 const SONGS = {
-  menu: { key: 60, mode: 'major', bpm: 94, vol: .8, prog: [1, 5, 6, 4, 1, 5, 4, 5], lead: 'bell', pad: 'warm', bass: 'round', verb: .55, echo: .25,
-    mel: ['4--3--2-3---1---', '2--3--4-5-------', '4--3--2-1---0---', '5--4--3-4---6---'],
-    bassP: 'R-------R--F-R--', p: '..x...x...x...x.', pType: 'shaker', pCalm: true, arp: 'up', arpLvl: -1, arpInst: 'pluck', arpRate: 4 },
-  arcade: { vol: 1.3, key: 60, mode: 'major', bpm: 110, prog: [1, 6, 4, 5, 1, 6, 2, 5], lead: 'pluck', counter: 'bell', pad: 'warm', bass: 'pluck', verb: .3, echo: .3,
-    mel: ['2-3-4---5-4-3---', '2-1-0---1-2-----', '2-3-4---6-5-4---', '5-4-3-2-3-------'],
-    bassP: 'R--R--R-F--F--O-', k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', o: '..............x.', arp: 'updown' },
+  menu: { theme: true, vol: .8, key: 60, mode: 'major', bpm: 100, menuLvl: 1, sLvl: 1, leadOct: 12, lead: 'bell', counter: 'pluck', counterLvl: 1, pad: 'warm', bass: 'round', verb: .45, echo: .28,
+    prog: [1, 5, 6, 4, 1, 5, 4, 5, 4, 5, 3, 6, 4, 5, 1, 1],
+    mel: THEME_MEL,
+    bassP: 'R-----R-F-------', k: 'x.......x.......', s: '....g.......g...', h: '..x...x...x...x.', p: 'x.x.x.x.x.x.x.x.', pType: 'shaker', arp: 'up', arpLvl: 2, arpInst: 'pluck' },
+  arcade: { theme: true, vol: 1.25, key: 60, mode: 'major', bpm: 112, leadOct: 12, lead: 'pluck', counter: 'bell', counterLvl: 2, pad: 'warm', bass: 'pluck', verb: .3, echo: .3,
+    prog: [1, 5, 6, 4, 1, 5, 4, 5, 4, 5, 3, 6, 4, 5, 1, 1],
+    mel: THEME_MEL,
+    bassP: 'R--R--R-F--F--O-', k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', o: '..............x.', p: '..x...x...x...x.', pType: 'shaker', arp: 'updown' },
   w1: { vol: 0.72, key: 65, mode: 'major', bpm: 104, prog: [4, 1, 5, 6, 4, 1, 5, 5], lead: 'bell', counter: 'pluck', pad: 'warm', bass: 'round', verb: .45, echo: .3,
     mel: ['4---5---6-5-4---', '3-----------2---', '4---5---6-7-8---', '7-6-5-4-5-------'],
     bassP: 'R---F---R---F-O-', k: 'x.....x...x.....', s: '....x.......x...', h: '..x...x...x...x.', p: 'x.x.x.x.x.x.x.x.', pType: 'shaker', arp: 'updown' },
@@ -1354,8 +1364,15 @@ function playSongStep(sg, s, t, d, lvl, boss) {
     BASSES[sg.bass](mtof(m), t, d * (calm ? 8 : len(sg.bassP, pos)) * .92, .16 * (calm ? .75 : 1), C.bass.in);
   }
   // mélodie (et contre-chant quand ça chauffe)
-  const order = [0, 1, 0, 2, 3, 1, 3, 2], pat = sg.mel[order[bar % 8]], mc = pat[pos];
-  if (mc >= '0' && mc <= '9') {
+  const order = [0, 1, 0, 2, 3, 1, 3, 2], pat = sg.theme ? sg.mel[bar % sg.mel.length] : sg.mel[order[bar % 8]], mc = pat[pos];
+  if (sg.theme) {
+    const di = THEME_DEG[mc];
+    if (di != null) {
+      const sc = SCALES[sg.mode], nd = i => sg.key + sc[((i % 7) + 7) % 7] + 12 * Math.floor(i / 7), L = len(pat, pos), v = (calm ? .075 : .09 + Math.max(0, lvl) * .01) * (mix.lead || 1);
+      LEADS[sg.lead](mtof(nd(di) + (sg.leadOct ?? 12)), t, d * L * .95, v, C.lead.in);
+      if (sg.counter && lvl >= (sg.counterLvl ?? 3)) LEADS[sg.counter](mtof(nd(di - 2) + (sg.leadOct ?? 12)), t, d * L * .9, .04, C.counter.in);
+    }
+  } else if (mc >= '0' && mc <= '9') {
     const n = ladder(sg, ch, +mc), L = len(pat, pos), v = (calm ? .07 : .085 + Math.max(0, lvl) * .01) * (mix.lead || 1);
     LEADS[sg.lead](mtof(n + oct), t, d * L * .95, v, C.lead.in);
     if (lvl >= 3 && sg.counter) LEADS[sg.counter](mtof(ladder(sg, ch, +mc + 2) + oct), t + d * 2, d * Math.max(1, L - 2) * .9, .035, C.counter.in);
@@ -1374,7 +1391,7 @@ function playSongStep(sg, s, t, d, lvl, boss) {
   const fill = lvl >= 2 && bar % 8 === 7 && pos >= 12;
   if (lvl >= 1 && sg.h) { const v = hitV(sg.h[pos]); if (v && !fill) DRUMS.h(t, v, C.drums.in); }
   if (lvl >= 1 && sg.k) { const v = hitV(sg.k[pos]); if (v) DRUMS.k(t, v, C.drums.in); }
-  if (lvl >= 2 && sg.s) { const v = hitV(sg.s[pos]); if (v && !fill) DRUMS.s(t, v, C.drums.in); }
+  if (lvl >= (sg.sLvl ?? 2) && sg.s) { const v = hitV(sg.s[pos]); if (v && !fill) DRUMS.s(t, v, C.drums.in); }
   if (lvl >= 3 && sg.o) { const v = hitV(sg.o[pos]); if (v) DRUMS.o(t, v, C.drums.in); }
   if (fill) (sg.pType === 'tom' ? DRUMS.tom : DRUMS.s)(t, .5 + (pos - 12) * .18, C.drums.in);
   if (boss && lvl >= 2 && pos % 4 === 0) DRUMS.tom(t, .35 + (lvl - 2) * .3, C.perc.in);
@@ -1402,11 +1419,11 @@ function musicTick() {
   const sg = SONGS[id];
   if (id !== MUSIC.id) { MUSIC.id = id; MUSIC.step = 0; MUSIC.next = 0; applySong(sg); MUSIC.out.gain.cancelScheduledValues(a.currentTime); MUSIC.out.gain.setValueAtTime(0, a.currentTime); MUSIC.on = false; }
   if (!MUSIC.on) { MUSIC.out.gain.setTargetAtTime(.85 * (sg.vol || 1), a.currentTime + .05, .12); MUSIC.on = true; }
-  const play = G.phase === 'play', zen = play && cfg.mode === 'zen', lvl = play ? musicLevel() : -1;
+  const play = G.phase === 'play', zen = play && cfg.mode === 'zen', lvl = play ? musicLevel() : (sg.menuLvl ?? -1);
   const bpm = play && !zen ? Math.min(sg.bpm + 14, sg.bpm + Math.min(G.round, 20) * .25 + G.combo * 1.2 + (G.boss ? 6 : 0)) : sg.bpm * (zen ? .85 : 1);
   const d = 60 / bpm / 4;
   if (!MUSIC.next || MUSIC.next < a.currentTime) MUSIC.next = a.currentTime + .08;
-  while (MUSIC.next < a.currentTime + .16) { playSongStep(sg, MUSIC.step, MUSIC.next, d, lvl, play && !!G.boss); MUSIC.next += d; MUSIC.step = (MUSIC.step + 1) % 128; }
+  while (MUSIC.next < a.currentTime + .16) { playSongStep(sg, MUSIC.step, MUSIC.next, d, lvl, play && !!G.boss); MUSIC.next += d; MUSIC.step = (MUSIC.step + 1) % 256; }
 }
 setInterval(musicTick, 40);
 
