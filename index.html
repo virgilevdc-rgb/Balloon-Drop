@@ -1412,7 +1412,7 @@ function currentSong() {
   return null;
 }
 /* ---------- v19 : bande originale en fichiers audio (boucles), le moteur synthétisé reste en secours ---------- */
-const OST_FILES = { menu: 'theme', arcade: 'theme', w1: 'w1', w2: 'w2', w3: 'w3', w4: 'w4', w5: 'w5', w6: 'w6', w7: 'w7', w8: 'w8', w9: 'w9', w10: 'w10', w11: 'w11', w12: 'w12' };
+const OST_FILES = { menu: 'lobby', arcade: 'theme', w1: 'w1', w2: 'w2', w3: 'w3', w4: 'w4', w5: 'w5', w6: 'w6', w7: 'w7', w8: 'w8', w9: 'w9', w10: 'w10', w11: 'w11', w12: 'w12' };
 const OST = { buf: {}, loading: {}, failed: {}, lead: {}, cur: null, src: null, sg: null, lp: null, gain: null, ac: null };
 function ostGraph(a) {
   if (OST.ac === a && OST.gain) return;
