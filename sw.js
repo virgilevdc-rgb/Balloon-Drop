@@ -1,4 +1,4 @@
-const CACHE = 'balloon-drop-v23';
+const CACHE = 'balloon-drop-v24';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -12,8 +12,10 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // le lecteur audio de l'iPhone demande les musiques par morceaux (Range) : on le laisse aller directement au réseau
+  if (req.headers.has('range')) return;
   const url = new URL(req.url);
-  const keep = res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; };
+  const keep = res => { if (!res || res.status !== 200) return res; const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; };
   if (url.origin === location.origin && url.pathname.includes('/music/')) {
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(keep)));
   } else if (url.origin === location.origin) {
