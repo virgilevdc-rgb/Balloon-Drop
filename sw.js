@@ -1,4 +1,4 @@
-const CACHE = 'balloon-drop-v26d';
+const CACHE = 'balloon-drop-v27';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
