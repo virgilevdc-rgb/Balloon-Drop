@@ -1,4 +1,6 @@
-const CACHE = 'balloon-drop-v27';
+const CACHE = 'balloon-drop-v27b';
+// les musiques ont leur propre cache, gardé d'une version à l'autre (pas de 15 Mo à retélécharger à chaque mise à jour)
+const MUSIC = 'balloon-drop-music';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -6,7 +8,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== MUSIC).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', e => {
@@ -17,7 +19,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   const keep = res => { if (!res || res.status !== 200) return res; const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; };
   if (url.origin === location.origin && url.pathname.includes('/music/')) {
-    e.respondWith(caches.match(req).then(r => r || fetch(req).then(keep)));
+    e.respondWith(caches.open(MUSIC).then(c => c.match(req).then(r => r || caches.match(req).then(r2 => r2 || fetch(req).then(res => { if (res && res.status === 200) c.put(req, res.clone()); return res; })))));
   } else if (url.origin === location.origin) {
     e.respondWith(fetch(req).then(keep).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   } else if (url.hostname.endsWith('googleapis.com') || url.hostname.endsWith('gstatic.com')) {

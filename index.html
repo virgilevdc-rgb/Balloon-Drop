@@ -1619,7 +1619,8 @@ function ostTrim() {
 function ostPrefetch() {
   if (OST.fetched || typeof fetch !== 'function' || location.protocol === 'file:') return;
   OST.fetched = 1;
-  const list = [...new Set(Object.values(OST_FILES))];
+  let cur = 1; for (let k = WORLDS.length; k >= 1; k--) if (worldOpen(k)) { cur = k; break; }
+  const list = [...new Set([OST_FILES.menu, OST_FILES.arcade, OST_FILES['w' + cur], OST_FILES['w' + Math.min(WORLDS.length, cur + 1)]].filter(Boolean))];
   let k = 0;
   const next = () => { if (k >= list.length) return; const f = list[k++]; fetch('music/' + f + '.mp3').then(r => r.ok && r.arrayBuffer()).catch(() => {}).finally(() => setTimeout(next, 1200)); };
   setTimeout(next, 4000);
@@ -8478,7 +8479,7 @@ function soundTest(card) {
   const show = () => {
     const f = OST_FILES[currentSong() || 'menu'], ms = !S.music ? 'musique coupée' : OST.buf[f] ? 'musique chargée' : OST.failed[f] ? 'musique de secours (' + (OST.err[f] || '?') + ')' : 'musique en chargement' + (OST.err[f] ? ' (' + OST.err[f] + ')' : '');
     const html = AUD.mode === 'html', hm = !S.music ? 'musique coupée' : HAUD.mel && HAUD.melCur ? (HAUD.playing ? 'musique en lecture' : HAUD.mel.paused ? 'musique prête (touche l\'écran)' : 'musique lancée, en attente') : 'musique en attente';
-    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v27';
+    if (info) info.textContent = (html ? 'Lecteur iPhone · ' + hm + (AUD.htmlErr ? ' (' + AUD.htmlErr + ')' : '') : 'Son : ' + audioStatus() + ' · ' + ms) + (S.muted ? ' · bruitages coupés' : '') + ' · ' + (IS_IOS ? 'iOS' : 'autre') + (window.matchMedia && matchMedia('(display-mode: standalone)').matches ? ' appli' : ' navigateur') + ' · v27b';
   };
   show(); setTimeout(show, 700); setTimeout(show, 2000);
 }
