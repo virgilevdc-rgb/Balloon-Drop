@@ -10129,6 +10129,11 @@ function showCodeModal() {
     const inp = card.querySelector('#codeInput'), err = card.querySelector('#codeError');
     const fail = msg => { err.textContent = msg; sfx.nope(); inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); };
     const submit = () => {
+      /* code admin (test) : débloque tous les ballons */
+      if (normCode(inp.value) === 'VVADMIN2026') {
+        S.owned = [...new Set([...S.owned, ...SKINS.map(s => s.id)])]; save();
+        closeModal(); sfx.buy(); toast('Mode admin : tous les ballons sont débloqués'); setShopTab('skins'); renderShop(); return;
+      }
       const c = CODES[normCode(inp.value)];
       if (!normCode(inp.value)) return fail('Tape un code avant de valider.');
       if (!c) return fail("Ce code n'existe pas. Vérifie l'orthographe et réessaie.");
