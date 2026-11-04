@@ -3514,7 +3514,7 @@ const TROPHIES = [
   { id: 'lvl10', cat: 'Mode infini', name: 'Niveau 10', desc: 'Atteins le niveau 10', prog: () => [S.bestLevel || 0, 10], reward: 40 },
   { id: 'lvl20', cat: 'Mode infini', name: 'Niveau 20', desc: 'Atteins le niveau 20', prog: () => [S.bestLevel || 0, 20], reward: 120 },
   { id: 'lvl30', cat: 'Mode infini', name: 'Niveau 30', desc: 'Atteins le niveau 30', prog: () => [S.bestLevel || 0, 30], reward: 250 },
-  { id: 'crow', cat: 'Aventure', name: 'Plumé !', desc: 'Bats le Corbeau géant', prog: () => [stv('boss_crow'), 1], reward: 60 },
+  { id: 'crow', cat: 'Aventure', name: 'Fil coupé !', desc: 'Bats le Cerf-volant Dragon', prog: () => [stv('boss_crow'), 1], reward: 60 },
   { id: 'storm', cat: 'Aventure', name: 'Éclaircie', desc: "Bats le Nuage d'orage", prog: () => [stv('boss_storm'), 1], reward: 90 },
   { id: 'dragon', cat: 'Aventure', name: 'Dompteur de dragon', desc: 'Bats le Dragon de lave', prog: () => [stv('boss_dragon'), 1], reward: 150, skin: 'oeil' },
   { id: 'kraken', cat: 'Aventure', name: 'Maître des mers', desc: 'Bats la Pieuvre géante', prog: () => [stv('boss_kraken'), 1], reward: 170 },
@@ -3623,7 +3623,7 @@ const WORLDS = [
     { name: 'Doublé', goal: 5, dbl: 1, plat: 1.15, intro: 'Chaque manche a deux ballons. Pose le premier, puis empile le second dessus.', stars: [15, 24] },
     { name: 'Vent de travers', goal: 8, move: [.8, .1], wind: .065, windChance: .6, bonus: .3, intro: 'Le vent et une plateforme mobile, en même temps.', stars: [13, 21] },
     { name: 'Ciel encombré', goal: 9, move: [.9, .1], birds: 185, dbl: .3, bonus: .35, intro: 'Oiseaux, doublés et plateforme mobile.', stars: [15, 24] },
-    { name: 'Le Corbeau géant', boss: 'crow', hp: 8, shrink: .93, move: [.7, .05], bonus: .3, intro: "Le roi des oiseaux garde la fin du Ciel. Chaque ballon posé le frappe, un Parfait ou un ballon gonflé à x3 frappe plus fort. Gare à ses coups d'ailes.", stars: [7, 10] },
+    { name: 'Le Cerf-volant Dragon', boss: 'crow', hp: 8, shrink: .93, move: [.7, .05], bonus: .3, intro: "Un dragon de papier garde la fin du Ciel. Chaque ballon posé le frappe, un Parfait ou un ballon gonflé à x3 frappe plus fort. Gare à ses coups de queue.", stars: [7, 10] },
   ] },
   { id: 2, name: "L'Orage", of: "de l'Orage", sw: ['#7d84c2', '#2a2e57'], sky: 'w2', desc: 'Pluie, rafales, brouillard et éclairs.', levels: [
     { name: 'Premières gouttes', goal: 7, rain: true, intro: 'La pluie fait tomber le ballon plus vite.', stars: [11, 18] },
@@ -5949,7 +5949,7 @@ function hazardHit(b) {
    Boss : un par monde, de plus en plus coriace
    ========================================================= */
 const BOSSES = {
-  crow: { name: 'Le Corbeau géant', p2: 'Il appelle ses oiseaux', p3: 'Il fonce sur tes ballons', reward: 60 },
+  crow: { name: 'Le Cerf-volant Dragon', p2: 'Il lâche ses cerfs-volants', p3: 'Il entre dans une colère noire', reward: 60 },
   storm: { name: "Le Nuage d'orage", p2: 'La foudre tombe : attends le coup de tonnerre', p3: 'Le brouillard monte', reward: 90 },
   stormx: { name: 'Le Nuage de foudre', p2: 'Il frappe plus vite', p3: 'Le brouillard monte, la foudre redouble', reward: 150 },
   dragon: { name: 'Le Dragon de lave', p2: 'La roche se fissure', p3: 'Les geysers se réveillent', reward: 120 },
@@ -6118,7 +6118,56 @@ function bossDefeat() {
 }
 
 /* ---------- Dessin des boss (aussi utilisé pour les icônes de la carte) ---------- */
-function drawCrow(c, x, y, s, flap, face, hurt, alpha = 1) {
+/* Boss du Monde 1 : le Cerf-volant Dragon (remplace le dessin du Corbeau, mêmes mécaniques) */
+function kiteKit(x, HURT) {
+const lg = (x0, y0, x1, y1, a, b) => { const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
+ const OUT = () => HURT ? 'rgba(255,255,255,0)' : '#14162e';
+const C = v => HURT ? '#ffffff' : v;
+const shape = (fill, draw, lw = 2) => { x.fillStyle = HURT ? '#fff' : fill; x.beginPath(); draw(); x.fill(); x.strokeStyle = OUT(); x.lineWidth = lw; x.lineJoin = 'round'; x.stroke(); };
+function kd(cx, cy, s, t, o = {}) {
+  const sp = o.speed || 1, rage = o.rage || 0, eyeCol = o.eye || '#e8336d';
+  x.save(); x.translate(cx, cy); x.rotate(o.rot || 0); x.scale(s, s); x.globalAlpha = o.alpha == null ? 1 : o.alpha;
+  if (rage) { const g = x.createRadialGradient(10, 0, 10, 10, 0, 120); g.addColorStop(0, `rgba(255,60,40,${.35 * rage})`); g.addColorStop(1, 'rgba(255,60,40,0)'); x.fillStyle = g; x.beginPath(); x.arc(10, 0, 120, 0, TAU); x.fill(); }
+  const seg = []; for (let i = 1; i <= 8; i++) seg.push([-i * 24, Math.sin(t * .08 * sp - i * .7) * (16 + rage * 10) + i * 4 * (o.droop == null ? 1 : o.droop), 20 - i * 1.4]);
+  const n = o.segs == null ? 8 : o.segs;
+  const [lx, ly] = seg[n - 1];
+  for (const [c, off] of [['#ffd23f', -6], ['#e8336d', 0], ['#5fd6ff', 6]]) { x.strokeStyle = C(c); x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(lx, ly); for (let k = 1; k <= 10; k++) x.lineTo(lx - k * 7, ly + off + Math.sin(t * .1 * sp - k * .6) * 8); x.stroke(); }
+  for (let i = n - 1; i >= 0; i--) { const [sx, sy, r] = seg[i];
+    for (const d of [-1, 1]) shape('#ffd23f', () => { x.moveTo(sx - 4, sy + d * r * .6); x.lineTo(sx - 12, sy + d * (r + 10)); x.lineTo(sx + 4, sy + d * r * .7); }, 1.5);
+    shape(lg(sx, sy - r, sx, sy + r, i % 2 ? '#ff7a5a' : '#ff5a4a', '#a8121e'), () => x.arc(sx, sy, r, 0, TAU));
+    x.strokeStyle = C('#ffd23f'); x.lineWidth = 2.5; x.beginPath(); x.arc(sx, sy, r * .62, -1.2, 1.2); x.stroke();
+    if (!HURT) { x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.ellipse(sx - r * .3, sy - r * .45, r * .35, r * .15, -.4, 0, TAU); x.fill(); } }
+  shape('#ffd23f', () => { x.moveTo(-6, -30); x.lineTo(-22, -62); x.lineTo(4, -38); }, 1.5); shape('#ffd23f', () => { x.moveTo(14, -30); x.lineTo(14, -66); x.lineTo(24, -34); }, 1.5);
+  shape(lg(0, -44, 0, 44, rage ? '#ff4a3a' : '#ff6b5a', rage ? '#8a0a14' : '#b3141f'), () => { x.moveTo(10, -44); x.lineTo(56, 0); x.lineTo(10, 44); x.lineTo(-30, 0); x.closePath(); }, 2.5);
+  x.strokeStyle = HURT ? '#fff' : 'rgba(120,60,20,.55)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(10, -44); x.lineTo(10, 44); x.moveTo(-30, 0); x.lineTo(56, 0); x.stroke();
+  x.strokeStyle = C('#ffd23f'); x.lineWidth = 3; x.beginPath(); x.moveTo(10, -36); x.lineTo(48, 0); x.lineTo(10, 36); x.lineTo(-22, 0); x.closePath(); x.stroke();
+  if (!HURT) { x.save(); if (rage || eyeCol !== '#e8336d') { x.shadowColor = eyeCol; x.shadowBlur = 14; }
+    x.fillStyle = '#fff'; x.beginPath(); x.ellipse(16, -12, 9, 8, 0, 0, TAU); x.fill(); x.fillStyle = eyeCol; x.beginPath(); x.arc(18, -11, 5, 0, TAU); x.fill(); x.restore();
+    x.fillStyle = '#1b0610'; x.beginPath(); x.ellipse(18.5, -11, 1.6, 4, 0, 0, TAU); x.fill();
+    x.strokeStyle = '#14162e'; x.lineWidth = 5; x.lineCap = 'round'; x.beginPath(); x.moveTo(5, -24 + rage * 2); x.lineTo(27, -17 - rage * 2); x.stroke(); }
+  const jaw = o.jaw || 0;
+  shape('#3a0a10', () => { x.moveTo(20, 12); x.quadraticCurveTo(40, 26 + jaw * 14, 52, 6); x.quadraticCurveTo(38, 14, 20, 12); }, 1.5);
+  x.fillStyle = '#fff'; for (const fx of [30, 42]) { x.beginPath(); x.moveTo(fx - 3, 15); x.lineTo(fx + 3, 15); x.lineTo(fx, 22 + jaw * 4); x.fill(); }
+  x.strokeStyle = C('#ffd23f'); x.lineWidth = 3; x.lineCap = 'round'; for (const d of [-1, 1]) { x.beginPath(); x.moveTo(44, 6); x.bezierCurveTo(70, 6 + d * 10, 60, 30 + d * 20, 84, 24 + d * 26 + Math.sin(t * .1 * sp) * 6); x.stroke(); }
+  x.restore();
+}
+function miniKite(px, py, s, t, a) { x.save(); x.translate(px, py); x.rotate(a); x.scale(s, s);
+  x.strokeStyle = '#ffd23f'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, 14); for (let k = 1; k < 6; k++) x.lineTo(Math.sin(t * .2 + k) * 4, 14 + k * 6); x.stroke();
+  shape(lg(0, -16, 0, 16, '#ff6b5a', '#b3141f'), () => { x.moveTo(0, -16); x.lineTo(12, 0); x.lineTo(0, 16); x.lineTo(-12, 0); x.closePath(); }, 1.5);
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(3, -3, 3, 0, TAU); x.fill(); x.fillStyle = '#14162e'; x.beginPath(); x.arc(4, -3, 1.5, 0, TAU); x.fill(); x.restore(); }
+  return { kd, miniKite };
+}
+function drawCrow(c, X, Y, s, flap, face, hurt, alpha = 1) {
+  let B = null; try { B = G.boss && G.boss.type === 'crow' ? G.boss : null; } catch (e) {}
+  const ph = B ? B.phase : 1, t = B ? B.t : 40, K = kiteKit(c, hurt);
+  c.save(); c.globalAlpha = alpha;
+  if (B && !B.dead) { c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(X + face * 10, Y + 30 * s); c.quadraticCurveTo(X + face * 60, Y + 200, X + face * 90, Y + 900); c.stroke(); }
+  c.translate(X, Y); c.scale(face, 1);
+  K.kd(0, 0, s * .72, t, { eye: ph >= 2 ? '#ffd23f' : '#e8336d', rage: ph === 3 ? 1 : 0, speed: ph === 3 ? 2.2 : 1, jaw: ph === 3 ? .6 : 0, segs: B ? 3 + Math.round(5 * B.hp / B.max) : 8 });
+  c.restore();
+}
+function drawMiniKite(bd) { const K = kiteKit(ctx, false); K.miniKite(bd.x, bd.y, 1.1, G.frame, Math.max(-.6, Math.min(.6, (bd.vx || 0) * .15))); }
+function drawCrowOld(c, x, y, s, flap, face, hurt, alpha = 1) {
   c.save(); c.translate(x, y); c.scale(s * face, s); c.globalAlpha = alpha;
   const f = Math.sin(flap), body = hurt ? '#ffffff' : '#1c1f33', wing = hurt ? '#eef0ff' : '#2b2f4d';
   c.fillStyle = wing;
@@ -6959,6 +7008,7 @@ function drawCloudSea() {
   ctx.rect(x0, base + 34, x1 - x0, H - base); ctx.fill();
 }
 function drawBird(bd, th) {
+  try { if (G.boss && G.boss.type === 'crow' && !G.boss.dead) return drawMiniKite(bd); } catch (e) {}
   if (th.bee) return drawBee(bd);
   if (th.sheep) return drawSheep(bd);
   ctx.save(); ctx.translate(bd.x, bd.y);
