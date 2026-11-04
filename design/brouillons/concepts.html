@@ -1,0 +1,103 @@
+<!doctype html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@800&display=swap" rel="stylesheet"><style>body{margin:0}</style></head><body><canvas id="c" width="1260" height="560"></canvas>
+<script>
+const TAU = Math.PI * 2, x = document.getElementById('c').getContext('2d');
+const lg = (x0, y0, x1, y1, a, b) => { const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
+const OUT = '#14162e';
+const shape = (fill, draw, lw = 2) => { x.fillStyle = fill; x.beginPath(); draw(); x.fill(); x.strokeStyle = OUT; x.lineWidth = lw; x.lineJoin = 'round'; x.stroke(); };
+const eye = (ex, ey, r, ang) => { shape('#fff', () => x.ellipse(ex, ey, r, r * .9, 0, 0, TAU), 1.5); x.fillStyle = '#e8336d'; x.beginPath(); x.arc(ex + r * .2, ey + r * .1, r * .55, 0, TAU); x.fill(); x.fillStyle = '#1b0610'; x.beginPath(); x.arc(ex + r * .25, ey + r * .12, r * .28, 0, TAU); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(ex, ey - r * .2, r * .18, 0, TAU); x.fill();
+  x.strokeStyle = OUT; x.lineWidth = r * .55; x.lineCap = 'round'; x.beginPath(); x.moveTo(ex - r * 1.1, ey - r * 1.2 + ang); x.lineTo(ex + r * 1.1, ey - r * .7 - ang); x.stroke(); };
+
+/* ===== 1. CERF-VOLANT DRAGON ===== */
+function kiteDragon(cx, cy, s, t) {
+  x.save(); x.translate(cx, cy); x.scale(s, s);
+  x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(8, 30); x.quadraticCurveTo(60, 140, 40, 260); x.stroke(); // fil
+  const seg = []; for (let i = 1; i <= 8; i++) seg.push([-i * 26, Math.sin(t * .08 - i * .7) * 16 + i * 4, 20 - i * 1.4]);
+  // rubans de la queue
+  const [lx, ly] = seg[7]; for (const [c, o] of [['#ffd23f', -6], ['#e8336d', 0], ['#5fd6ff', 6]]) { x.strokeStyle = c; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(lx, ly + o * .3); for (let k = 1; k <= 10; k++) x.lineTo(lx - k * 7, ly + o + Math.sin(t * .1 - k * .6) * 8); x.stroke(); }
+  for (let i = seg.length - 1; i >= 0; i--) { const [sx, sy, r] = seg[i];
+    for (const d of [-1, 1]) shape('#ffd23f', () => { x.moveTo(sx - 4, sy + d * r * .6); x.lineTo(sx - 12, sy + d * (r + 10)); x.lineTo(sx + 4, sy + d * r * .7); }, 1.5);
+    shape(lg(sx, sy - r, sx, sy + r, i % 2 ? '#ff7a5a' : '#ff5a4a', '#a8121e'), () => x.arc(sx, sy, r, 0, TAU));
+    x.strokeStyle = '#ffd23f'; x.lineWidth = 2.5; x.beginPath(); x.arc(sx, sy, r * .62, -1.2, 1.2); x.stroke();
+    x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.ellipse(sx - r * .3, sy - r * .45, r * .35, r * .15, -.4, 0, TAU); x.fill(); }
+  // tête en losange de soie
+  shape('#ffd23f', () => { x.moveTo(-6, -30); x.lineTo(-22, -62); x.lineTo(4, -38); }, 1.5); shape('#ffd23f', () => { x.moveTo(14, -30); x.lineTo(14, -66); x.lineTo(24, -34); }, 1.5);
+  shape(lg(0, -44, 0, 44, '#ff6b5a', '#b3141f'), () => { x.moveTo(10, -44); x.lineTo(56, 0); x.lineTo(10, 44); x.lineTo(-30, 0); x.closePath(); }, 2.5);
+  x.strokeStyle = 'rgba(120,60,20,.55)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(10, -44); x.lineTo(10, 44); x.moveTo(-30, 0); x.lineTo(56, 0); x.stroke(); // baguettes
+  x.strokeStyle = '#ffd23f'; x.lineWidth = 3; x.beginPath(); x.moveTo(10, -36); x.lineTo(48, 0); x.lineTo(10, 36); x.lineTo(-22, 0); x.closePath(); x.stroke();
+  eye(16, -12, 9, 2);
+  shape('#3a0a10', () => { x.moveTo(20, 12); x.quadraticCurveTo(40, 26, 52, 6); x.quadraticCurveTo(38, 14, 20, 12); }, 1.5);
+  x.fillStyle = '#fff'; for (const fx of [30, 42]) { x.beginPath(); x.moveTo(fx - 3, 15); x.lineTo(fx + 3, 15); x.lineTo(fx, 22); x.fill(); }
+  x.strokeStyle = '#ffd23f'; x.lineWidth = 3; x.lineCap = 'round'; for (const d of [-1, 1]) { x.beginPath(); x.moveTo(44, 6); x.bezierCurveTo(70, 6 + d * 10, 60, 30 + d * 20, 84, 24 + d * 26 + Math.sin(t * .1) * 6); x.stroke(); }
+  x.restore();
+}
+
+/* ===== 2. CAPITAINE ZÉPHYR ===== */
+function zephyr(cx, cy, s, t) {
+  x.save(); x.translate(cx, cy + Math.sin(t * .05) * 4); x.scale(s, s);
+  x.strokeStyle = '#6b4a2a'; x.lineWidth = 2; for (const dx of [-30, -10, 10, 30]) { x.beginPath(); x.moveTo(dx * 1.6, 40); x.lineTo(dx * .9, 92); x.stroke(); }
+  // enveloppe rayée
+  x.save(); x.beginPath(); x.moveTo(0, 60); x.bezierCurveTo(-80, 30, -78, -78, 0, -78); x.bezierCurveTo(78, -78, 80, 30, 0, 60); x.closePath(); x.clip();
+  for (let i = -5; i <= 5; i++) { x.fillStyle = i % 2 ? '#1f2238' : '#d8223a'; x.beginPath(); x.ellipse(0, -10, Math.abs(i) * 16 + 8, 80, 0, 0, TAU); x.fill(); }
+  for (let i = 5; i >= 0; i--) { x.fillStyle = i % 2 ? '#1f2238' : '#d8223a'; x.beginPath(); x.ellipse(0, -10, i * 15 + 8, 80, 0, 0, TAU); x.fill(); }
+  x.fillStyle = 'rgba(255,255,255,.28)'; x.beginPath(); x.ellipse(-26, -40, 14, 26, -.4, 0, TAU); x.fill();
+  x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(-90, 20, 180, 50);
+  x.restore();
+  x.strokeStyle = OUT; x.lineWidth = 2.5; x.beginPath(); x.moveTo(0, 60); x.bezierCurveTo(-80, 30, -78, -78, 0, -78); x.bezierCurveTo(78, -78, 80, 30, 0, 60); x.stroke();
+  // rustine + tête de mort
+  shape('#e8d7b0', () => x.rect(22, 0, 18, 14), 1.5); x.strokeStyle = '#6b4a2a'; x.lineWidth = 1; x.beginPath(); x.moveTo(24, 3); x.lineTo(38, 3); x.moveTo(24, 11); x.lineTo(38, 11); x.stroke();
+  shape('#f4f1e1', () => { x.arc(-6, -28, 14, 0, TAU); }, 1.5); x.fillStyle = OUT; x.beginPath(); x.arc(-11, -29, 3.5, 0, TAU); x.arc(-1, -29, 3.5, 0, TAU); x.fill();
+  x.strokeStyle = '#f4f1e1'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(-24, -6); x.lineTo(12, -14); x.moveTo(-24, -14); x.lineTo(12, -6); x.stroke();
+  // nacelle
+  shape(lg(0, 88, 0, 120, '#c98a45', '#7a4a20'), () => x.roundRect(-30, 90, 60, 30, 5));
+  x.strokeStyle = 'rgba(60,30,10,.5)'; x.lineWidth = 1.5; for (let k = 1; k < 4; k++) { x.beginPath(); x.moveTo(-30, 90 + k * 7.5); x.lineTo(30, 90 + k * 7.5); x.stroke(); }
+  // capitaine
+  shape('#ffcf9f', () => x.arc(-4, 80, 14, 0, TAU));
+  shape('#1b1d30', () => { x.moveTo(-26, 72); x.quadraticCurveTo(-4, 52, 18, 72); x.quadraticCurveTo(-4, 66, -26, 72); }, 1.5);
+  x.strokeStyle = '#ffd23f'; x.lineWidth = 2; x.beginPath(); x.moveTo(-24, 71); x.quadraticCurveTo(-4, 64, 16, 71); x.stroke();
+  x.fillStyle = OUT; x.beginPath(); x.ellipse(-9, 79, 4.5, 4, 0, 0, TAU); x.fill(); x.lineWidth = 1.5; x.strokeStyle = OUT; x.beginPath(); x.moveTo(-18, 74); x.lineTo(8, 82); x.stroke();
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(2, 79, 3, 0, TAU); x.fill(); x.fillStyle = OUT; x.beginPath(); x.arc(2.8, 79.5, 1.6, 0, TAU); x.fill();
+  shape('#5a3a1a', () => { x.moveTo(-4, 86); x.quadraticCurveTo(-18, 84, -22, 92); x.quadraticCurveTo(-12, 88, -4, 90); x.quadraticCurveTo(4, 88, 14, 92); x.quadraticCurveTo(10, 84, -4, 86); }, 1);
+  shape(lg(10, 80, 40, 70, '#ffe27a', '#b8862a'), () => { x.save(); x.translate(14, 84); x.rotate(-.5); x.roundRect(0, -3, 30, 6, 2); x.restore(); }, 1.5);
+  // drapeau
+  x.strokeStyle = '#6b4a2a'; x.lineWidth = 2; x.beginPath(); x.moveTo(26, 90); x.lineTo(26, 52); x.stroke();
+  shape('#1b1d30', () => { x.moveTo(26, 52); x.quadraticCurveTo(40, 50 + Math.sin(t * .2) * 3, 50, 56); x.lineTo(26, 66); }, 1.5);
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(35, 58, 2.5, 0, TAU); x.fill();
+  x.restore();
+}
+
+/* ===== 3. AIGLE TEMPÊTE ===== */
+function eagle(cx, cy, s, t) {
+  x.save(); x.translate(cx, cy); x.scale(s, s); const f = Math.sin(t * .08);
+  const wing = (bx, by, tx, ty, dir, back) => { for (let i = 5; i >= 0; i--) { const k = i / 5, ex = tx - dir * k * 34, ey = ty + k * 20;
+      shape(lg(bx, by, ex, ey, back ? '#a8742c' : '#e0a548', back ? '#5a3a14' : '#8a5a1c'), () => { x.moveTo(bx, by - 4); x.quadraticCurveTo((bx + ex) / 2, (by + ey) / 2 - 20 - f * 8, ex, ey); x.quadraticCurveTo((bx + ex) / 2 + dir * 10, (by + ey) / 2 + 12, bx + dir * 4, by + 16); }, 1.5);
+      x.fillStyle = 'rgba(255,240,200,.5)'; x.beginPath(); x.arc(ex, ey, 2, 0, TAU); x.fill(); }
+    shape(lg(bx, by - 20, bx, by + 14, back ? '#b98a3a' : '#f2c14e', back ? '#6b4518' : '#a86a1c'), () => { x.moveTo(bx - dir * 6, by + 2); x.quadraticCurveTo(bx + dir * 20, by - 30 - f * 22, tx * .62 + bx * .38, ty * .62 + by * .38 + 4); x.quadraticCurveTo(bx + dir * 26, by + 12, bx + dir * 2, by + 14); }, 1.5); };
+  wing(-8, -2, -84, -22 - f * 40, -1, true);
+  for (const [a, l] of [[-.3, 32], [0, 38], [.3, 32]]) { x.save(); x.translate(-26, 8); x.rotate(Math.PI + a); shape('#f4f1e6', () => { x.moveTo(0, -6); x.lineTo(l, -8); x.lineTo(l + 6, 0); x.lineTo(l, 8); x.lineTo(0, 6); x.closePath(); }, 1.5); x.restore(); }
+  x.strokeStyle = '#ffb000'; x.lineWidth = 3.5; x.lineCap = 'round'; for (const dx of [-6, 10]) { x.beginPath(); x.moveTo(dx, 20); x.lineTo(dx + 2, 32); x.moveTo(dx + 2, 32); x.lineTo(dx - 4, 36); x.moveTo(dx + 2, 32); x.lineTo(dx + 8, 36); x.stroke(); }
+  shape(lg(-20, -12, 20, 26, '#c98a3a', '#5a3814'), () => x.ellipse(0, 6, 33, 19, 0, 0, TAU));
+  x.fillStyle = 'rgba(255,230,170,.3)'; x.beginPath(); x.ellipse(-6, -2, 17, 6, -.2, 0, TAU); x.fill();
+  wing(-12, 0, 40, -34 - f * 40, 1, false);
+  // tête blanche
+  shape(lg(16, -26, 36, 10, '#ffffff', '#d8d4c4'), () => { x.arc(28, -8, 17, 0, TAU); }, 2);
+  for (let i = 0; i < 4; i++) shape('#f4f1e6', () => { x.moveTo(12 + i * 3, 2 + i * 3); x.lineTo(6 + i * 2, 12 + i * 3); x.lineTo(16 + i * 3, 8 + i * 3); }, 1);
+  shape(lg(40, -16, 64, 4, '#ffd23f', '#d48a00'), () => { x.moveTo(40, -15); x.quadraticCurveTo(58, -16, 64, -4); x.quadraticCurveTo(62, 6, 55, 4); x.quadraticCurveTo(56, -4, 41, -3); x.closePath(); }, 1.5);
+  // œil d'orage qui s'illumine
+  x.save(); x.shadowColor = '#5fd6ff'; x.shadowBlur = 10; shape('#e9fbff', () => x.ellipse(33, -11, 5.5, 5, 0, 0, TAU), 1.5); x.restore();
+  x.fillStyle = '#1b6fa8'; x.beginPath(); x.arc(34.5, -10.5, 3, 0, TAU); x.fill(); x.fillStyle = '#04121e'; x.beginPath(); x.arc(35, -10.4, 1.5, 0, TAU); x.fill();
+  x.strokeStyle = '#8a5a1c'; x.lineWidth = 4.5; x.lineCap = 'round'; x.beginPath(); x.moveTo(25, -21); x.lineTo(41, -15); x.stroke();
+  // petits éclairs autour des ailes
+  x.strokeStyle = '#fff3a0'; x.lineWidth = 2; x.shadowColor = '#ffd23f'; x.shadowBlur = 8;
+  for (const [ex, ey] of [[-70, -30], [52, -60]]) { x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + 6, ey + 8); x.lineTo(ex + 1, ey + 10); x.lineTo(ex + 8, ey + 20); x.stroke(); }
+  x.restore();
+}
+
+const panels = [['Cerf-volant Dragon', kiteDragon, 1.9, '#3f9ad6', '#dff2fc'], ['Capitaine Zéphyr', zephyr, 1.6, '#3f9ad6', '#dff2fc'], ['Aigle Tempête', eagle, 2.3, '#3f9ad6', '#dff2fc']];
+document.fonts.ready.then(() => panels.forEach(([n, fn, s, a, b], i) => {
+  const X0 = i * 420; x.save(); x.beginPath(); x.roundRect(X0 + 10, 10, 400, 540, 24); x.clip();
+  x.fillStyle = lg(0, 0, 0, 560, a, b); x.fillRect(X0, 0, 420, 560);
+  fn(X0 + 205, 230, s, 30);
+  fn(X0 + 340, 450, s * .38, 30);
+  x.fillStyle = '#12304f'; x.font = '28px "Lilita One"'; x.textAlign = 'center'; x.fillText(n, X0 + 160, 500);
+  x.font = '800 12px Nunito'; x.fillText('taille jeu ↑', X0 + 340, 530); x.restore(); }));
+</script></body></html>
