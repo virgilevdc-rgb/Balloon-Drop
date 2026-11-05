@@ -15,6 +15,7 @@
 | Codes et secrets | `CODES`, `SECRETS`, `normCode` (code admin dans `submit` du modal « Code secret ») |
 | Trophées | `TROPHIES`, `checkTrophies` |
 | Mondes et niveaux | `WORLDS` (niveaux, boss, textes d'intro), `levelKey`, `renderStory` |
+| Difficulté | `WORLD_TUNE` (une ligne par monde), `arcadeRound` (Infini), `DEFL_GRACE` / `DEFL_TIME` (dégonflage) |
 | Décors | `SKIES` (palette par monde : `top`, `bottom`, `ink`, `zone`, `plinth`, `floor`, `ambient`), `drawSky`, `drawHills`, `cloud`, `drawSunLight` |
 | Plateformes | `drawPlatform`, `drawMetalPlatform`, `drawGoldPlatform` |
 | Ballon en jeu | `drawBalloon`, `land`, `newRound` |

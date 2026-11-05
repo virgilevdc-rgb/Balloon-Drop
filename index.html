@@ -4054,6 +4054,37 @@ const WORLDS = [
     { name: 'Le Marchand de cauchemars', boss: 'nightmare', hp: 13, shrink: .93, bonus: .3, intro: "Il lève sa lanterne puis verse du sable noir sur une colonne : éloigne le ballon de la bande rouge. Ensuite, la nuit tombe autour du ballon.", stars: [9, 14] },
   ] },
 ];
+
+/* =========================================================
+   Rééquilibrage de la difficulté (une ligne par monde, appliquée au chargement)
+   k : vitesse de la plateforme, vent, fréquence des oiseaux (x k) et plateforme plus étroite
+   move : vitesse minimale de la plateforme (0 = niveaux immobiles conservés)
+   goal : manches en plus par niveau · dbl : probabilité de doublé en plus. Les boss ne changent pas.
+   ========================================================= */
+const WORLD_TUNE = [
+  null,                                            // 1  Le Ciel : inchangé
+  { k: 1.06, move: 0,   goal: 0, dbl: 0 },         // 2  L'Orage
+  { k: 1.73, move: 0,   goal: 0, dbl: 0 },         // 3  Le Volcan
+  { k: 1.27, move: .25, goal: 0, dbl: 0 },         // 4  L'Océan
+  { k: 1.32, move: .34, goal: 1, dbl: 0 },         // 5  La Banquise
+  { k: 1.68, move: .43, goal: 1, dbl: .05 },       // 6  La Jungle
+  { k: 1.80, move: .52, goal: 1, dbl: .10 },       // 7  Le Miroir
+  { k: 1.90, move: .61, goal: 1, dbl: .15 },       // 8  L'Espace
+  { k: 1.80, move: .70, goal: 2, dbl: .20 },       // 9  Le Jardin
+  { k: 1.74, move: .79, goal: 2, dbl: .25 },       // 10 Les Bonbons
+  { k: 1.69, move: .88, goal: 2, dbl: .30 },       // 11 L'Enchanté
+  { k: 1.50, move: .97, goal: 2, dbl: .35 },       // 12 Les Rêves
+];
+WORLDS.forEach((W, i) => { const T = WORLD_TUNE[i]; if (!T) return;
+  for (const lv of W.levels) { if (lv.boss) continue;
+    lv.goal = (lv.goal || 0) + T.goal;
+    lv.plat = (lv.plat || 1) / (1 + (T.k - 1) * .3);
+    if (lv.move) lv.move = [lv.move[0] * T.k, lv.move[1] * T.k];
+    else if (T.move && !lv.drift && !lv.swing) lv.move = [T.move * T.k, 0];
+    if (lv.wind) lv.wind *= T.k;
+    if (lv.birds) lv.birds = Math.round(lv.birds / T.k);
+    if (T.dbl) lv.dbl = Math.min(.8, (lv.dbl || 0) + T.dbl);
+  } });
 const SECRET_LEVEL = { name: 'Au-dessus des nuages', goal: 8, moon: true, move: [.5, .07], wind: .028, windChance: .45, coins: .9, bonus: .4, intro: 'Le niveau secret. La gravité est lunaire : le ballon tombe tout doucement et le vent le pousse plus longtemps.', stars: [13, 21] };
 const UNIQUE_LEVEL = { name: 'Nuage de foudre', unique: true, boss: 'storm', enraged: true, hp: 20, shrink: .93, rain: true, move: [.9, .06], bonus: .3, intro: "Scénario unique. L'Orage enragé : foudre dès le début, rafales et oiseaux. Un seul essai.", stars: [10, 15] };
 const HC_LEVEL = { name: 'Hors-Carte', hc: true, goal: 15, shrink: .94, plat: 1.05, coins: 0, bonus: 0, intro: 'Trois épreuves dans un seul niveau : Crayon, Encre, Couleur. Trois vies.', stars: [26, 40] };

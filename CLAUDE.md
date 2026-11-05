@@ -28,6 +28,10 @@ En ligne : https://virgilevdc-rgb.github.io/Balloon-Drop/ (GitHub Pages, branche
 - Tester **sur fond clair ET sombre** et **en petit** (le ballon rétrécit à chaque manche). Éviter `globalCompositeOperation = 'lighter'` sur fond clair (tout devient blanc).
 - Lire l'état du jeu dans un dessin avec `try { G... } catch (e) {}` (zone morte des `const`).
 
+## Régler la difficulté
+- **`WORLD_TUNE`** (juste après `WORLDS`) : une ligne par monde (`k` vitesse/vent/oiseaux/plateforme, `move` vitesse minimale, `goal` manches en plus, `dbl` doublés en plus). Pour rendre un monde plus facile ou plus dur, changer sa ligne, rien d'autre. Les boss ne sont pas concernés.
+- Infini : `arcadeRound` (biomes toutes les 10 manches, difficulté sans plafond après la manche 20), dégonflage `DEFL_GRACE` / `DEFL_TIME`.
+
 ## Ajouter du contenu
 - **Ballon** : objet `{ id, theme, name, price | unlock, dust, paint, after?, string?, flat?, gloss?, prev? }` ajouté via le bloc `SKINS.push(...)`. Vérifier que l'`id` n'existe pas déjà.
 - **Famille** : ajouter dans `THEMES` (`id`, `name`, `bonus`).
