@@ -1329,7 +1329,7 @@ const INTRO = { on: false, t0: 0, done: null, ev: {}, saveOutfit: null, view: ''
 const INTRO_HATS = [['couronne', 'soleil'], ['sorcier', ''], ['cowboy', 'aviateur'], ['bonnet', 'ski'], ['hautdeforme', 'monocle'], ['fete', 'coeur'], ['casquette', 'rondes']];
 const INTRO_WORLDS = ['w2', 'w3', 'w4', 'w10', 'w11', 'w8', 'w12'];
 const INTRO_LINES = [[0, 'Le voyage d\'un ballon…'], [3000, '…plus dur que tu ne le penses.'], [5700, 'De nombreux mondes, des boss redoutables.'], [7400, 'Des tenues et des ballons à collectionner.'], [9100, 'À toi de jouer !']];
-const INTRO_SKINS = [['citron', 'cowboy', 'aviateur'], ['meduse', '', ''], ['pasteque', 'fete', 'coeur'], ['bouleneige', 'bonnet', ''], ['phenix', '', ''], ['galaxie', 'sorcier', '']];
+const INTRO_SKINS = [['citron', 'cowboy', 'aviateur'], ['meduse', '', ''], ['phenix', '', '']];
 const wantIntro = () => !S.introSeen && !stv('games') && !parseDuelHash();
 function startIntro(done) {
   const el = $('intro');
@@ -1363,8 +1363,9 @@ function introFall(t, t0, y0, yEnd, key, onLand) {
   introOnce(key, onLand);
   return { y: yEnd, sq: Math.exp(-(t - tl) / 110) };
 }
+function introPop() { const k = (performance.now() - (INTRO.pop || 0)) / 260; return k >= 1 ? 1 : 1 + .16 * Math.sin(k * Math.PI) * (1 - k * .5); }
 function drawIntro(th) {
-  const t = performance.now() - INTRO.t0, b = INTRO.b, top = H * .74, P = { x: W / 2, w: Math.min(W * .5, 200) }, R0 = Math.min(W, H) * .2;
+  const t = performance.now() - INTRO.t0, b = INTRO.b, top = H * .74, R0 = Math.min(W, H) * .2, P = { x: W / 2, w: R0 * 1.05 };
   for (let i = INTRO_LINES.length - 1; i >= 0; i--) if (t >= INTRO_LINES[i][0]) { if (INTRO.line !== i) { INTRO.line = i; introCaption(i); } break; }
   let showPlat = false;
   b.squash = 0; ctx.globalAlpha = 1; ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
@@ -1377,13 +1378,13 @@ function drawIntro(th) {
     b.y = t > 4500 ? top - b.r * 1.02 : f.y; b.squash = f.sq; b.x = W / 2; b.rot *= .9;
     if (t > 4500) introOnce('shrink', () => { tone(620, 180, .5, 'sine', .1); for (let i = 0; i < 14; i++) FX.particles.push({ x: b.x + (Math.random() - .5) * b.r, y: b.y - b.r * .9, vx: (Math.random() - .5) * 3, vy: -1 - Math.random() * 2, g: -.02, drag: .96, life: 40, size: 4 + Math.random() * 5, color: 'rgba(255,255,255,0.85)', rot: 0, vr: 0, shape: 'dot' }); });
   } else if (t < 7400) { // montage des mondes
-    const i = Math.min(3, Math.floor((t - 5700) / 425)), wl = ['w2', 'w3', 'w4', 'w8'];
-    if (INTRO.wi !== i) { INTRO.wi = i; setView(wl[i]); fadeT = 0; INTRO.flash = performance.now(); S.outfit = {}; sfx.gust(); }
-    b.r = Math.min(W, H) * .17; b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
+    const i = Math.min(2, Math.floor((t - 5700) / 567)), wl = ['w2', 'w3', 'w4'];
+    if (INTRO.wi !== i) { INTRO.wi = i; setView(wl[i]); fadeT = 0; INTRO.flash = performance.now(); INTRO.pop = performance.now(); S.outfit = {}; sfx.gust(); }
+    b.r = Math.min(W, H) * .17 * introPop(); b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
   } else if (t < 9100) { // ballons et tenues à collectionner
-    const i = Math.min(INTRO_SKINS.length - 1, Math.floor((t - 7400) / 284));
-    if (INTRO.si !== i) { INTRO.si = i; if (i === 0) { setView('w1'); fadeT = 0; } INTRO.flash = performance.now(); const [sk, hat, gl] = INTRO_SKINS[i]; INTRO.skin = sk; S.outfit = { hat, glasses: gl }; sfx.tap(2); }
-    b.r = Math.min(W, H) * .17; b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
+    const i = Math.min(INTRO_SKINS.length - 1, Math.floor((t - 7400) / 567));
+    if (INTRO.si !== i) { INTRO.si = i; if (i === 0) { setView('w1'); fadeT = 0; INTRO.flash = performance.now(); } INTRO.pop = performance.now(); const [sk, hat, gl] = INTRO_SKINS[i]; INTRO.skin = sk; S.outfit = { hat, glasses: gl }; sfx.tap(2); }
+    b.r = Math.min(W, H) * .19 * introPop(); b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
   } else { // la Fusée décolle et sort de l'écran : c'est parti
     introOnce('rocket', () => { INTRO.skin = 'fusee'; S.outfit = {}; setView('w8'); fadeT = 0; INTRO.flash = performance.now(); });
     b.r = Math.min(W, H) * .2; b.x = W / 2; b.y = H * .52; b.rot = 0;
