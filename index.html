@@ -1328,11 +1328,12 @@ function showSharePreview(url, text, name) {
 const INTRO = { on: false, t0: 0, done: null, ev: {}, saveOutfit: null, view: '', b: null };
 const INTRO_HATS = [['couronne', 'soleil'], ['sorcier', ''], ['cowboy', 'aviateur'], ['bonnet', 'ski'], ['hautdeforme', 'monocle'], ['fete', 'coeur'], ['casquette', 'rondes']];
 const INTRO_WORLDS = ['w2', 'w3', 'w4', 'w10', 'w11', 'w8', 'w12'];
-const INTRO_LINES = [[0, 'Il était une fois un ballon…'], [3000, '…qui rétrécit à chaque manche.'], [5700, '13 mondes, 13 boss, des dizaines de tenues.'], [9100, 'À toi de jouer !']];
+const INTRO_LINES = [[0, 'Le voyage d\'un ballon…'], [3000, '…plus dur que tu ne le penses.'], [5700, 'De nombreux mondes, des boss redoutables.'], [7400, 'Des tenues et des ballons à collectionner.'], [9100, 'À toi de jouer !']];
+const INTRO_SKINS = [['citron', 'cowboy', 'aviateur'], ['meduse', '', ''], ['pasteque', 'fete', 'coeur'], ['bouleneige', 'bonnet', ''], ['phenix', '', ''], ['galaxie', 'sorcier', '']];
 const wantIntro = () => !S.introSeen && !stv('games') && !parseDuelHash();
 function startIntro(done) {
   const el = $('intro');
-  INTRO.on = true; INTRO.t0 = performance.now(); INTRO.done = done; INTRO.ev = {}; INTRO.line = -1;
+  INTRO.on = true; INTRO.t0 = performance.now(); INTRO.done = done; INTRO.ev = {}; INTRO.line = -1; INTRO.skin = null; INTRO.fly = 0; INTRO.wi = INTRO.si = -1;
   INTRO.saveOutfit = S.outfit; INTRO.view = view; S.outfit = {};
   INTRO.b = { x: W / 2, y: -80, r: Math.min(PW, H) * .2, vy: 0, squash: 0, state: 'home', enter: 1, rot: 0, landed: 0 };
   setView('w1'); fadeT = 0; FX.particles = []; FX.floats = [];
@@ -1342,7 +1343,7 @@ function startIntro(done) {
 }
 function endIntro() {
   if (!INTRO.on) return;
-  INTRO.on = false; S.outfit = INTRO.saveOutfit || {}; S.introSeen = 1; save();
+  INTRO.on = false; S.outfit = INTRO.saveOutfit || {}; S.introSeen = 1; INTRO.skin = null; INTRO.fly = 0; window.__LAUNCH = null; save();
   const el = $('intro'); el.classList.add('out');
   FX.particles = []; FX.floats = [];
   setView(homeView());
@@ -1352,7 +1353,7 @@ function endIntro() {
 }
 function introCaption(i) {
   const c = $('introCap'); c.classList.remove('in'); void c.offsetWidth;
-  c.textContent = INTRO_LINES[i][1]; c.classList.add('in'); if (i === 3) c.classList.add('big');
+  c.textContent = INTRO_LINES[i][1]; c.classList.add('in'); if (i === INTRO_LINES.length - 1) c.classList.add('big');
 }
 function introOnce(k, fn) { if (!INTRO.ev[k]) { INTRO.ev[k] = 1; fn(); } }
 function introFall(t, t0, y0, yEnd, key, onLand) {
@@ -1375,19 +1376,28 @@ function drawIntro(th) {
     const f = introFall(t, 3150, H * .4, top - R0 * 1.02, 'land1', () => { sfx.land(); sfx.perfect(2); floatText('Parfait !', P.x, top - R0 * 2.4, 30, 'gold'); burst(P.x, top, 14, '#ffd23f'); buzz(15); });
     b.y = t > 4500 ? top - b.r * 1.02 : f.y; b.squash = f.sq; b.x = W / 2; b.rot *= .9;
     if (t > 4500) introOnce('shrink', () => { tone(620, 180, .5, 'sine', .1); for (let i = 0; i < 14; i++) FX.particles.push({ x: b.x + (Math.random() - .5) * b.r, y: b.y - b.r * .9, vx: (Math.random() - .5) * 3, vy: -1 - Math.random() * 2, g: -.02, drag: .96, life: 40, size: 4 + Math.random() * 5, color: 'rgba(255,255,255,0.85)', rot: 0, vr: 0, shape: 'dot' }); });
-  } else if (t < 9100) { // montage des mondes et des tenues
-    const i = Math.min(INTRO_WORLDS.length - 1, Math.floor((t - 5700) / 486));
-    if (INTRO.wi !== i) { INTRO.wi = i; setView(INTRO_WORLDS[i]); fadeT = 0; INTRO.flash = performance.now(); const [hat, gl] = INTRO_HATS[i]; S.outfit = { hat, glasses: gl }; sfx.gust(); }
+  } else if (t < 7400) { // montage des mondes
+    const i = Math.min(3, Math.floor((t - 5700) / 425)), wl = ['w2', 'w3', 'w4', 'w8'];
+    if (INTRO.wi !== i) { INTRO.wi = i; setView(wl[i]); fadeT = 0; INTRO.flash = performance.now(); S.outfit = {}; sfx.gust(); }
     b.r = Math.min(W, H) * .17; b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
-  } else { // retour au ciel : dernier lâcher, et c'est parti
-    introOnce('back', () => { setView('w1'); fadeT = 0; INTRO.flash = performance.now(); S.outfit = { hat: 'couronne', glasses: 'soleil' }; });
-    showPlat = true; b.r = R0 * .8; b.x = W / 2; b.rot = 0;
-    const f = introFall(t, 9100, H * .16, top - b.r * 1.02, 'land2', () => { sfx.goal(); confetti(P.x, top - b.r, 40); burst(P.x, top, 20, '#ffd23f'); buzz([20, 30, 20]); });
-    b.y = f.y; b.squash = f.sq;
-    if (t > 12000) { endIntro(); return; }
+  } else if (t < 9100) { // ballons et tenues à collectionner
+    const i = Math.min(INTRO_SKINS.length - 1, Math.floor((t - 7400) / 284));
+    if (INTRO.si !== i) { INTRO.si = i; if (i === 0) { setView('w1'); fadeT = 0; } INTRO.flash = performance.now(); const [sk, hat, gl] = INTRO_SKINS[i]; INTRO.skin = sk; S.outfit = { hat, glasses: gl }; sfx.tap(2); }
+    b.r = Math.min(W, H) * .17; b.x = W / 2; b.y = H * .45 + Math.sin(t / 300) * 10; b.rot = Math.sin(t / 380) * .1;
+  } else { // la Fusée décolle et sort de l'écran : c'est parti
+    introOnce('rocket', () => { INTRO.skin = 'fusee'; S.outfit = {}; setView('w8'); fadeT = 0; INTRO.flash = performance.now(); });
+    b.r = Math.min(W, H) * .2; b.x = W / 2; b.y = H * .52; b.rot = 0;
+    const L = t - 9100, s = b.r / 75;
+    window.__LAUNCH = L < 500 ? 1e9 : G.frame - 95;              /* fusée au repos, puis cachée dans le hublot pendant le vol */
+    INTRO.fly = L >= 500 ? Math.min(1, (L - 500) / 1300) : 0;
+    if (L >= 500) introOnce('lift', () => { sfx.goal(); buzz([20, 30, 40]); for (let i = 0; i < 18; i++) FX.particles.push({ x: b.x + (Math.random() - .5) * b.r, y: b.y + b.r * .5, vx: (Math.random() - .5) * 4, vy: -Math.random() * 1.5, g: .02, drag: .95, life: 50, size: 8 + Math.random() * 8, color: 'rgba(235,236,242,0.9)', rot: 0, vr: 0, shape: 'dot' }); });
+    if (t > 11000) { window.__LAUNCH = null; INTRO.skin = null; endIntro(); return; }
   }
   if (showPlat) { const rise = t < 3600 && t < 9000 ? easeOutCubic(Math.max(0, (t - 3000) / 600)) : 1; drawMetalPlatform(P, th, top + (1 - rise) * (H - top + 30)); }
-  drawBalloon(b, skinById(S.skin), th);
+  drawBalloon(b, skinById(INTRO.skin || S.skin), th);
+  if (INTRO.fly > 0) { const k = INTRO.fly, ry = b.y + b.r * .3 - k * k * (b.y + b.r * 2.5), s = b.r / 75 * 1.15;
+    drawRocket(ctx, b.x + Math.sin(k * 9) * 2, ry, s, 1, G.frame);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(b.x + (i - 1.5) * 8, ry + 40 * s + i * 14, 5 + i * 2, 0, TAU); ctx.fill(); } }
   drawFloats(th);
   drawParticles();
   if (INTRO.flash) { const k = (performance.now() - INTRO.flash) / 160; if (k < 1) { ctx.fillStyle = `rgba(255,255,255,${(.55 * (1 - k)).toFixed(3)})`; ctx.fillRect(0, 0, W, H); } }
@@ -4336,7 +4346,7 @@ function newRound() {
     if (view !== want) setView(want);
     if (W && L % 10 === 0) { const bn = $('banner'); bn.classList.remove('show'); schedule(8, () => { banner(W.name); sfx.goal(); }); G.biomeT = G.frame; }
   }
-  const pw = Math.max(32, PW * .11) * cfg.plat * (p.platMul || 1) * (G.wide > 0 ? 1.7 : 1) * (cfg.tuto && L < 2 ? 1.4 : 1);
+  const pw = Math.max(32, PW * .11) * cfg.plat * (p.platMul || 1) * (G.wide > 0 ? 1.7 : 1);
   const speed = p.speed * (G.slow > 0 ? .45 : 1);
   R = {
     L, p, rng,
@@ -10884,7 +10894,7 @@ function afterSplash() {
     audio(); sfx.pop(); setTimeout(() => sfx.goal(), 140); buzz([15, 30, 15]);
     el.classList.add('pop');
     setTimeout(() => el.classList.add('out'), 220);
-    setTimeout(() => { el.remove(); homeEnter = 0; if (wantIntro()) startIntro(() => { afterSplash(); if (!S.tutoDone) setTimeout(() => { if (screen === 'home') startGame('arcade'); }, 350); }); else afterSplash(); }, 700);
+    setTimeout(() => { el.remove(); homeEnter = 0; if (wantIntro()) startIntro(() => { if (!S.tutoDone && screen === 'home') startGame('arcade'); afterSplash(); }); else afterSplash(); }, 700);
   };
   el.addEventListener('pointerdown', go);
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
