@@ -1,4 +1,4 @@
-const CACHE = 'balloon-drop-v34';
+const CACHE = 'balloon-drop-v35';
 // les musiques ont leur propre cache, gardé d'une version à l'autre (pas de 15 Mo à retélécharger à chaque mise à jour)
 const MUSIC = 'balloon-drop-music';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png'];

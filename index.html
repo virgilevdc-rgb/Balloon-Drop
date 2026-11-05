@@ -2476,7 +2476,7 @@ const NEW_SKINS = [
     } },
 
   /* ---------- ROSACE : vitrail de cathédrale, plomb, et un rayon de soleil qui balaie le verre ---------- */
-  { id: 'rosace', theme: 'matieres', name: 'Rosace', price: 1500, gloss: .5, dust: '#3a5fe0',
+  { id: 'rosace', theme: 'arts', name: 'Rosace', price: 1500, gloss: .5, dust: '#3a5fe0',
     paint: (c, r, t) => {
       const LEAD = '#221c3a', lw = Math.max(.8, r * .035);
       const glass = (col, x, y, rad) => { const g = c.createRadialGradient(x - rad * .3, y - rad * .3, 0, x, y, rad * 1.2); g.addColorStop(0, shadeHex(col, .35)); g.addColorStop(1, col); return g; };
@@ -3727,6 +3727,399 @@ const TRIO = [OEIL, FUSEE, ASTRONAUTE];
 
 SKINS.push(GLOBE2_SKIN, OEIL, FUSEE, ASTRONAUTE);
 
+/* =========================================================
+   Familles Arts, Fêtes et Mécaniques
+   ========================================================= */
+/* Famille « Les Arts » : un ballon = une technique artistique, chacun avec un détail animé. */
+const ARTS = [
+
+  /* ---------- MOSAÏQUE : tesselles en spirale, ligne dorée qui accroche la lumière ---------- */
+  { id: 'mosaique', theme: 'arts', name: 'Mosaïque', price: 700, gloss: .5, dust: '#2a8fb0',
+    paint: (c, r, t) => {
+      c.fillStyle = '#e9e1cf'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();   /* joint */
+      c.save(); clipCircle(c, r);
+      /* anneaux de tesselles : soleil d'or, rayons, anneau bleu, vague blanche, bordure terre cuite */
+      const ring = (r0, r1, colFn) => { const rows = Math.max(1, Math.round((r1 - r0) / (r * .085)));
+        for (let j = 0; j < rows; j++) { const rr = r0 + (j + .5) * (r1 - r0) / rows, n = Math.max(6, Math.round(TAU * rr / (r * .085)));
+          for (let i = 0; i < n; i++) { const a = i * TAU / n + j * .3, x = Math.cos(a) * rr, y = Math.sin(a) * rr, sz = r * .07 * (.85 + h1(i * 31 + j * 7 + rr) * .3);
+            c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = colFn(a, j, i, n); c.beginPath(); c.roundRect(-sz / 2, -sz / 2, sz, sz, sz * .18); c.fill(); c.restore(); } } };
+      ring(0, r * .2, () => '#f2b705');
+      ring(r * .2, r * .45, a => (Math.floor((a + Math.PI) / (TAU / 16)) % 2 ? '#f2c14e' : '#c8553d'));
+      ring(r * .45, r * .62, () => '#2a6fb0');
+      ring(r * .62, r * .8, (a, j) => (Math.sin(a * 10 + j * 1.6) > 0 ? '#f4efe2' : '#3fb0c8'));
+      ring(r * .8, r * 1.02, () => '#b5552f');
+      /* lumière qui court sur les tesselles dorées */
+      const k = ((t * .01) % 1.6) - .3; if (k > -.3 && k < 1.3) { const x = (k * 2 - 1) * r * 1.2, sg = c.createLinearGradient(x - r * .25, -r, x + r * .25, r);
+        sg.addColorStop(0, 'rgba(255,250,215,0)'); sg.addColorStop(.5, 'rgba(255,250,215,0.35)'); sg.addColorStop(1, 'rgba(255,250,215,0)'); c.fillStyle = sg; c.fillRect(-r, -r, 2 * r, 2 * r); }
+      c.restore();
+      c.strokeStyle = 'rgba(120,100,70,0.35)'; c.lineWidth = Math.max(.8, r * .025); c.beginPath(); c.arc(0, 0, r * .985, 0, TAU); c.stroke();
+    } },
+
+  /* ---------- PORCELAINE BLEUE : motifs peints au cobalt, un oiseau peint qui traverse ---------- */
+  { id: 'porcelaine', theme: 'arts', name: 'Porcelaine bleue', price: 900, gloss: .95, dust: '#2a4fb0',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#ffffff'); g.addColorStop(.7, '#f1f4fb'); g.addColorStop(1, '#cfd9ef');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      const B = '#1f3f9a', B2 = 'rgba(31,63,154,0.55)';
+      /* frises haut et bas */
+      c.strokeStyle = B; c.lineWidth = Math.max(.8, r * .025);
+      for (const y of [-.72, .72]) { c.beginPath(); c.moveTo(-r, y * r); c.lineTo(r, y * r); c.stroke();
+        for (let i = -6; i <= 6; i++) { c.beginPath(); c.arc(i * r * .17, y * r + (y < 0 ? -r * .06 : r * .06), r * .05, y < 0 ? Math.PI : 0, y < 0 ? 0 : Math.PI); c.stroke(); } }
+      /* branche fleurie */
+      c.lineCap = 'round'; c.lineWidth = Math.max(1, r * .035);
+      c.beginPath(); c.moveTo(-r * .7, r * .45); c.quadraticCurveTo(-r * .2, r * .1, r * .1, -r * .15); c.quadraticCurveTo(r * .3, -r * .3, r * .55, -r * .25); c.stroke();
+      c.lineWidth = Math.max(.8, r * .02); c.beginPath(); c.moveTo(-r * .25, r * .14); c.quadraticCurveTo(-r * .3, -r * .1, -r * .15, -r * .3); c.stroke();
+      const flower = (x, y, s) => { c.fillStyle = B2; for (let k = 0; k < 5; k++) { const a = k * TAU / 5 + .3; c.beginPath(); c.ellipse(x + Math.cos(a) * s, y + Math.sin(a) * s, s * .7, s * .45, a, 0, TAU); c.fill(); }
+        c.fillStyle = B; c.beginPath(); c.arc(x, y, s * .4, 0, TAU); c.fill(); };
+      flower(r * .1, -r * .15, r * .1); flower(-r * .15, -r * .32, r * .08); flower(r * .55, -r * .25, r * .07); flower(-r * .45, r * .3, r * .06);
+      c.fillStyle = B2; for (const [x, y, a] of [[-r * .4, r * .25, -.6], [r * .3, -r * .2, .5], [-r * .05, r * .02, -.2]]) { c.beginPath(); c.ellipse(x, y, r * .09, r * .035, a, 0, TAU); c.fill(); }
+      /* l'oiseau peint traverse toutes les ~6 s */
+      const f = t % 360; if (f < 150) { const k = f / 150, x = -r * 1.2 + k * r * 2.4, y = -r * .45 + Math.sin(k * Math.PI) * -r * .08, fl = Math.sin(t * .35);
+        c.strokeStyle = B; c.lineWidth = Math.max(.9, r * .028); c.beginPath(); c.moveTo(x - r * .12, y - fl * r * .07); c.quadraticCurveTo(x - r * .05, y - r * .03, x, y); c.quadraticCurveTo(x + r * .05, y - r * .03, x + r * .12, y - fl * r * .07); c.stroke();
+        c.fillStyle = B; c.beginPath(); c.ellipse(x, y + r * .01, r * .035, r * .02, 0, 0, TAU); c.fill(); }
+      c.restore();
+      c.strokeStyle = 'rgba(31,63,154,0.45)'; c.lineWidth = Math.max(.8, r * .02); c.beginPath(); c.arc(0, 0, r * .985, 0, TAU); c.stroke();
+    } },
+
+  /* ---------- POP ART : trame de points, contours épais, bulle « POP ! » ---------- */
+  { id: 'popart', theme: 'arts', name: 'Pop Art', price: 800, flat: true, gloss: 0, dust: '#e8337d',
+    paint: (c, r, t) => {
+      c.fillStyle = '#4fd0e8'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      /* trame de points magenta qui grossit en diagonale */
+      const s = r * .12; c.fillStyle = '#e8337d';
+      for (let y = -r; y < r + s; y += s) for (let x = -r + ((Math.round(y / s)) % 2 ? s / 2 : 0); x < r + s; x += s) {
+        const k = Math.max(0, Math.min(1, ((x + y) / (2 * r) + .55))); if (k < .08) continue; c.beginPath(); c.arc(x, y, s * .5 * k, 0, TAU); c.fill(); }
+      c.restore();
+      c.strokeStyle = '#111'; c.lineWidth = Math.max(1.6, r * .075); c.beginPath(); c.arc(0, 0, r * .96, 0, TAU); c.stroke();
+      /* reflet façon BD */
+      c.fillStyle = '#ffffff'; c.strokeStyle = '#111'; c.lineWidth = Math.max(1, r * .035);
+      c.beginPath(); c.moveTo(-r * .6, -r * .2); c.quadraticCurveTo(-r * .62, -r * .62, -r * .2, -r * .62); c.quadraticCurveTo(-r * .45, -r * .5, -r * .6, -r * .2); c.fill(); c.stroke();
+      c.beginPath(); c.arc(-r * .12, -r * .66, r * .05, 0, TAU); c.fill(); c.stroke();
+    },
+    after: (c, r, t) => {
+      /* bulle « POP ! » toutes les ~4 s */
+      const f = t % 240; if (f > 50) return;
+      const k = f < 10 ? f / 10 : f > 40 ? (50 - f) / 10 : 1, s = (.7 + .3 * Math.min(1, f / 8)) * k;
+      c.save(); c.translate(r * .55, -r * .7); c.rotate(-.15); c.scale(s, s);
+      c.fillStyle = '#ffffff'; c.strokeStyle = '#111'; c.lineWidth = Math.max(1.4, r * .05);
+      c.beginPath(); for (let i = 0; i < 18; i++) { const a = i * TAU / 18, rr = (i % 2 ? r * .3 : r * .42); c.lineTo(Math.cos(a) * rr * 1.25, Math.sin(a) * rr); } c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#e8333d'; c.font = `${Math.max(8, Math.round(r * .26))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineWidth = Math.max(1, r * .03); c.strokeText('POP !', 0, r * .02); c.fillText('POP !', 0, r * .02);
+      c.restore();
+    } },
+
+  /* ---------- ART DÉCO : noir et or, éventail qui s'ouvre, éclat qui balaie ---------- */
+  { id: 'artdeco', theme: 'arts', name: 'Art déco', price: 1200, gloss: .6, dust: '#d4a23a',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#2a2f3a'); g.addColorStop(1, '#07090d');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      const gold = (a, b) => { const gg = c.createLinearGradient(-r, -r, r, r); gg.addColorStop(0, '#fff1b8'); gg.addColorStop(.5, '#d4a23a'); gg.addColorStop(1, '#8a5a12'); return gg; };
+      const open = .55 + .45 * (Math.sin(t * .025) + 1) / 2;
+      /* éventail en soleil depuis le bas */
+      c.strokeStyle = gold(); c.lineWidth = Math.max(.8, r * .025);
+      for (let i = -7; i <= 7; i++) { const a = -Math.PI / 2 + i * .17 * open; c.beginPath(); c.moveTo(0, r * .55); c.lineTo(Math.cos(a) * r * 1.6, r * .55 + Math.sin(a) * r * 1.6); c.stroke(); }
+      for (const rr of [.35, .55, .75]) { c.beginPath(); c.arc(0, r * .55, r * rr, -Math.PI / 2 - 1.2 * open, -Math.PI / 2 + 1.2 * open); c.stroke(); }
+      /* arches en gradins */
+      c.fillStyle = '#0b0e14'; c.beginPath(); c.arc(0, r * .55, r * .22, Math.PI, 0); c.fill(); c.strokeStyle = gold(); c.lineWidth = Math.max(1, r * .04); c.stroke();
+      /* émeraudes */
+      for (const [x, y] of [[-r * .55, -r * .2], [r * .55, -r * .2], [0, -r * .62]]) { c.fillStyle = '#1fae6a'; c.beginPath(); c.moveTo(x, y - r * .08); c.lineTo(x + r * .06, y); c.lineTo(x, y + r * .08); c.lineTo(x - r * .06, y); c.closePath(); c.fill(); c.strokeStyle = gold(); c.lineWidth = Math.max(.6, r * .018); c.stroke(); }
+      /* bandeau doré et chevrons */
+      c.fillStyle = gold(); c.fillRect(-r, r * .55, r * 2, r * .05);
+      c.strokeStyle = gold(); c.lineWidth = Math.max(.8, r * .025);
+      for (let i = -5; i <= 5; i++) { c.beginPath(); c.moveTo(i * r * .2 - r * .08, r * .75); c.lineTo(i * r * .2, r * .68); c.lineTo(i * r * .2 + r * .08, r * .75); c.stroke(); }
+      /* éclat qui balaie */
+      const k = ((t * .007) % 1.6) - .3; if (k > -.3 && k < 1.3) { const x = (k * 2 - 1) * r * 1.3, sg = c.createLinearGradient(x - r * .3, -r, x + r * .3, r);
+        sg.addColorStop(0, 'rgba(255,240,190,0)'); sg.addColorStop(.5, 'rgba(255,240,190,0.28)'); sg.addColorStop(1, 'rgba(255,240,190,0)'); c.fillStyle = sg; c.fillRect(-r, -r, 2 * r, 2 * r); }
+      c.restore();
+      c.strokeStyle = gold(); c.lineWidth = Math.max(1.2, r * .05); c.beginPath(); c.arc(0, 0, r * .97, 0, TAU); c.stroke();
+    } },
+];
+
+/* Famille « Les Fêtes » : chaque ballon n'est disponible qu'autour de sa fête (fenêtre de dates). */
+const FETES = [
+
+  /* ---------- CITROUILLE (Halloween) : visage creusé, la bougie fait rougeoyer la chair ---------- */
+  { id: 'citrouille', theme: 'fetes', name: 'Citrouille', price: 600, season: [10, 15, 11, 5], seasonText: 'Du 15/10 au 05/11', string: false, flat: true, gloss: .45, dust: '#ff8a1f',
+    paint: (c, r, t) => {
+      const fl = .78 + Math.sin(t * .31) * .09 + Math.sin(t * .73 + 1) * .07 + Math.sin(t * 1.7) * .04;
+      /* corps : côtes qui restent dans la silhouette du ballon */
+      const body = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); body.addColorStop(0, '#ffb35c'); body.addColorStop(.6, '#f07a12'); body.addColorStop(1, '#a8400a');
+      c.fillStyle = body; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      c.strokeStyle = 'rgba(140,50,0,0.45)'; c.lineWidth = Math.max(1, r * .045);
+      for (const k of [-.62, -.3, .3, .62]) { c.beginPath(); c.ellipse(0, 0, Math.abs(k) * r, r * 1.02, 0, k < 0 ? Math.PI / 2 : -Math.PI / 2, k < 0 ? Math.PI * 1.5 : Math.PI / 2); c.stroke(); }
+      c.strokeStyle = 'rgba(255,200,120,0.25)'; c.lineWidth = Math.max(.8, r * .025);
+      for (const k of [-.46, -.14, .14, .46]) { c.beginPath(); c.ellipse(0, 0, Math.abs(k) * r, r, 0, k < 0 ? Math.PI / 2 : -Math.PI / 2, k < 0 ? Math.PI * 1.5 : Math.PI / 2); c.stroke(); }
+      /* lueur de la bougie à travers la chair */
+      const halo = c.createRadialGradient(0, r * .15, r * .1, 0, r * .15, r * .9); halo.addColorStop(0, `rgba(255,190,60,${(.45 * fl).toFixed(3)})`); halo.addColorStop(1, 'rgba(255,190,60,0)');
+      c.fillStyle = halo; c.fillRect(-r, -r, 2 * r, 2 * r);
+      /* visage creusé : bord épais sombre puis intérieur lumineux */
+      const face = () => {
+        for (const sx of [-1, 1]) { c.moveTo(sx * r * .12, -r * .02); c.lineTo(sx * r * .44, -r * .02); c.lineTo(sx * r * .28, -r * .34); c.closePath(); }
+        c.moveTo(-r * .07, r * .1); c.lineTo(r * .07, r * .1); c.lineTo(0, r * .2); c.closePath();
+        c.moveTo(-r * .55, r * .3); const teeth = [[-.42, .44], [-.32, .34], [-.2, .48], [-.06, .36], [.08, .5], [.2, .36], [.32, .46], [.42, .32], [.55, .3]];
+        for (const [x, y] of teeth) c.lineTo(x * r, y * r); c.quadraticCurveTo(r * .2, r * .78, -r * .55, r * .3); c.closePath(); };
+      c.fillStyle = '#5a1a00'; c.beginPath(); face(); c.fill();
+      c.save(); c.translate(-r * .02, -r * .025); c.scale(.92, .9); c.translate(r * .01, r * .03);
+      const inner = c.createRadialGradient(0, r * .15, 0, 0, r * .15, r * .6); inner.addColorStop(0, '#fff8c8'); inner.addColorStop(.45, `rgb(255,${Math.round(200 + fl * 40)},90)`); inner.addColorStop(1, '#ff8a00');
+      c.shadowColor = '#ffb000'; c.shadowBlur = r * .25 * fl; c.fillStyle = inner; c.beginPath(); face(); c.fill(); c.restore();
+      c.restore();
+    },
+    after: (c, r) => {
+      c.fillStyle = '#5a7a24'; c.strokeStyle = '#3a5214'; c.lineWidth = Math.max(.8, r * .025);
+      c.beginPath(); c.moveTo(-r * .07, -r * .9); c.quadraticCurveTo(-r * .06, -r * 1.15, r * .1, -r * 1.22); c.lineTo(r * .15, -r * 1.12); c.quadraticCurveTo(r * .05, -r * 1.05, r * .08, -r * .9); c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = '#4f8f2a'; c.lineWidth = Math.max(.8, r * .028); c.lineCap = 'round'; c.beginPath(); c.moveTo(r * .05, -r * .97); c.bezierCurveTo(r * .32, -r * 1.12, r * .38, -r * .86, r * .52, -r * .98); c.stroke();
+      c.fillStyle = '#4f8f2a'; c.beginPath(); c.ellipse(-r * .22, -r * 1.0, r * .14, r * .07, -.4, 0, TAU); c.fill();
+    } },
+
+  /* ---------- BOULE DE NOËL : guirlande qui scintille, neige ---------- */
+  { id: 'boulenoel', theme: 'fetes', name: 'Boule de Noël', price: 700, season: [12, 1, 12, 31], seasonText: 'En décembre', gloss: .9, dust: '#d61f2c',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .32, -r * .36, r * .05, 0, 0, r); g.addColorStop(0, '#ff6b6b'); g.addColorStop(.6, '#c41d2b'); g.addColorStop(1, '#6e0a14');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      /* bandeau doré avec flocons */
+      c.fillStyle = '#f2c14e'; c.fillRect(-r, -r * .14, r * 2, r * .28); c.fillStyle = 'rgba(138,90,18,0.4)'; c.fillRect(-r, -r * .14, r * 2, r * .03); c.fillRect(-r, r * .11, r * 2, r * .03);
+      c.strokeStyle = '#ffffff'; c.lineWidth = Math.max(.7, r * .02); c.lineCap = 'round';
+      for (let i = -2; i <= 2; i++) { const x = i * r * .4, y = 0, s = r * .08; for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.beginPath(); c.moveTo(x - Math.cos(a) * s, y - Math.sin(a) * s); c.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); c.stroke(); } }
+      /* guirlande lumineuse en arc */
+      const COL = ['#ffd23f', '#5fd6ff', '#7ae06a', '#ff8fb8'];
+      for (const [yy, ph] of [[-.5, 0], [.5, 2]]) for (let i = 0; i < 9; i++) { const x = (-1 + i * .25) * r, y = yy * r + Math.sin(i * .9 + ph) * r * .06, on = (Math.floor(t / 14) + i) % 3 !== 0;
+        c.save(); if (on) { c.shadowColor = COL[i % 4]; c.shadowBlur = r * .18; } c.fillStyle = on ? COL[i % 4] : 'rgba(255,255,255,0.25)'; c.beginPath(); c.arc(x, y, Math.max(1, r * .045), 0, TAU); c.fill(); c.restore(); }
+      /* neige qui tombe sur la boule */
+      c.fillStyle = '#ffffff'; for (let i = 0; i < 14; i++) { const y = -r + ((h1(i + 4400) * r * 2 + t * r * .006 * (1 + h1(i + 4430))) % (r * 2)); c.globalAlpha = .7; c.beginPath(); c.arc((h1(i + 4460) * 2 - 1) * r, y, Math.max(.6, r * .02), 0, TAU); c.fill(); }
+      c.globalAlpha = 1; c.restore();
+    },
+    after: (c, r) => {
+      const gg = c.createLinearGradient(-r * .22, 0, r * .22, 0); gg.addColorStop(0, '#8a5a12'); gg.addColorStop(.5, '#ffe08a'); gg.addColorStop(1, '#8a5a12');
+      c.fillStyle = gg; c.beginPath(); c.roundRect(-r * .2, -r * 1.12, r * .4, r * .18, r * .04); c.fill();
+      c.strokeStyle = '#c9a23a'; c.lineWidth = Math.max(.8, r * .03); c.beginPath(); c.arc(0, -r * 1.18, r * .08, Math.PI, 0); c.stroke();
+    } },
+
+  /* ---------- ŒUF DE PÂQUES : œuf peint qui se fissure, un poussin sort la tête ---------- */
+  { id: 'oeufpaques', theme: 'fetes', name: 'Œuf de Pâques', price: 600, season: [3, 20, 4, 30], seasonText: 'Du 20/03 au 30/04', gloss: .7, dust: '#9be7c8',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#e9fff6'); g.addColorStop(.6, '#9be7c8'); g.addColorStop(1, '#4fb08a');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      /* bandes peintes */
+      c.fillStyle = '#ff8fb8'; c.beginPath(); for (let i = 0; i <= 20; i++) { const x = -r + i * r / 10; c.lineTo(x, r * .25 + (i % 2 ? -r * .08 : r * .02)); } c.lineTo(r, r * .38); c.lineTo(-r, r * .38); c.closePath(); c.fill();
+      c.fillStyle = '#ffd23f'; c.fillRect(-r, r * .42, r * 2, r * .1);
+      c.fillStyle = '#b388ff'; for (let i = -3; i <= 3; i++) { c.beginPath(); c.arc(i * r * .28, r * .7, r * .07, 0, TAU); c.fill(); }
+      c.fillStyle = '#ffffff'; for (let i = -3; i <= 3; i++) { c.beginPath(); c.arc(i * r * .28 + r * .14, -r * .5, r * .05, 0, TAU); c.fill(); }
+      c.restore();
+    },
+    /* des oreilles de lapin sortent du haut de l'œuf, se dressent, remuent, redescendent (cycle de ~6 s) */
+    after: (c, r, t) => {
+      const f = t % 360, up = f < 40 ? 0 : f < 80 ? (f - 40) / 40 : f < 260 ? 1 : f < 300 ? 1 - (f - 260) / 40 : 0;
+      if (up <= 0) return;
+      const e = 1 - Math.pow(1 - up, 3), wig = f > 80 && f < 260 ? Math.sin((f - 80) * .18) * .12 : 0;
+      c.save(); c.beginPath(); c.rect(-r * 2, -r * 3, r * 4, r * 2.2); c.arc(0, 0, r * .98, 0, TAU, true); c.clip();
+      for (const sx of [-1, 1]) {
+        c.save(); c.translate(sx * r * .2, -r * .78 + (1 - e) * r * .9); c.rotate(sx * (.18 + (sx > 0 ? wig : -wig * .6)));
+        const L = r * .85, w = r * .2;
+        c.fillStyle = '#f4f1ea'; c.strokeStyle = '#8a8478'; c.lineWidth = Math.max(.8, r * .025);
+        c.beginPath(); c.moveTo(-w, 0); c.bezierCurveTo(-w * 1.25, -L * .55, -w * .6, -L, 0, -L); c.bezierCurveTo(w * .6, -L, w * 1.25, -L * .55, w, 0); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#ffb3c8'; c.beginPath(); c.moveTo(-w * .5, -L * .08); c.bezierCurveTo(-w * .7, -L * .55, -w * .3, -L * .86, 0, -L * .86); c.bezierCurveTo(w * .3, -L * .86, w * .7, -L * .55, w * .5, -L * .08); c.closePath(); c.fill();
+        if (sx > 0 && f > 140 && f < 200) { c.fillStyle = '#f4f1ea'; c.beginPath(); c.ellipse(0, -L * .82, w * 1.02, L * .2, 0, 0, TAU); c.fill(); }   /* l'oreille droite se plie */
+        c.restore();
+      }
+      c.restore();
+    } },
+
+  /* ---------- CŒUR (Saint-Valentin) : il bat, des petits cœurs s'envolent ---------- */
+  { id: 'coeurvalentin', theme: 'fetes', name: 'Cœur', price: 500, season: [2, 1, 2, 20], seasonText: 'Du 01/02 au 20/02', gloss: .8, dust: '#ff4f7a',
+    paint: (c, r, t) => {
+      const beat = (t % 60) < 8 ? 1 + .06 * Math.sin((t % 60) / 8 * Math.PI) : (t % 60) < 18 && (t % 60) > 10 ? 1 + .04 * Math.sin(((t % 60) - 10) / 8 * Math.PI) : 1;
+      const g = c.createRadialGradient(-r * .32, -r * .36, r * .05, 0, 0, r); g.addColorStop(0, '#ffc2d4'); g.addColorStop(.6, '#ff6b98'); g.addColorStop(1, '#c41d55');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); c.scale(beat, beat);
+      const heart = (s, y0) => { c.beginPath(); c.moveTo(0, y0 + s * .35); c.bezierCurveTo(-s * .9, y0 - s * .2, -s * .5, y0 - s * .85, 0, y0 - s * .4); c.bezierCurveTo(s * .5, y0 - s * .85, s * .9, y0 - s * .2, 0, y0 + s * .35); c.closePath(); };
+      const hg = c.createLinearGradient(0, -r * .5, 0, r * .4); hg.addColorStop(0, '#ff4f7a'); hg.addColorStop(1, '#a8123e');
+      c.fillStyle = hg; heart(r * .95, r * .12); c.fill(); c.strokeStyle = 'rgba(120,0,40,0.4)'; c.lineWidth = Math.max(.8, r * .025); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.ellipse(-r * .3, -r * .25, r * .12, r * .06, -.6, 0, TAU); c.fill();
+      c.restore();
+    },
+    after: (c, r, t) => {
+      for (let i = 0; i < 5; i++) { const k = ((t * .008 + i * .2) % 1), x = Math.sin(t * .03 + i * 2) * r * .5 + (i - 2) * r * .2, y = -r * .7 - k * r * 1.1, s = r * .12 * (1 - k * .4);
+        c.globalAlpha = 1 - k; c.fillStyle = i % 2 ? '#ff8fb8' : '#ff4f7a';
+        c.beginPath(); c.moveTo(x, y + s * .35); c.bezierCurveTo(x - s * .9, y - s * .2, x - s * .5, y - s * .85, x, y - s * .4); c.bezierCurveTo(x + s * .5, y - s * .85, x + s * .9, y - s * .2, x, y + s * .35); c.fill(); }
+      c.globalAlpha = 1;
+    } },
+
+  /* ---------- FEU D'ARTIFICE (Nouvel An et 14 juillet) ---------- */
+  { id: 'feuartifice', theme: 'fetes', name: "Feu d'artifice", price: 900, season: [12, 26, 1, 6], season2: [7, 10, 7, 18], seasonText: 'Nouvel An et 14 juillet', string: false, gloss: .85, dust: '#ffd23f',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(0, r * .3, r * .1, 0, 0, r); g.addColorStop(0, '#2a2f6e'); g.addColorStop(1, '#070a1e');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      for (let i = 0; i < 18; i++) { c.fillStyle = `rgba(255,255,255,${(.3 + h1(i + 4700) * .5).toFixed(2)})`; c.beginPath(); c.arc((h1(i + 4720) * 2 - 1) * r, (h1(i + 4740) * 2 - 1) * r * .6 - r * .2, Math.max(.5, r * .01), 0, TAU); c.fill(); }
+      /* silhouette de toits */
+      c.fillStyle = '#05060f'; c.beginPath(); c.moveTo(-r, r); for (const [x, y] of [[-1, .62], [-.7, .62], [-.7, .5], [-.45, .5], [-.45, .66], [-.2, .66], [-.1, .4], [0, .66], [.25, .66], [.25, .55], [.5, .55], [.5, .62], [1, .62]]) c.lineTo(x * r, y * r); c.lineTo(r, r); c.closePath(); c.fill();
+      /* 3 fusées décalées dans le temps */
+      const COLS = [['#ffd23f', '#ff8a3d'], ['#5fd6ff', '#ffffff'], ['#ff4f7a', '#b388ff']];
+      for (let j = 0; j < 3; j++) { const T = (t + j * 55) % 165, X = (-.45 + j * .45) * r, Y = (-.25 - (j % 2) * .2) * r;
+        if (T < 35) { const k = T / 35; c.fillStyle = '#fff6c8'; c.beginPath(); c.arc(X, r * .6 + (Y - r * .6) * k, Math.max(.8, r * .025), 0, TAU); c.fill(); }
+        else if (T < 110) { const k = (T - 35) / 75, R = r * .58 * Math.sqrt(k);
+          if (k < .15) { c.fillStyle = `rgba(255,250,220,${(1 - k / .15).toFixed(3)})`; c.beginPath(); c.arc(X, Y, r * .14, 0, TAU); c.fill(); }
+          for (let i = 0; i < 16; i++) { const a = i * TAU / 16, x = X + Math.cos(a) * R, y = Y + Math.sin(a) * R + k * k * r * .15;
+            c.strokeStyle = COLS[j][i % 2]; c.globalAlpha = 1 - k; c.lineWidth = Math.max(1, r * .045); c.lineCap = 'round';
+            c.beginPath(); c.moveTo(X + Math.cos(a) * R * .55, Y + Math.sin(a) * R * .7 + k * k * r * .1); c.lineTo(x, y); c.stroke(); }
+          c.globalAlpha = 1; } }
+      c.restore();
+    } },
+];
+
+/* Famille « Les Mécaniques » : laiton et acier, des pièces qui bougent vraiment. */
+const brass = (c, r) => { const g = c.createLinearGradient(-r, -r, r, r); g.addColorStop(0, '#fff1b8'); g.addColorStop(.45, '#d4a23a'); g.addColorStop(1, '#7a4f10'); return g; };
+function gear(c, x, y, R, n, rot, col) {
+  c.save(); c.translate(x, y); c.rotate(rot); c.fillStyle = col; c.beginPath();
+  for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n, rr = i % 2 ? R * .78 : R; c.lineTo(Math.cos(a - .12) * rr, Math.sin(a - .12) * rr); c.lineTo(Math.cos(a + .12) * rr, Math.sin(a + .12) * rr); }
+  c.closePath(); c.fill(); c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.arc(0, 0, R * .3, 0, TAU); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = Math.max(.5, R * .06); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; c.beginPath(); c.moveTo(Math.cos(a) * R * .32, Math.sin(a) * R * .32); c.lineTo(Math.cos(a) * R * .7, Math.sin(a) * R * .7); c.stroke(); }
+  c.restore();
+}
+const MECAS = [
+
+  /* ---------- MONTRE À GOUSSET ---------- */
+  { id: 'gousset', theme: 'mecaniques', name: 'Montre à gousset', price: 1100, gloss: .8, dust: '#d4a23a',
+    paint: (c, r, t) => {
+      c.fillStyle = brass(c, r); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.fillStyle = '#fbf6ea'; c.beginPath(); c.arc(0, 0, r * .84, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r * .84);
+      /* engrenages visibles par la fenêtre */
+      c.fillStyle = '#2a2018'; c.beginPath(); c.arc(0, r * .3, r * .3, 0, TAU); c.fill();
+      c.save(); c.beginPath(); c.arc(0, r * .3, r * .28, 0, TAU); c.clip();
+      gear(c, -r * .1, r * .3, r * .17, 10, t * .03, '#d4a23a'); gear(c, r * .14, r * .36, r * .11, 8, -t * .045, '#e8c060'); gear(c, r * .05, r * .14, r * .08, 7, t * .06, '#b8862a');
+      c.restore(); c.strokeStyle = brass(c, r); c.lineWidth = Math.max(1, r * .03); c.beginPath(); c.arc(0, r * .3, r * .3, 0, TAU); c.stroke();
+      /* graduations et chiffres */
+      c.strokeStyle = '#2a2018';
+      for (let i = 0; i < 60; i++) { const a = i * TAU / 60, l = i % 5 ? .05 : .1; c.lineWidth = Math.max(.5, r * (i % 5 ? .01 : .022)); c.beginPath(); c.moveTo(Math.cos(a) * r * .8, Math.sin(a) * r * .8); c.lineTo(Math.cos(a) * r * (.8 - l), Math.sin(a) * r * (.8 - l)); c.stroke(); }
+      c.fillStyle = '#2a2018'; c.font = `${Math.max(6, Math.round(r * .15))}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (const [n, a] of [['XII', -Math.PI / 2], ['III', 0], ['IX', Math.PI]]) c.fillText(n, Math.cos(a) * r * .57, Math.sin(a) * r * .57);
+      /* aiguilles (la trotteuse avance par à-coups) */
+      const sec = Math.floor(t / 60), ha = t * .0006 - Math.PI / 2, ma = t * .007 - Math.PI / 2, sa = sec * TAU / 60 - Math.PI / 2;
+      c.strokeStyle = '#1b1b2a'; c.lineCap = 'round';
+      c.lineWidth = Math.max(1.2, r * .05); c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(ha) * r * .38, Math.sin(ha) * r * .38); c.stroke();
+      c.lineWidth = Math.max(1, r * .035); c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(ma) * r * .6, Math.sin(ma) * r * .6); c.stroke();
+      c.strokeStyle = '#c41d2b'; c.lineWidth = Math.max(.6, r * .015); c.beginPath(); c.moveTo(-Math.cos(sa) * r * .12, -Math.sin(sa) * r * .12); c.lineTo(Math.cos(sa) * r * .7, Math.sin(sa) * r * .7); c.stroke();
+      c.fillStyle = '#d4a23a'; c.beginPath(); c.arc(0, 0, r * .05, 0, TAU); c.fill();
+      c.restore();
+      c.strokeStyle = '#7a4f10'; c.lineWidth = Math.max(.8, r * .02); c.beginPath(); c.arc(0, 0, r * .84, 0, TAU); c.stroke();
+    },
+    after: (c, r) => { c.fillStyle = brass(c, r); c.beginPath(); c.roundRect(-r * .12, -r * 1.12, r * .24, r * .16, r * .04); c.fill();
+      c.strokeStyle = '#c9a23a'; c.lineWidth = Math.max(1, r * .045); c.beginPath(); c.arc(0, -r * 1.22, r * .13, 0, TAU); c.stroke(); } },
+
+  /* ---------- BOUSSOLE : l'aiguille cherche le nord ---------- */
+  { id: 'boussole', theme: 'mecaniques', name: 'Boussole', price: 900, gloss: .85, dust: '#c41d2b',
+    paint: (c, r, t) => {
+      c.fillStyle = brass(c, r); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      const g = c.createRadialGradient(-r * .2, -r * .25, r * .1, 0, 0, r * .85); g.addColorStop(0, '#f6efdc'); g.addColorStop(1, '#d9c9a0');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * .84, 0, TAU); c.fill();
+      /* rose des vents */
+      c.fillStyle = 'rgba(90,60,20,0.25)'; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + Math.PI / 8; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a - .12) * r * .35, Math.sin(a - .12) * r * .35); c.lineTo(Math.cos(a) * r * .55, Math.sin(a) * r * .55); c.closePath(); c.fill(); }
+      c.fillStyle = 'rgba(90,60,20,0.5)'; for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a - .15) * r * .3, Math.sin(a - .15) * r * .3); c.lineTo(Math.cos(a) * r * .7, Math.sin(a) * r * .7); c.closePath(); c.fill(); }
+      c.strokeStyle = 'rgba(90,60,20,0.6)'; c.lineWidth = Math.max(.5, r * .012); for (let i = 0; i < 36; i++) { const a = i * TAU / 36; c.beginPath(); c.moveTo(Math.cos(a) * r * .8, Math.sin(a) * r * .8); c.lineTo(Math.cos(a) * r * .74, Math.sin(a) * r * .74); c.stroke(); }
+      c.fillStyle = '#5a3a14'; c.font = `${Math.max(6, Math.round(r * .16))}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (const [n, a] of [['N', -Math.PI / 2], ['E', 0], ['S', Math.PI / 2], ['O', Math.PI]]) { c.fillStyle = n === 'N' ? '#c41d2b' : '#5a3a14'; c.fillText(n, Math.cos(a) * r * .62, Math.sin(a) * r * .62); }
+      /* aiguille : oscillation amortie qui reprend de temps en temps */
+      const f = t % 300, k = f / 300, ang = Math.sin(f * .09) * 1.1 * Math.exp(-k * 6) + Math.sin(t * .02) * .03;
+      c.save(); c.rotate(ang);
+      c.fillStyle = '#c41d2b'; c.beginPath(); c.moveTo(0, -r * .62); c.lineTo(r * .08, 0); c.lineTo(-r * .08, 0); c.closePath(); c.fill();
+      c.fillStyle = '#e6ebf3'; c.beginPath(); c.moveTo(0, r * .62); c.lineTo(r * .08, 0); c.lineTo(-r * .08, 0); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = Math.max(.5, r * .012); c.beginPath(); c.moveTo(0, -r * .62); c.lineTo(0, r * .62); c.stroke();
+      c.restore();
+      c.fillStyle = brass(c, r); c.beginPath(); c.arc(0, 0, r * .07, 0, TAU); c.fill();
+      c.strokeStyle = '#7a4f10'; c.lineWidth = Math.max(.8, r * .02); c.beginPath(); c.arc(0, 0, r * .84, 0, TAU); c.stroke();
+    } },
+
+  /* ---------- GLOBE ANCIEN : terre sépia qui tourne, méridien en laiton ---------- */
+  { id: 'globeancien', theme: 'mecaniques', name: 'Globe ancien', price: 1000, gloss: .7, dust: '#c9a77a',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#f3e6c8'); g.addColorStop(.7, '#d6bf8e'); g.addColorStop(1, '#8a6a3a');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r); c.rotate(-.35);
+      /* continents qui défilent (projection sur la sphère) */
+      const rot = t * .006, CONT = [[0, .25, .35, .3], [.9, -.2, .3, .45], [1.9, .3, .22, .2], [2.6, -.35, .4, .25], [3.6, .1, .3, .38], [4.6, -.1, .25, .3], [5.4, .4, .2, .18]];
+      c.fillStyle = '#8a9a5a'; c.strokeStyle = 'rgba(70,50,20,0.55)'; c.lineWidth = Math.max(.6, r * .015);
+      for (const [lon, lat, w, h] of CONT) { const a = lon + rot, x = Math.sin(a), z = Math.cos(a); if (z < -.1) continue;
+        c.save(); c.translate(x * r * .95 * Math.cos(lat), lat * r * .95); c.scale(Math.max(.15, z), 1);
+        c.beginPath(); for (let k = 0; k <= 10; k++) { const b = k * TAU / 10, rr = 1 + .25 * Math.sin(b * 3 + lon * 5); c.lineTo(Math.cos(b) * w * r * rr, Math.sin(b) * h * r * rr); } c.closePath(); c.fill(); c.stroke(); c.restore(); }
+      /* méridiens et parallèles */
+      c.strokeStyle = 'rgba(90,60,20,0.35)'; c.lineWidth = Math.max(.5, r * .012);
+      for (let k = 0; k < 6; k++) { const a = k * Math.PI / 6 + rot % (Math.PI / 6), x = Math.sin(a); c.beginPath(); c.ellipse(0, 0, Math.abs(x) * r, r, 0, 0, TAU); c.stroke(); }
+      for (const y of [-.6, -.3, 0, .3, .6]) { c.beginPath(); c.ellipse(0, y * r, Math.sqrt(1 - y * y) * r, r * .06, 0, 0, TAU); c.stroke(); }
+      c.restore();
+      /* méridien en laiton */
+      c.strokeStyle = brass(c, r); c.lineWidth = Math.max(1.5, r * .07); c.beginPath(); c.arc(0, 0, r * 1.0, -Math.PI * .85, Math.PI * .85); c.stroke();
+      c.fillStyle = '#d4a23a'; for (const a of [-Math.PI * .85, Math.PI * .85]) { c.beginPath(); c.arc(Math.cos(a) * r, Math.sin(a) * r, r * .05, 0, TAU); c.fill(); }
+    } },
+
+  /* ---------- BOÎTE À MUSIQUE : cylindre à picots, notes qui s'envolent ---------- */
+  { id: 'boitemusique', theme: 'mecaniques', name: 'Boîte à musique', price: 1200, gloss: .65, dust: '#b8862a',
+    paint: (c, r, t) => {
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#a8643a'); g.addColorStop(1, '#4a2410');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r);
+      c.strokeStyle = 'rgba(30,10,0,0.3)'; c.lineWidth = Math.max(.5, r * .012); for (let i = -6; i <= 6; i++) { c.beginPath(); c.moveTo(-r, i * r * .16); c.bezierCurveTo(-r * .3, i * r * .16 + r * .05, r * .3, i * r * .16 - r * .05, r, i * r * .16); c.stroke(); }
+      /* fenêtre sur le mécanisme */
+      c.fillStyle = '#1a0e06'; c.beginPath(); c.roundRect(-r * .7, -r * .32, r * 1.4, r * .64, r * .1); c.fill();
+      /* cylindre qui tourne avec ses picots */
+      const cy = c.createLinearGradient(0, -r * .2, 0, r * .2); cy.addColorStop(0, '#fff1b8'); cy.addColorStop(.5, '#d4a23a'); cy.addColorStop(1, '#6b4510');
+      c.fillStyle = cy; c.fillRect(-r * .6, -r * .18, r * 1.2, r * .36);
+      c.fillStyle = '#f4efe2';
+      for (let i = 0; i < 26; i++) { const lane = i % 9, ph = h1(i + 5100) * TAU + t * .04, z = Math.cos(ph); if (z < 0) continue;
+        c.beginPath(); c.arc(-r * .55 + lane * r * .135, Math.sin(ph) * r * .17, Math.max(.6, r * .018 * (.5 + z)), 0, TAU); c.fill(); }
+      /* peigne en acier */
+      c.fillStyle = '#c9d3e0'; for (let i = 0; i < 9; i++) { c.fillRect(-r * .57 + i * r * .135, r * .2, r * .05, r * .1 + (i % 3) * r * .015); }
+      c.restore();
+      c.strokeStyle = brass(c, r); c.lineWidth = Math.max(1.2, r * .05); c.beginPath(); c.arc(0, 0, r * .975, 0, TAU); c.stroke();
+    },
+    after: (c, r, t) => {
+      /* manivelle qui tourne */
+      const a = t * .04; c.strokeStyle = '#c9a23a'; c.lineWidth = Math.max(1, r * .05); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(r * .95, 0); c.lineTo(r * 1.15, 0); c.lineTo(r * 1.15 + Math.cos(a) * r * .15, Math.sin(a) * r * .15); c.stroke();
+      c.fillStyle = '#7a3a1a'; c.beginPath(); c.arc(r * 1.15 + Math.cos(a) * r * .15, Math.sin(a) * r * .15, r * .05, 0, TAU); c.fill();
+      /* notes qui s'envolent */
+      for (let i = 0; i < 3; i++) { const k = ((t * .007 + i / 3) % 1), x = (i - 1) * r * .4 + Math.sin(t * .05 + i * 2) * r * .12, y = -r * .8 - k * r * .9, s = r * .14;
+        c.globalAlpha = 1 - k; c.fillStyle = ['#ffd23f', '#ffffff', '#ffb3c8'][i];
+        c.beginPath(); c.ellipse(x, y, s * .5, s * .38, -.4, 0, TAU); c.fill(); c.fillRect(x + s * .38, y - s * 1.4, s * .14, s * 1.4);
+        if (i !== 1) { c.beginPath(); c.moveTo(x + s * .52, y - s * 1.4); c.quadraticCurveTo(x + s * 1.2, y - s * 1.1, x + s * .9, y - s * .6); c.lineTo(x + s * .52, y - s * 1); c.fill(); } }
+      c.globalAlpha = 1;
+    } },
+
+  /* ---------- RÉACTEUR : turbine qui tourne, cœur incandescent ---------- */
+  { id: 'reacteur', theme: 'mecaniques', name: 'Réacteur', price: 1400, string: false, gloss: .6, dust: '#5fd6ff',
+    paint: (c, r, t) => {
+      const pulse = .6 + .4 * Math.sin(t * .1);
+      const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#9aa4b8'); g.addColorStop(.7, '#3a4258'); g.addColorStop(1, '#14182a');
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+      c.save(); clipCircle(c, r * .86);
+      c.fillStyle = '#0a0e1c'; c.beginPath(); c.arc(0, 0, r * .86, 0, TAU); c.fill();
+      /* turbine */
+      c.save(); c.rotate(t * .12); const n = 14;
+      for (let i = 0; i < n; i++) { c.rotate(TAU / n); const bg = c.createLinearGradient(0, -r * .2, r * .3, -r * .8); bg.addColorStop(0, '#c9d3e0'); bg.addColorStop(1, '#5a6478');
+        c.fillStyle = bg; c.beginPath(); c.moveTo(-r * .03, -r * .2); c.quadraticCurveTo(r * .25, -r * .45, r * .12, -r * .84); c.lineTo(r * .02, -r * .84); c.quadraticCurveTo(r * .1, -r * .45, -r * .1, -r * .2); c.closePath(); c.fill(); }
+      c.restore();
+      /* flou de vitesse */
+      c.fillStyle = 'rgba(200,215,235,0.12)'; c.beginPath(); c.arc(0, 0, r * .84, 0, TAU); c.fill();
+      /* cœur incandescent */
+      const cg = c.createRadialGradient(0, 0, 0, 0, 0, r * .5); cg.addColorStop(0, '#ffffff'); cg.addColorStop(.35, `rgba(95,214,255,${(.9 * pulse + .1).toFixed(3)})`); cg.addColorStop(1, 'rgba(42,99,232,0)');
+      c.fillStyle = cg; c.beginPath(); c.arc(0, 0, r * .5, 0, TAU); c.fill();
+      c.fillStyle = '#3a4258'; c.beginPath(); c.arc(0, 0, r * .12, 0, TAU); c.fill(); c.fillStyle = '#9aa4b8'; c.beginPath(); c.arc(-r * .03, -r * .03, r * .05, 0, TAU); c.fill();
+      c.restore();
+      /* carénage boulonné */
+      c.strokeStyle = '#9aa4b8'; c.lineWidth = Math.max(1.5, r * .08); c.beginPath(); c.arc(0, 0, r * .9, 0, TAU); c.stroke();
+      c.fillStyle = '#e6ebf3'; for (let i = 0; i < 10; i++) { const a = i * TAU / 10; c.beginPath(); c.arc(Math.cos(a) * r * .9, Math.sin(a) * r * .9, Math.max(.8, r * .022), 0, TAU); c.fill(); }
+      c.strokeStyle = `rgba(95,214,255,${(.5 * pulse).toFixed(3)})`; c.lineWidth = Math.max(1, r * .03); c.beginPath(); c.arc(0, 0, r * .97, 0, TAU); c.stroke();
+    } },
+];
+
+SKINS.push(...ARTS, ...FETES, ...MECAS);
+
 const THEMES = [
   { id: 'classiques', name: 'Classiques', bonus: 100 },
   { id: 'gourmand', name: 'Gourmandises', bonus: 200 },
@@ -3738,6 +4131,9 @@ const THEMES = [
   { id: 'profondeurs', name: 'Profondeurs', bonus: 300 },
   { id: 'merveilles', name: 'Merveilles', bonus: 300 },
   { id: 'legendes', name: 'Légendes', bonus: 500 },
+  { id: 'arts', name: 'Arts', bonus: 300 },
+  { id: 'fetes', name: 'Fêtes', bonus: 300 },
+  { id: 'mecaniques', name: 'Mécaniques', bonus: 300 },
   { id: 'exploits', name: 'Exploits', bonus: 0 },
   { id: 'mondes', name: 'Mondes', bonus: 0 },
   { id: 'trophees', name: 'Trophées', bonus: 0 },
