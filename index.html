@@ -273,6 +273,8 @@ svg { display: block; }
 .hud-top .coin-pill { justify-self: end; }
 #score { font-family: var(--font-display); font-size: 62px; line-height: .95; text-align: center; font-variant-numeric: tabular-nums; text-shadow: 0 3px 0 var(--hud-shadow); transition: transform .15s; min-width: 2ch; }
 #score.bump { transform: scale(1.22); }
+.rec-pill { position: absolute; left: 16px; top: 62px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--hud-chip); color: var(--hud-ink); font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; transition: box-shadow .3s; }
+.rec-pill.hot { box-shadow: 0 0 0 4px rgba(242,183,5,.45); }
 .chips { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; padding: 0 40px; }
 .chip { background: var(--hud-chip); color: var(--hud-soft); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 900; white-space: nowrap; }
 .chip.gold { color: var(--hud-gold); }
@@ -281,6 +283,7 @@ svg { display: block; }
 .chip.fire { color: #ffffff; background: linear-gradient(90deg, #ff7a1a, #e8336d); animation: firePulse .55s ease-in-out infinite alternate; }
 @keyframes firePulse { from { transform: scale(1); } to { transform: scale(1.08); } }
 
+#banner.biome { font-size: 60px; color: #ffffff; -webkit-text-stroke: 3px #12304f; paint-order: stroke fill; text-shadow: 0 6px 0 #12304f, 0 10px 24px rgba(0,0,0,.35); }
 #banner {
   position: fixed; left: 0; right: 0; top: 50%; text-align: center; pointer-events: none;
   font-family: var(--font-display); font-size: 34px; line-height: 1.05; color: var(--hud-ink);
@@ -910,6 +913,7 @@ body.nav-on .screen { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92
 <div class="hud" id="hud" hidden>
   <div class="hud-top">
     <button class="icon-btn" id="btnPause" aria-label="Pause"></button>
+    <span class="rec-pill" id="recPill" hidden></span>
     <div id="score" aria-live="polite">0</div>
     <span class="coin-pill" id="hudCoinPill"><span class="coin" aria-hidden="true"></span><span id="hudCoins">0</span></span>
   </div>
@@ -4218,6 +4222,7 @@ const BONUSES = [
 ];
 
 /* Une nouveauté à chaque manche : la plateforme glisse (2), le vent (3), les oiseaux (4), la manche bonus (5), le double ballon (6), puis tout se mélange */
+const ARCADE_META = new Set(['name', 'goal', 'plat', 'intro', 'stars', 'bonus', 'coins', 'move', 'wind', 'birds', 'dbl', 'windChance', 'boss', 'hp', 'shrink', 'gust']);
 function arcadeRound(L, rng, f) {
   if (L < 0) return { speed: 0, wind: 0, gust: false, dbl: false, birdEvery: 0, bonus: false };
   const still = L >= 6 && rng() < .2;
@@ -4229,7 +4234,17 @@ function arcadeRound(L, rng, f) {
   const birdsOn = !!f.birds || L === 3 || (L >= 4 && rng() < Math.min(.75, .35 + (L - 4) * .05));
   const birdEvery = birdsOn ? Math.max(100, 230 - L * 5) : 0;
   const bonus = L >= 1 && rng() < .38;
-  return { speed, wind, gust, dbl, birdEvery, bonus };
+  if (!f.v2 || L < 10) return { speed, wind, gust, dbl, birdEvery, bonus };
+  /* Infini v2 : au-delà de la manche 10, chaque biome apporte ses obstacles et la difficulté continue de monter */
+  const over = Math.max(0, L - 20), b = Math.floor(L / 10), W = WORLDS[b % WORLDS.length];
+  const p = { speed: L >= 1 && !still ? Math.min(3.2 + over * .04, 5) : 0, wind: wind ? Math.sign(wind) * Math.min(.2 + over * .003, .3) : 0, gust, dbl,
+    birdEvery: birdEvery ? Math.max(70, birdEvery - over * 2) : 0, bonus, platMul: Math.max(.62, 1 - over * .007) };
+  const pool = W.levels.filter(l => !l.boss && Object.keys(l).some(k => !ARCADE_META.has(k)));
+  if (pool.length && rng() < Math.min(.9, .6 + b * .05)) {
+    const sp = storyRound(pool[Math.floor(rng() * pool.length)], Math.min(L % 10, 9), rng);
+    for (const k in sp) if (!(k in p) && sp[k]) p[k] = sp[k];
+  }
+  return p;
 }
 function storyRound(lv, L, rng) {
   const speed = lv.move ? Math.min(3.2, lv.move[0] + L * lv.move[1]) : 0;
@@ -4254,7 +4269,7 @@ function zenRound(L, rng) {
 function seededRng(seed) { return L => mulberry32((seed ^ Math.imul(L + 1, 2654435761)) >>> 0); }
 function buildCfg(mode, o) {
   if (mode === 'arcade') {
-    return { mode, shrink: .9, plat: 1, size: 1, inflate: 1, grav: 1, coinChance: .55, rngFor: () => Math.random, round: (L, rng) => arcadeRound(L - (cfg.shift || 0), rng, {}), label: L => 'Niveau ' + (L + 1) };
+    return { mode, v2: true, shrink: .9, plat: 1, size: 1, inflate: 1, grav: 1, coinChance: .55, rngFor: () => Math.random, round: (L, rng) => arcadeRound(L - (cfg.shift || 0), rng, { v2: true }), label: L => 'Manche ' + (L + 1) };
   }
   if (mode === 'chrono') {
     return { mode, shrink: .9, plat: 1, size: 1, inflate: 1, grav: 1, coinChance: .55, rngFor: () => Math.random, round: (L, rng) => arcadeRound(L, rng, {}), label: L => 'Niveau ' + (L + 1) };
@@ -4289,7 +4304,7 @@ function startGame(mode, o = {}) {
   cfg.shift = cfg.tuto && mode === 'arcade' ? 3 : 0;
   G.run++;
   ensureMissions();
-  Object.assign(G, { phase: 'play', mode, world: o.world || 1, level: o.level || 0, score: 0, round: 0, combo: 0, maxCombo: 0, coinsRun: 0, perfects: 0, sizeBoost: 0, shield: false, slow: 0, wide: 0, timers: [], dailyHit: false, seen: {}, ending: false, shown: 0, timeLeft: mode === 'chrono' ? 3600 : 0, lands: 0, x3run: 0, trophiesRun: [],
+  Object.assign(G, { recordHit: false, deflHint: false, biomeT: null, phase: 'play', mode, world: o.world || 1, level: o.level || 0, score: 0, round: 0, combo: 0, maxCombo: 0, coinsRun: 0, perfects: 0, sizeBoost: 0, shield: false, slow: 0, wide: 0, timers: [], dailyHit: false, seen: {}, ending: false, shown: 0, timeLeft: mode === 'chrono' ? 3600 : 0, lands: 0, x3run: 0, trophiesRun: [],
     second: false, tutoLands: 0, tutoDragged: false, missionsDone: [], xpStart: S.xp, lvlStart: playerLevel(), coinsStart: S.coins });
   FX.particles = []; FX.floats = []; FX.streaks = []; FX.birds = []; FX.flying = []; FX.embers = []; FX.fire = []; FX.shots = []; FX.rings = []; FX.critters = []; FX.ink = []; FX.inkShots = []; FX.venom = [];
   G.boss = cfg.lv && cfg.lv.boss ? makeBoss(cfg.lv) : null;
@@ -4313,7 +4328,12 @@ function newRound() {
   const L = G.round;
   const rng = cfg.rngFor(L);
   const p = cfg.round(L, rng);
-  const pw = Math.max(32, PW * .11) * cfg.plat * (G.wide > 0 ? 1.7 : 1);
+  if (cfg.v2) {
+    const W = L >= 10 ? WORLDS[Math.floor(L / 10) % WORLDS.length] : null, want = W ? W.sky : 'arcade';
+    if (view !== want) setView(want);
+    if (W && L % 10 === 0) { const bn = $('banner'); bn.classList.remove('show'); schedule(8, () => { banner(W.name); sfx.goal(); }); G.biomeT = G.frame; }
+  }
+  const pw = Math.max(32, PW * .11) * cfg.plat * (p.platMul || 1) * (G.wide > 0 ? 1.7 : 1);
   const speed = p.speed * (G.slow > 0 ? .45 : 1);
   R = {
     L, p, rng,
@@ -4500,6 +4520,7 @@ function runTimers() {
   for (const tm of due) if (tm.run === G.run && G.phase === 'play') tm.fn();
 }
 
+const DEFL_GRACE = 180, DEFL_TIME = 120;
 function drop() {
   const b = aimBall();
   if (!b || G.phase !== 'play' || (cfg.mode === 'chrono' && G.ending)) return;
@@ -4582,6 +4603,10 @@ function land(b, perfect, surfaceY, sf) {
     if (G.tutoLands >= 3) { S.tutoDone = true; save(); }
   }
 
+  if (cfg.v2 && !G.recordHit && (S.best || 0) > 0 && G.score > S.best) {
+    G.recordHit = true;
+    schedule(16, () => { banner('Nouveau record !', 'Continue'); sfx.goal(); confetti(PW / 2, H * .3, 50); buzz([20, 40, 20]); updateHud(); });
+  }
   if (cfg.mode === 'daily' && !G.dailyHit && G.score >= cfg.target) {
     G.dailyHit = true;
     schedule(16, () => { banner('Objectif atteint', 'Continue pour battre ton record du jour'); sfx.goal(); confetti(PW / 2, H * .42, 44); buzz([20, 40, 20]); });
@@ -6833,6 +6858,16 @@ function updateGame() {
         if (G.frame % 6 === 0) sfx.squeak(b.inf);
         if (b.inf >= 1) { popInAir(b); continue; }
       }
+      if (cfg.v2 && G.round >= 4 && b.enter >= 1 && !(dragging || keys.left || keys.right)) {
+        b.air = (b.air || 0) + 1;
+        if (b.air > DEFL_GRACE) {
+          if (!b.base0) b.base0 = b.base;
+          b.base = Math.max(b.base0 * .85, b.base - b.base0 * .15 / DEFL_TIME);
+          if (!G.deflHint) { G.deflHint = true; showHint("Le ballon perd de l'air : pose ton doigt pour viser"); }
+          if (b.air % 9 === 0) FX.particles.push({ x: b.x + (Math.random() - .5) * b.r * .3, y: b.y - b.r, vx: (Math.random() - .5) * 1.2, vy: -1.4, g: -.01, drag: .98, life: 34, size: 3 + Math.random() * 2.5, color: '#ffffff', rot: 0, vr: 0, shape: 'dot' });
+          if (b.air > DEFL_GRACE + DEFL_TIME) { drop(); continue; }
+        }
+      }
       b.r = b.base * (1 + INF_GROW * b.inf);
       if (keys.left) b.x -= 6;
       if (keys.right) b.x += 6;
@@ -6988,7 +7023,9 @@ function floatText(text, x, y, size, kind) {
 let bannerTimer = 0;
 function banner(title, sub) {
   const el = $('banner');
+  if (cfg && cfg.v2 && G.biomeT != null && G.frame - G.biomeT < 75 && !WORLDS.some(w => w.name === title)) { schedule(80 - (G.frame - G.biomeT), () => banner(title, sub)); return; }
   el.textContent = title;
+  el.classList.toggle('biome', !!(cfg && cfg.v2 && WORLDS.some(w => w.name === title)));
   if (sub) { const s = document.createElement('small'); s.textContent = sub; el.appendChild(s); }
   el.classList.add('show');
   clearTimeout(bannerTimer);
@@ -7238,6 +7275,11 @@ function drawBalloon(b, skin, th) {
   drawOutfit(ctx, b.r, MIR() && b.state !== 'home');
   if (b.state === 'aim' && b.inf > .72) { ctx.fillStyle = `rgba(255,40,60,${Math.min(.4, (b.inf - .72) * 1.4).toFixed(3)})`; ctx.beginPath(); ctx.arc(0, 0, b.r, 0, TAU); ctx.fill(); }
   ctx.restore();
+  if (b.state === 'aim' && cfg && cfg.v2 && b.air > 20 && b.air <= DEFL_GRACE && !(b.inf > 0)) {
+    const k = 1 - b.air / DEFL_GRACE, rr = b.r + 10, a0 = -Math.PI / 2;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#ff8a3d'; ctx.beginPath(); ctx.arc(b.x, b.y, rr, a0, a0 + TAU * k); ctx.stroke(); ctx.restore();
+  }
   if (b.state === 'aim' && b.inf > 0) {
     const rr = b.r + 11, a0 = -Math.PI / 2;
     ctx.lineCap = 'round'; ctx.lineWidth = 5;
@@ -7680,6 +7722,8 @@ function refreshHome() {
 function updateHud() {
   if (!R || !cfg) return;
   $('cLvl').textContent = cfg.label(G.round);
+  { const rp = $('recPill'), on = !!cfg.v2 && (S.best || 0) > 0; rp.hidden = !on;
+    if (on) { rp.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3.5h8v5.5a4 4 0 0 1-8 0zM12 13v3.5M8.5 20.5h7" fill="none" stroke="#f2b705" stroke-width="2.6" stroke-linecap="round"/></svg>Record ' + Math.max(S.best, G.recordHit ? G.score : 0); rp.classList.toggle('hot', !!G.recordHit); } }
   $('cCombo').textContent = G.combo >= 2 ? 'Combo x' + G.combo : '';
   $('cCombo').classList.toggle('fire', G.combo >= 3);
   const abm = aimBall();
