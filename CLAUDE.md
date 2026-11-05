@@ -3,6 +3,11 @@
 Jeu mobile (PWA) de Virgile : on glisse un ballon au-dessus d'une plateforme, on le gonfle (x2, x3) et on le lâche.
 En ligne : https://virgilevdc-rgb.github.io/Balloon-Drop/ (GitHub Pages, branche `main`).
 
+## Objectif
+- D'abord pour le plaisir, puis **sortie sur l'App Store** et peut-être **en vivre**.
+- Viser un jeu **parfaitement ficelé** : finitions, sensations, **easter eggs** et secrets à découvrir.
+- Suivi des tâches dans Notion : https://app.notion.com/p/edf64af96e9b4db785112664ddec41f7 (mettre à jour le statut après chaque tâche).
+
 ## Façon de travailler avec Virgile
 - Répondre **en français**, court, chaleureux. Dates JJ/MM/AAAA.
 - **Annoncer le plan avant une tâche en plusieurs étapes**, résumer après chaque étape.
