@@ -1,0 +1,46 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bouli, fiche de personnage</title><link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#cfe9f7}canvas{width:100%;max-width:1600px;display:block;margin:0 auto}</style></head><body><canvas id="c" width="1600" height="1500"></canvas>
+<script src="mascotte.js"></script><script src="mascotte2.js"></script><script>
+const x = document.getElementById('c').getContext('2d');
+const B = (X, Y, u, t, ex = {}, cos = null) => drawBouli2(x, X, Y, u, cos, t, 'aviatrice', ex);
+const card = (X, Y, W, H, title) => { x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.roundRect(X, Y, W, H, 26); x.fill(); if (title) { x.fillStyle = '#12304f'; x.font = '26px "Lilita One"'; x.textAlign = 'left'; x.fillText(title, X + 24, Y + 42); } };
+const lab = (s, X, Y, col = '#4a5a7a', sz = 17) => { x.fillStyle = col; x.font = `800 ${sz}px Nunito`; x.textAlign = 'center'; x.fillText(s, X, Y); };
+window.draw = t => {
+  const g = x.createLinearGradient(0, 0, 0, 1500); g.addColorStop(0, '#e6f5fd'); g.addColorStop(1, '#bfe2f5'); x.fillStyle = g; x.fillRect(0, 0, 1600, 1500);
+  /* en-tête + pose de base */
+  card(20, 20, 520, 660);
+  x.fillStyle = '#12304f'; x.font = '84px "Lilita One"'; x.textAlign = 'left'; x.fillText('Bouli', 52, 112);
+  x.fillStyle = '#e8336d'; x.font = '800 20px Nunito'; x.fillText('La mascotte de Balloon Drop', 56, 146);
+  x.fillStyle = '#4a5a7a'; x.font = '700 16px Nunito'; ['Petit être tout rond et curieux, il rêve de voler.', 'Il ne quitte jamais ses lunettes d\'aviateur', 'ni son écharpe rouge.'].forEach((s, i) => x.fillText(s, 56, 180 + i * 24));
+  B(300, 640, 74, t);
+  /* proportions */
+  card(560, 20, 500, 660, 'Proportions');
+  const px = 880, py = 620, u = 74, hr = u * 1.6, cy = py - u * 1.6;
+  B(px, py, u, 30, { pose: 'down', eyes: 'open' });
+  x.setLineDash([6, 6]); x.strokeStyle = 'rgba(232,51,109,0.7)'; x.lineWidth = 2;
+  const guide = (y, txt) => { x.beginPath(); x.moveTo(600, y); x.lineTo(1010, y); x.stroke(); x.fillStyle = '#e8336d'; x.font = '800 14px Nunito'; x.textAlign = 'left'; x.fillText(txt, 604, y - 6); };
+  guide(cy - hr * .98, 'Haut du corps'); guide(cy - hr * .55, 'Lunettes : 1/4 du haut'); guide(cy - hr * .08, 'Yeux : milieu'); guide(cy + hr * .52, 'Écharpe : 3/4'); guide(py, 'Sol');
+  x.setLineDash([]); x.strokeStyle = '#12304f'; x.lineWidth = 2; x.beginPath(); x.moveTo(1040, cy - hr * .98); x.lineTo(1040, py); x.stroke();
+  lab('Hauteur du corps = 1,6 × sa largeur aux yeux', 810, 668, '#12304f', 15);
+  /* palette */
+  card(1080, 20, 500, 660, 'Palette');
+  [['#ff5a8c', 'Corps', 'rose Bouli'], ['#ffdde8', 'Reflet du corps', 'rose clair'], ['#fff3f6', 'Ventre', 'crème rosé'], ['#e8333d', 'Écharpe', 'rouge'], ['#f2c14e', 'Monture des lunettes', 'or'], ['#2a8fd6', 'Verres', 'bleu ciel'], ['#2a2a44', 'Contour et yeux', 'encre'], ['#ffd23f', 'Accent', 'jaune ballon']].forEach(([hex, name, sub], i) => {
+    const X = 1110, Y = 80 + i * 72; x.fillStyle = hex; x.strokeStyle = '#2a2a44'; x.lineWidth = 2; x.beginPath(); x.roundRect(X, Y, 56, 56, 14); x.fill(); x.stroke();
+    x.fillStyle = '#12304f'; x.font = '800 18px Nunito'; x.textAlign = 'left'; x.fillText(name, X + 74, Y + 24); x.fillStyle = '#4a5a7a'; x.font = '700 15px Nunito'; x.fillText(hex.toUpperCase() + ' · ' + sub, X + 74, Y + 46); });
+  /* expressions */
+  card(20, 700, 1560, 300, 'Expressions');
+  [[{}, 'Content'], [{ eyes: 'happy', mouth: 'open' }, 'Ravi'], [{ eyes: 'wide', mouth: 'o' }, 'Surpris'], [{ eyes: 'sad', mouth: 'sad', brows: 'sad', tear: 1 }, 'Triste'], [{ eyes: 'open', mouth: 'grr', brows: 'angry' }, 'Fâché'], [{ eyes: 'x', mouth: 'o' }, 'Assommé'], [{ eyes: 'closed', mouth: 'cat' }, 'Endormi']].forEach(([ex, l], i) => {
+    const X = 130 + i * 222; B(X, 950, 40, t + i * 30, Object.assign({ pose: 'down' }, ex)); lab(l, X, 985); });
+  /* poses */
+  card(20, 1020, 1040, 460, 'Poses');
+  [[{ pose: 'wave' }, null, 'Coucou'], [{ pose: 'down' }, null, 'Au repos'], [{ pose: 'jump', eyes: 'happy', mouth: 'open', lift: .9 }, null, 'Saut de joie'], [{}, 'golf', 'En costume']].forEach(([ex, cos, l], i) => {
+    const X = 150 + i * 250; B(X, 1415, 46, t + i * 25, ex, cos); lab(l, X, 1460); });
+  /* règles + tailles */
+  card(1080, 1020, 500, 460, 'Règles');
+  const R = [['✓', 'Toujours les lunettes sur le front', '#2fae6a'], ['✓', 'Toujours l\'écharpe rouge et son pan', '#2fae6a'], ['✓', 'Contour encre épais, lumière en haut à gauche', '#2fae6a'], ['✓', 'Les costumes se posent par-dessus', '#2fae6a'], ['✕', 'Pas de bras en bâton', '#e8333d'], ['✕', 'Pas d\'autre couleur de corps', '#e8333d'], ['✕', 'Une seule petite dent, jamais de bouche réaliste', '#e8333d']];
+  R.forEach(([ic, s, col], i) => { x.fillStyle = col; x.font = '900 20px Nunito'; x.textAlign = 'left'; x.fillText(ic, 1106, 1100 + i * 34); x.fillStyle = '#12304f'; x.font = '700 17px Nunito'; x.fillText(s, 1136, 1100 + i * 34); });
+  x.fillStyle = '#12304f'; x.font = '22px "Lilita One"'; x.textAlign = 'left'; x.fillText('Tailles en jeu', 1106, 1360);
+  [[22, 1160], [13, 1260], [8, 1335], [5, 1395]].forEach(([s, X]) => B(X, 1455, s, t));
+};
+if (window.__NOLOOP) document.fonts.ready.then(() => draw(30)); else { let t = 0; const loop = () => { t++; draw(t); requestAnimationFrame(loop); }; document.fonts.ready.then(loop); }
+</script></body></html>
