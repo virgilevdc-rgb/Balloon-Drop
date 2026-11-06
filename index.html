@@ -2653,8 +2653,8 @@ const JULES_SKIN = { id: 'jules', theme: 'secrets', name: 'Jules', secret: true,
   } };
 /* Ballon secret THOMAS (code « THOMAS ») : le Pilote-buteur.
    Une petite arène dans le ballon : une voiture rouge façon « foot en voiture » pousse un gros ballon,
-   saute au boost, fait un salto, frappe… BUT ! Le ballon explose dans la cage (onde + confettis rouges et blancs),
-   « BUT ! » s'affiche, la voiture fête ça, recule, un nouveau ballon tombe du ciel et ça recommence. 300 images. */
+   saute au boost, fait un salto, frappe… AZMOG ! Le ballon explose dans la cage (onde + confettis rouges et blancs),
+   « AZMOG » s'affiche, la voiture fête ça, recule, un nouveau ballon tombe du ciel et ça recommence. 300 images. */
 const THOMAS_SKIN = { id: 'thomas', theme: 'secrets', name: 'Thomas', secret: true, string: false, gloss: .55, dust: '#e8333d',
   paint: (c, r, t) => {
     const f = t % 300, INK = '#3a0a12', mix = (a, b, k) => a + (b - a) * k, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
@@ -2672,15 +2672,15 @@ const THOMAS_SKIN = { id: 'thomas', theme: 'secrets', name: 'Thomas', secret: tr
     for (const s of [-1, 1]) { const lg = c.createRadialGradient(s * r * .55, -r * .7, 0, s * r * .55, -r * .7, r * .5); lg.addColorStop(0, 'rgba(255,240,220,0.35)'); lg.addColorStop(1, 'rgba(255,240,220,0)');
       c.fillStyle = lg; c.beginPath(); c.arc(s * r * .55, -r * .7, r * .5, 0, TAU); c.fill(); }
     /* ---------- terrain ---------- */
-    const GY = r * .3;                                                /* sol où roulent voiture et ballon */
+    const GY = r * .16;                                                /* sol où roulent voiture et ballon */
     const pg = c.createLinearGradient(0, GY - r * .05, 0, r * .6); pg.addColorStop(0, '#6fd25a'); pg.addColorStop(1, '#2f8a2c');
-    c.fillStyle = pg; c.beginPath(); c.moveTo(-r * 1.1, GY - r * .02); c.quadraticCurveTo(0, GY - r * .06, r * 1.1, GY - r * .02); c.lineTo(r * 1.1, r * .62); c.lineTo(-r * 1.1, r * .62); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.1)'; for (let i = -5; i <= 5; i += 2) { c.beginPath(); c.moveTo(i * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .26, r * .62); c.lineTo(i * r * .26, r * .62); c.closePath(); c.fill(); }
+    c.fillStyle = pg; c.beginPath(); c.moveTo(-r * 1.1, GY - r * .02); c.quadraticCurveTo(0, GY - r * .06, r * 1.1, GY - r * .02); c.lineTo(r * 1.1, r * .5); c.lineTo(-r * 1.1, r * .5); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.1)'; for (let i = -5; i <= 5; i += 2) { c.beginPath(); c.moveTo(i * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .26, r * .5); c.lineTo(i * r * .26, r * .5); c.closePath(); c.fill(); }
     c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = lw(.014);
-    c.beginPath(); c.moveTo(0, GY - r * .04); c.lineTo(0, r * .62); c.stroke();
+    c.beginPath(); c.moveTo(0, GY - r * .04); c.lineTo(0, r * .5); c.stroke();
     c.beginPath(); c.ellipse(0, GY + r * .12, r * .3, r * .08, 0, 0, TAU); c.stroke();
     /* ---------- bande THOMAS (comme un tableau d'affichage) ---------- */
-    const by = r * .66;
+    const by = r * .5;
     c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(0, by - r * .1, r * 1.1, r * .2, 0, 0, Math.PI); c.ellipse(0, by + r * .14, r * 1.1, r * .2, 0, Math.PI, 0, true); c.closePath(); c.fill();
     c.fillStyle = '#1a1a2e'; c.beginPath(); c.ellipse(0, by - r * .07, r * 1.1, r * .2, 0, 0, Math.PI); c.ellipse(0, by + r * .11, r * 1.1, r * .2, 0, Math.PI, 0, true); c.closePath(); c.fill();
     { const ecx = by + r * .02, erx = r * 1.1, ery = r * .2, yAt = x => ecx + ery * Math.sqrt(Math.max(0, 1 - (x / erx) ** 2));
@@ -2775,11 +2775,11 @@ const THOMAS_SKIN = { id: 'thomas', theme: 'secrets', name: 'Thomas', secret: tr
       if (k < .15) { c.save(); c.globalAlpha = 1 - k / .15; const fg = c.createRadialGradient(ox, oy, 0, ox, oy, r * .4); fg.addColorStop(0, '#ffffff'); fg.addColorStop(.4, '#ffd23f'); fg.addColorStop(1, 'rgba(255,90,40,0)'); c.fillStyle = fg; c.beginPath(); c.arc(ox, oy, r * .4, 0, TAU); c.fill(); c.restore(); }
       for (let i = 0; i < 26; i++) { const a = h1(i + 900) * TAU, v = (.35 + h1(i + 950) * .65) * r * .9, x = ox + Math.cos(a) * v * k * 1.2, y = oy + Math.sin(a) * v * k * 1.2 + k * k * r * .5;
         c.save(); c.translate(x, y); c.rotate(k * 12 + i); c.globalAlpha = Math.max(0, 1 - k * 1.1); c.fillStyle = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#ff2a3a' : '#ffd23f'; c.fillRect(-r * .022, -r * .012, r * .044, r * .024); c.restore(); } }
-    /* « BUT ! » */
+    /* « AZMOG » */
     if (f >= GOAL + 4 && f < GOAL + 64) { const k = (f - GOAL - 4) / 60, s = k < .15 ? .4 + sm(k / .15) * .75 : k < .25 ? 1.15 - (k - .15) * 1.5 : 1, a = k > .82 ? 1 - (k - .82) / .18 : 1;
-      c.save(); c.globalAlpha = a; c.translate(0, -r * .42); c.rotate(-.08); c.scale(s, s); c.font = `${Math.max(8, Math.round(r * .34))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = lw(.07); c.strokeText('BUT !', 0, 0); c.fillStyle = '#ffffff'; c.fillText('BUT !', 0, 0);
-      c.fillStyle = '#ffd23f'; c.save(); c.beginPath(); c.rect(-r, r * .02, r * 2, r); c.clip(); c.fillText('BUT !', 0, 0); c.restore(); c.restore(); }
+      c.save(); c.globalAlpha = a; c.translate(0, -r * .5); c.rotate(-.08); c.scale(s, s); c.font = `${Math.max(8, Math.round(r * .3))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = lw(.07); c.strokeText('AZMOG', 0, 0); c.fillStyle = '#ffffff'; c.fillText('AZMOG', 0, 0);
+      c.fillStyle = '#ffd23f'; c.save(); c.beginPath(); c.rect(-r, r * .02, r * 2, r); c.clip(); c.fillText('AZMOG', 0, 0); c.restore(); c.restore(); }
     c.restore();
   } };
 
