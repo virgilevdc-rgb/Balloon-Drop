@@ -77,7 +77,7 @@ function mArm(c, u, sx, sy, ang, L, w, side) {
 function drawBouli2(c, x, y, u, costume, t, variant, ex = {}) {
   const br = Math.sin(t * .07) * .035;
   c.save(); c.translate(x, y);
-  c.fillStyle = 'rgba(20,30,60,0.18)'; c.beginPath(); c.ellipse(0, u * .05, u * 1.55 * (ex.lift ? .7 : 1), u * .28 * (ex.lift ? .7 : 1), 0, 0, TAU2); c.fill();
+  if (!ex.noShadow) { c.fillStyle = 'rgba(20,30,60,0.18)'; c.beginPath(); c.ellipse(0, u * .05, u * 1.55 * (ex.lift ? .7 : 1), u * .28 * (ex.lift ? .7 : 1), 0, 0, TAU2); c.fill(); }
   if (ex.lift) c.translate(0, -ex.lift * u);
   c.scale(1 + br * .6, 1 - br);
   const hr = u * 1.6, cy = -u * 1.6;
@@ -89,9 +89,23 @@ function drawBouli2(c, x, y, u, costume, t, variant, ex = {}) {
   const body = () => { c.moveTo(0, cy - hr * .98); c.bezierCurveTo(hr * .78, cy - hr * .98, hr * 1.08, cy - hr * .1, hr * 1.02, cy + hr * .4); c.bezierCurveTo(hr * .95, cy + hr * .95, hr * .4, cy + hr * 1.0, 0, cy + hr * 1.0);
     c.bezierCurveTo(-hr * .4, cy + hr * 1.0, -hr * .95, cy + hr * .95, -hr * 1.02, cy + hr * .4); c.bezierCurveTo(-hr * 1.08, cy - hr * .1, -hr * .78, cy - hr * .98, 0, cy - hr * .98); c.closePath(); };
   const aL = hr * .62, aW = hr * .52;
-  const pose = ex.pose || 'wave', lAng = pose === 'jump' ? -Math.PI * .78 : pose === 'down' ? Math.PI * .62 : Math.PI * .72;
-  mArm(c, u, -hr * .82, cy + hr * .28, lAng, aL, aW, -1);
-  const rAng = costume ? .55 : pose === 'jump' ? -.22 : pose === 'down' ? Math.PI * .38 : -.95 + Math.sin(t * .25) * .22, hand = mArm(c, u, hr * .82, cy + hr * .22, rAng, aL, aW, 1);
+  const pose = ex.pose || 'wave', lAng = ex.lAng != null ? ex.lAng : pose === 'jump' ? -Math.PI * .78 : pose === 'down' ? Math.PI * .62 : Math.PI * .72;
+  const lsx = -hr * .82, lsy = cy + hr * .28, rsx = hr * .82, rsy = cy + hr * .22, G = ex.grip;
+  const armTo = (sx, sy, p) => [Math.atan2(p[1] - sy, p[0] - sx), Math.max(aL * .55, Math.hypot(p[0] - sx, p[1] - sy) / .95)];
+  const gL = G && ex.oneHand !== 'r', gR = G && ex.oneHand !== 'l';
+  const rAng = ex.rAng != null ? ex.rAng : costume ? .55 : pose === 'jump' ? -.22 : pose === 'down' ? Math.PI * .38 : -.95 + Math.sin(t * .25) * .22;
+  const lArm = gL ? armTo(lsx, lsy, G) : [lAng, aL], rArm = gR ? armTo(rsx, rsy, G) : [rAng, aL];
+  const lhand = G || [lsx + Math.cos(lAng) * aL * .95, lsy + Math.sin(lAng) * aL * .95], hand = [rsx + Math.cos(rArm[0]) * rArm[1] * .95, rsy + Math.sin(rArm[0]) * rArm[1] * .95];
+  const lF = G ? !!ex.gripFront && gL : !!ex.lFront, rF = G ? !!ex.gripFront && gR : false;
+  const drawClub = () => { const [hx, hy] = lhand, a = ex.club.a, L = ex.club.L, ex2 = hx + Math.cos(a) * L, ey2 = hy + Math.sin(a) * L;
+    c.lineCap = 'round'; c.strokeStyle = MO; c.lineWidth = Math.max(1, u * .2); c.beginPath(); c.moveTo(hx, hy); c.lineTo(ex2, ey2); c.stroke();
+    c.strokeStyle = '#d6dde8'; c.lineWidth = Math.max(.6, u * .11); c.beginPath(); c.moveTo(hx, hy); c.lineTo(ex2, ey2); c.stroke();
+    c.save(); c.translate(ex2, ey2); c.rotate(a - Math.PI / 2); mShape(c, u, '#9aa4b8', () => c.roundRect(-u * .12, -u * .1, u * .5, u * .24, u * .09), .09); c.restore();
+    mShape(c, u, '#ffffff', () => c.arc(hx, hy, u * .2, 0, TAU2), .08); };
+  if (ex.club && ex.clubBack) drawClub();
+  const gW = aW * (G ? .8 : 1);
+  if (!lF) mArm(c, u, lsx, lsy, lArm[0], lArm[1], gL ? gW : aW, -1);
+  if (!rF) mArm(c, u, rsx, rsy, rArm[0], rArm[1], gR ? gW : aW, 1);
   mShape(c, u, mRad(c, 0, cy, hr * 1.3, '#ffdde8', '#ff5a8c'), body);
   c.save(); c.beginPath(); body(); c.clip();
   c.strokeStyle = 'rgba(255,240,245,0.55)'; c.lineWidth = hr * .12; c.beginPath(); c.arc(-hr * .12, cy + hr * .05, hr * 1.02, -.45, .9); c.stroke();
@@ -101,10 +115,11 @@ function drawBouli2(c, x, y, u, costume, t, variant, ex = {}) {
   c.restore();
   if (variant === 'aviatrice') { mShape(c, u, '#e8333d', () => c.ellipse(hr * .55, cy + hr * .53, hr * .14, hr * .12, 0, 0, TAU2), .09);
     mShape(c, u, '#d61f2c', () => { c.moveTo(hr * .55, cy + hr * .6); c.lineTo(hr * .7, cy + hr * .95); c.lineTo(hr * .52, cy + hr * .92); c.closePath(); }, .08); }
+  if (lF || rF) { if (ex.club && !ex.clubBack) drawClub(); if (lF) mArm(c, u, lsx, lsy, lArm[0], lArm[1], gW, -1); if (rF) mArm(c, u, rsx, rsy, rArm[0], rArm[1], gW, 1); }
   c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(-hr * .5, cy - hr * .48, hr * .13, hr * .24, .6, 0, TAU2); c.fill(); c.beginPath(); c.arc(-hr * .3, cy - hr * .75, hr * .05, 0, TAU2); c.fill();
   /* visage (expressions) */
   const E = ex.eyes || 'open', Mo = ex.mouth || 'cat', ey = cy - hr * .08, gap = hr * .32, es = hr * .23;
-  if (E === 'open' || E === 'wide') mEyes(c, u, 0, ey, gap, es * (E === 'wide' ? 1.18 : 1), E === 'wide' ? 30 : t, [.2, .05]);
+  if (E === 'open' || E === 'wide') mEyes(c, u, 0, ey, gap, es * (E === 'wide' ? 1.18 : 1), E === 'wide' ? 30 : t, ex.look || [.2, .05]);
   else { c.strokeStyle = MO; c.lineWidth = Math.max(1, u * .13); c.lineCap = 'round';
     for (const sd of [-1, 1]) { const x0 = sd * gap;
       if (E === 'happy') { c.beginPath(); c.arc(x0, ey + es * .3, es * .6, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); }
@@ -125,12 +140,13 @@ function drawBouli2(c, x, y, u, costume, t, variant, ex = {}) {
   /* signatures */
   const top = cy - hr * .95;
   if (variant === 'aviatrice') mGoggles(c, u, 0, cy - hr * .55, hr * .78, hr * .88);
-  if (costume) mHat(c, u, costume, 0, top + hr * (variant === 'aviatrice' ? -.05 : .08), hr * .78, t);
+  if (costume && !ex.hatOff) mHat(c, u, costume, 0, top + hr * (variant === 'aviatrice' ? -.05 : .08), hr * .78, t);
   if (variant === 'antenne') { const hatTop = costume === 'mage' ? top - hr * 1.35 : costume === 'golf' ? top - hr * .45 : costume === 'peche' ? top - hr * .28 : top;
     const bx = hr * .3 + Math.sin(t * .05) * hr * .06, by = hatTop - hr * .78;
     c.strokeStyle = MO; c.lineWidth = Math.max(.8, u * .08); c.beginPath(); c.moveTo(0, hatTop + hr * .02); c.quadraticCurveTo(hr * .08, hatTop - hr * .35, bx, by + hr * .3); c.stroke();
     mShape(c, u, mRad(c, bx, by, hr * .34, '#fff27e', '#f0b400'), () => c.ellipse(bx, by, hr * .25, hr * .3, 0, 0, TAU2), .09);
     c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(bx - hr * .08, by - hr * .11, hr * .05, hr * .09, .5, 0, TAU2); c.fill(); }
-  if (costume) mProp(c, u, costume, hand, t);
+  if (ex.club) { if (!ex.clubBack && !lF && !rF) drawClub(); }
+  else if (costume && !ex.noProp) mProp(c, u, costume, hand, t);
   c.restore();
 }

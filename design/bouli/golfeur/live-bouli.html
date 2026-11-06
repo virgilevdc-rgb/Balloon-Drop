@@ -1,0 +1,13 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Le Golfeur</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#2f86c9;font-family:Nunito,sans-serif}.w{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px}
+h1{font-family:"Lilita One";color:#fff;margin:4px 0 0;font-size:34px;text-shadow:0 4px 0 #12304f}canvas{width:min(100%,520px);aspect-ratio:1;border-radius:24px;background:linear-gradient(#8fd3f6,#2f86c9)}
+.s{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.15);border-radius:20px;padding:10px 16px;color:#fff;font-weight:800}.s canvas{width:auto;aspect-ratio:auto;border-radius:12px}</style></head>
+<body><div class="w"><h1>Le Golfeur</h1><canvas id="big" width="1040" height="1040"></canvas><div class="s">Tailles en jeu :<canvas id="a" width="140" height="140"></canvas><canvas id="b" width="70" height="70"></canvas></div></div>
+<script src="moteur.js"></script><script src="golf.js"></script><script src="../mascotte.js"></script><script src="../mascotte2.js"></script><script src="golf-bouli.js"></script><script>
+const big = document.getElementById('big').getContext('2d'), sm = ['a', 'b'].map(i => document.getElementById(i).getContext('2d'));
+let t = 0; window.frame = tt => { if (tt != null) t = tt;
+  big.clearRect(0, 0, 1040, 1040); big.save(); big.translate(520, 600); paintSkin(big, GOLFBOULI, 330, t); big.restore();
+  sm.forEach(c => { const W = c.canvas.width; c.clearRect(0, 0, W, W); c.save(); c.translate(W / 2, W * .58); paintSkin(c, GOLFBOULI, W * .3, t); c.restore(); }); };
+const loop = () => { t++; frame(); requestAnimationFrame(loop); }; document.fonts.ready.then(() => { if (!window.__NOLOOP) loop(); });
+</script></body></html>
