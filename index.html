@@ -2651,6 +2651,137 @@ const JULES_SKIN = { id: 'jules', theme: 'secrets', name: 'Jules', secret: true,
     c.strokeStyle = 'rgba(10,22,56,0.6)'; c.lineWidth = Math.max(.6, br * .07); c.beginPath(); c.arc(0, 0, br, 0, TAU); c.stroke();
     c.restore();
   } };
+/* Ballon secret THOMAS (code « THOMAS ») : le Pilote-buteur.
+   Une petite arène dans le ballon : une voiture rouge façon « foot en voiture » pousse un gros ballon,
+   saute au boost, fait un salto, frappe… BUT ! Le ballon explose dans la cage (onde + confettis rouges et blancs),
+   « BUT ! » s'affiche, la voiture fête ça, recule, un nouveau ballon tombe du ciel et ça recommence. 300 images. */
+const THOMAS_SKIN = { id: 'thomas', theme: 'secrets', name: 'Thomas', secret: true, string: false, gloss: .55, dust: '#e8333d',
+  paint: (c, r, t) => {
+    const f = t % 300, INK = '#3a0a12', mix = (a, b, k) => a + (b - a) * k, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    const lw = k => Math.max(.6, r * k);
+    /* ---------- fond : dôme d'arène rouge ---------- */
+    const g = c.createRadialGradient(-r * .32, -r * .4, r * .05, 0, 0, r); g.addColorStop(0, '#ff7a6a'); g.addColorStop(.55, '#d61f2c'); g.addColorStop(1, '#5a0812');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); clipCircle(c, r);
+    /* nid d'abeille du dôme */
+    c.strokeStyle = 'rgba(255,200,190,0.13)'; c.lineWidth = lw(.012);
+    const hs = r * .13;
+    for (let row = -6; row <= 2; row++) for (let col = -6; col <= 6; col++) { const x = col * hs * 1.5, y = row * hs * 1.73 + (col % 2 ? hs * .87 : 0); if (y > r * .2) continue;
+      c.beginPath(); for (let k = 0; k <= 6; k++) { const a = k * Math.PI / 3; c.lineTo(x + Math.cos(a) * hs * .92, y + Math.sin(a) * hs * .92); } c.stroke(); }
+    /* projecteurs */
+    for (const s of [-1, 1]) { const lg = c.createRadialGradient(s * r * .55, -r * .7, 0, s * r * .55, -r * .7, r * .5); lg.addColorStop(0, 'rgba(255,240,220,0.35)'); lg.addColorStop(1, 'rgba(255,240,220,0)');
+      c.fillStyle = lg; c.beginPath(); c.arc(s * r * .55, -r * .7, r * .5, 0, TAU); c.fill(); }
+    /* ---------- terrain ---------- */
+    const GY = r * .3;                                                /* sol où roulent voiture et ballon */
+    const pg = c.createLinearGradient(0, GY - r * .05, 0, r * .6); pg.addColorStop(0, '#6fd25a'); pg.addColorStop(1, '#2f8a2c');
+    c.fillStyle = pg; c.beginPath(); c.moveTo(-r * 1.1, GY - r * .02); c.quadraticCurveTo(0, GY - r * .06, r * 1.1, GY - r * .02); c.lineTo(r * 1.1, r * .62); c.lineTo(-r * 1.1, r * .62); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.1)'; for (let i = -5; i <= 5; i += 2) { c.beginPath(); c.moveTo(i * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .18, GY - r * .04); c.lineTo((i + 1) * r * .26, r * .62); c.lineTo(i * r * .26, r * .62); c.closePath(); c.fill(); }
+    c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = lw(.014);
+    c.beginPath(); c.moveTo(0, GY - r * .04); c.lineTo(0, r * .62); c.stroke();
+    c.beginPath(); c.ellipse(0, GY + r * .12, r * .3, r * .08, 0, 0, TAU); c.stroke();
+    /* ---------- bande THOMAS (comme un tableau d'affichage) ---------- */
+    const by = r * .66;
+    c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(0, by - r * .1, r * 1.1, r * .2, 0, 0, Math.PI); c.ellipse(0, by + r * .14, r * 1.1, r * .2, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    c.fillStyle = '#1a1a2e'; c.beginPath(); c.ellipse(0, by - r * .07, r * 1.1, r * .2, 0, 0, Math.PI); c.ellipse(0, by + r * .11, r * 1.1, r * .2, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    { const ecx = by + r * .02, erx = r * 1.1, ery = r * .2, yAt = x => ecx + ery * Math.sqrt(Math.max(0, 1 - (x / erx) ** 2));
+      c.font = `${Math.max(6, Math.round(r * .17))}px "Lilita One", "Arial Rounded MT Bold", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const word = 'THOMAS', gap = r * .03, ws = [...word].map(ch => c.measureText(ch).width); let x = -(ws.reduce((a, b) => a + b, 0) + gap * (word.length - 1)) / 2;
+      const glow = f >= 92 && f < 150 && (f >> 2) % 2 === 0;
+      [...word].forEach((ch, i) => { const cx = x + ws[i] / 2, d = r * .01, rot = Math.atan2(yAt(cx + d) - yAt(cx - d), 2 * d);
+        c.save(); c.translate(cx, yAt(cx)); c.rotate(rot); c.fillStyle = glow ? '#ffd23f' : '#ff4a4a'; c.fillText(ch, 0, 0); c.restore(); x += ws[i] + gap; }); }
+    /* ---------- cage (à droite) ---------- */
+    const GX = r * .74, GH = r * .3, GW = r * .2;
+    const bulge = f >= 86 && f < 110 ? Math.sin((f - 86) / 24 * Math.PI) * Math.exp(-(f - 86) / 14) * r * .06 : 0;
+    c.save(); c.translate(GX, GY);
+    c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = lw(.007);
+    for (let i = 0; i <= 5; i++) { c.beginPath(); c.moveTo(-GW * .5 + i * GW * .2 + bulge * Math.sin(i / 5 * Math.PI), -GH); c.lineTo(-GW * .5 + i * GW * .2 + bulge * Math.sin(i / 5 * Math.PI) * .6, 0); c.stroke(); }
+    for (let j = 0; j <= 5; j++) { c.beginPath(); c.moveTo(-GW * .5, -GH + j * GH * .2); c.quadraticCurveTo(0, -GH + j * GH * .2 + bulge * .3, GW * .5 + bulge, -GH + j * GH * .2); c.stroke(); }
+    c.strokeStyle = INK; c.lineWidth = lw(.03); c.lineCap = 'round'; c.beginPath(); c.moveTo(-GW * .5, 0); c.lineTo(-GW * .5, -GH); c.lineTo(GW * .5, -GH); c.stroke();
+    c.strokeStyle = '#ffffff'; c.lineWidth = lw(.018); c.stroke();
+    c.restore();
+    /* ---------- chronologie ---------- */
+    const BR = r * .16, CW = r * .42;
+    let bx, byy, bAlpha = 1, cx, cy, crot = 0, boost = 0, flip = 0;
+    const KO = 0, JUMP = 54, HIT = 74, GOAL = 86, BACK = 170, DROP = 196, READY = 262;
+    const B0 = -r * .34, C0 = B0 - BR - CW * .48;
+    if (f < JUMP) { const k = f / JUMP; bx = mix(B0, r * .02, k); byy = GY - BR - Math.abs(Math.sin(k * Math.PI * 3)) * r * .015; cx = bx - BR - CW * .48; cy = GY; boost = k > .4 ? .6 : .2; }
+    else if (f < HIT) { const k = (f - JUMP) / (HIT - JUMP); bx = mix(r * .02, r * .14, k); byy = GY - BR - Math.sin(k * Math.PI) * r * .2;
+      cx = mix(r * .02 - BR - CW * .48, r * .02, k); cy = GY - Math.sin(k * Math.PI * .9) * r * .3; crot = -sm((k - .45) / .55) * TAU * .92; boost = 1; flip = k; }
+    else if (f < GOAL) { const k = (f - HIT) / (GOAL - HIT); bx = mix(r * .14, GX + r * .02, k); byy = mix(GY - BR - r * .08, GY - r * .17, k) - Math.sin(k * Math.PI) * r * .1;
+      const k2 = Math.min(1, (f - HIT) / 22); cx = mix(r * .02, -r * .08, k2); cy = GY - Math.sin((1 - k2) * Math.PI * .5) * r * .22 * (1 - k2); crot = -TAU * .92 - k2 * TAU * .08; boost = .4; }
+    else if (f < BACK) { bAlpha = 0; bx = GX; byy = GY - r * .17;
+      const k2 = Math.min(1, (f - HIT) / 22); cx = mix(r * .02, -r * .08, k2); cy = GY - (k2 < 1 ? Math.sin((1 - k2) * Math.PI * .5) * r * .22 * (1 - k2) : 0);
+      const hop = f > 108 && f < 150 ? Math.abs(Math.sin((f - 108) / 14 * Math.PI)) * r * .06 : 0; cy -= hop; crot = k2 < 1 ? -TAU * .92 - k2 * TAU * .08 : Math.sin((f - 108) / 14 * Math.PI) * .12 * (hop > 0 ? 1 : 0); boost = f > 108 && f < 150 && hop > r * .03 ? .7 : 0; }
+    else { bx = B0; const kb = f < DROP ? 0 : Math.min(1, (f - DROP) / (READY - DROP));
+      /* nouveau ballon : tombe du ciel et rebondit */
+      if (f < DROP) { bAlpha = 0; byy = -r * 1.3; }
+      else { const tt = kb * 3.2, n = Math.floor(tt), q = tt - n, hgt = [1.15, .35, .12, .04][Math.min(3, n)] * r; byy = GY - BR - (n === 0 ? (1 - q * q) * hgt : 4 * q * (1 - q) * hgt); }
+      const k = sm((f - BACK) / (DROP + 20 - BACK)); cx = mix(-r * .08, C0, k); cy = GY - (f < DROP + 20 ? Math.abs(Math.sin(f * .5)) * r * .006 : 0); boost = f > READY + 10 ? .25 + Math.sin(f * .8) * .1 : 0; }
+    /* ---------- ombres ---------- */
+    c.fillStyle = 'rgba(20,40,10,0.28)';
+    if (bAlpha > 0) { const hgt = Math.max(0, GY - BR - byy) / r, s = Math.max(.3, 1 - hgt * 1.2); c.beginPath(); c.ellipse(bx, GY + r * .005, BR * .9 * s, BR * .22 * s, 0, 0, TAU); c.fill(); }
+    { const hgt = Math.max(0, GY - cy) / r, s = Math.max(.3, 1 - hgt * 1.5); c.beginPath(); c.ellipse(cx, GY + r * .005, CW * .55 * s, r * .03 * s, 0, 0, TAU); c.fill(); }
+    /* ---------- traînée de boost ---------- */
+    const trail = [];
+    if (boost > .5) for (let i = 0; i < 10; i++) { const q = ((t * .17 + i * .1) % 1); trail.push(q); }
+    /* ---------- la voiture ---------- */
+    const car = () => {
+      c.save(); c.translate(cx, cy); c.translate(0, -r * .09); c.rotate(crot); c.translate(0, r * .09);
+      const s = r;
+      /* flammes de boost */
+      if (boost > 0) { const fl = 1 + Math.sin(t * 1.7) * .15, L = s * (.12 + boost * .2) * fl;
+        const fg = c.createLinearGradient(-s * .2, 0, -s * .2 - L, 0); fg.addColorStop(0, '#fff6c8'); fg.addColorStop(.4, '#ffb000'); fg.addColorStop(1, 'rgba(255,60,30,0)');
+        c.fillStyle = fg; c.beginPath(); c.moveTo(-s * .19, -s * .1); c.quadraticCurveTo(-s * .2 - L * .6, -s * .1, -s * .2 - L, -s * .075); c.quadraticCurveTo(-s * .2 - L * .6, -s * .05, -s * .19, -s * .05); c.closePath(); c.fill(); }
+      /* carrosserie */
+      const body = () => { c.moveTo(-s * .21, -s * .045); c.lineTo(-s * .22, -s * .12); c.lineTo(-s * .1, -s * .14); c.quadraticCurveTo(-s * .03, -s * .215, s * .06, -s * .2); c.lineTo(s * .11, -s * .13);
+        c.quadraticCurveTo(s * .2, -s * .12, s * .225, -s * .085); c.lineTo(s * .22, -s * .045); c.closePath(); };
+      const bg = c.createLinearGradient(0, -s * .21, 0, -s * .04); bg.addColorStop(0, '#ff8a7a'); bg.addColorStop(.45, '#e8232f'); bg.addColorStop(1, '#8a0e18');
+      c.fillStyle = bg; c.strokeStyle = INK; c.lineWidth = lw(.014); c.lineJoin = 'round'; c.beginPath(); body(); c.fill(); c.stroke();
+      /* aileron */
+      c.fillStyle = '#1a1a2e'; c.beginPath(); c.moveTo(-s * .21, -s * .125); c.lineTo(-s * .25, -s * .175); c.lineTo(-s * .16, -s * .175); c.lineTo(-s * .15, -s * .135); c.closePath(); c.fill(); c.stroke();
+      /* vitre */
+      c.fillStyle = '#1d2a4a'; c.beginPath(); c.moveTo(-s * .06, -s * .145); c.quadraticCurveTo(-s * .02, -s * .195, s * .045, -s * .188); c.lineTo(s * .085, -s * .135); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.moveTo(-s * .03, -s * .155); c.quadraticCurveTo(-s * .005, -s * .18, s * .02, -s * .182); c.lineTo(s * .005, -s * .15); c.closePath(); c.fill();
+      /* bande blanche et numéro */
+      c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(-s * .2, -s * .1); c.lineTo(s * .2, -s * .095); c.lineTo(s * .2, -s * .08); c.lineTo(-s * .2, -s * .083); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(-s * .04, -s * .175, s * .05, s * .01, -.2, 0, TAU); c.fill();
+      /* phare */
+      c.fillStyle = '#fff6c8'; c.beginPath(); c.ellipse(s * .21, -s * .08, s * .012, s * .01, 0, 0, TAU); c.fill();
+      /* roues */
+      for (const [wx, wr] of [[-s * .13, s * .07], [s * .135, s * .06]]) { c.fillStyle = '#1a1a2e'; c.beginPath(); c.arc(wx, -wr, wr, 0, TAU); c.fill(); c.stroke();
+        c.fillStyle = '#c8ced8'; c.beginPath(); c.arc(wx, -wr, wr * .52, 0, TAU); c.fill(); c.strokeStyle = '#1a1a2e'; c.lineWidth = lw(.008);
+        const sp = cx / wr; for (let i = 0; i < 5; i++) { const a = sp + i * TAU / 5; c.beginPath(); c.moveTo(wx, -wr); c.lineTo(wx + Math.cos(a) * wr * .5, -wr + Math.sin(a) * wr * .5); c.stroke(); }
+        c.strokeStyle = INK; c.lineWidth = lw(.014); c.fillStyle = '#e8232f'; c.beginPath(); c.arc(wx, -wr, wr * .15, 0, TAU); c.fill(); }
+      c.restore(); };
+    /* particules de boost (derrière tout) */
+    trail.forEach(q => { const a = crot, ox = cx + Math.cos(a) * -r * (.24 + q * .35) , oy = cy - r * .08 + Math.sin(a) * -r * (.24 + q * .35) + Math.sin(q * 9 + t) * r * .01;
+      c.fillStyle = `rgba(255,${(180 - q * 120) | 0},60,${(.8 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(ox, oy, r * (.03 - q * .02), 0, TAU); c.fill(); });
+    /* ---------- le ballon de foot ---------- */
+    const ball = () => { if (bAlpha <= 0) return; c.save(); c.globalAlpha = bAlpha; c.translate(bx, byy); c.rotate(bx / BR);
+      const bg2 = c.createRadialGradient(-BR * .35, -BR * .4, BR * .1, 0, 0, BR); bg2.addColorStop(0, '#ffffff'); bg2.addColorStop(1, '#c9ced8');
+      c.fillStyle = bg2; c.strokeStyle = INK; c.lineWidth = lw(.014); c.beginPath(); c.arc(0, 0, BR, 0, TAU); c.fill(); c.stroke();
+      c.save(); c.beginPath(); c.arc(0, 0, BR, 0, TAU); c.clip(); c.fillStyle = '#1a1a2e';
+      const pent = (x, y, s, rot) => { c.beginPath(); for (let i = 0; i < 5; i++) { const a = rot + i * TAU / 5; c.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); } c.closePath(); c.fill(); };
+      pent(0, 0, BR * .32, -Math.PI / 2); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5 + Math.PI / 5; pent(Math.cos(a) * BR * .92, Math.sin(a) * BR * .92, BR * .3, a + Math.PI); }
+      c.strokeStyle = 'rgba(26,26,46,0.6)'; c.lineWidth = lw(.007); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * TAU / 5; c.beginPath(); c.moveTo(Math.cos(a) * BR * .32, Math.sin(a) * BR * .32); c.lineTo(Math.cos(a) * BR * .7, Math.sin(a) * BR * .7); c.stroke(); }
+      c.restore(); c.fillStyle = 'rgba(255,255,255,0.8)'; c.rotate(-bx / BR); c.beginPath(); c.ellipse(-BR * .38, -BR * .42, BR * .16, BR * .09, -.6, 0, TAU); c.fill(); c.restore(); };
+    ball(); car();
+    /* étincelle de la frappe */
+    if (f >= HIT - 1 && f < HIT + 8) { const k = (f - HIT + 1) / 9, x = r * .14 - BR * .7, y = GY - BR - r * .08; c.save(); c.globalAlpha = 1 - k; c.fillStyle = '#fff6c8'; c.strokeStyle = '#ffb000'; c.lineWidth = lw(.012);
+      c.beginPath(); for (let i = 0; i < 12; i++) { const a = i * TAU / 12, rr = (i % 2 ? .04 : .11) * r * (1 + k); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); c.stroke(); c.restore(); }
+    /* ---------- BUT : le ballon explose dans la cage ---------- */
+    if (f >= GOAL && f < GOAL + 60) { const k = (f - GOAL) / 60, ox = GX, oy = GY - r * .17;
+      c.save(); c.globalAlpha = Math.max(0, 1 - k * 2.2); c.strokeStyle = '#fff6c8'; c.lineWidth = lw(.04 * (1 - k)); c.beginPath(); c.arc(ox, oy, r * (.08 + k * 1.2), 0, TAU); c.stroke(); c.restore();
+      if (k < .15) { c.save(); c.globalAlpha = 1 - k / .15; const fg = c.createRadialGradient(ox, oy, 0, ox, oy, r * .4); fg.addColorStop(0, '#ffffff'); fg.addColorStop(.4, '#ffd23f'); fg.addColorStop(1, 'rgba(255,90,40,0)'); c.fillStyle = fg; c.beginPath(); c.arc(ox, oy, r * .4, 0, TAU); c.fill(); c.restore(); }
+      for (let i = 0; i < 26; i++) { const a = h1(i + 900) * TAU, v = (.35 + h1(i + 950) * .65) * r * .9, x = ox + Math.cos(a) * v * k * 1.2, y = oy + Math.sin(a) * v * k * 1.2 + k * k * r * .5;
+        c.save(); c.translate(x, y); c.rotate(k * 12 + i); c.globalAlpha = Math.max(0, 1 - k * 1.1); c.fillStyle = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#ff2a3a' : '#ffd23f'; c.fillRect(-r * .022, -r * .012, r * .044, r * .024); c.restore(); } }
+    /* « BUT ! » */
+    if (f >= GOAL + 4 && f < GOAL + 64) { const k = (f - GOAL - 4) / 60, s = k < .15 ? .4 + sm(k / .15) * .75 : k < .25 ? 1.15 - (k - .15) * 1.5 : 1, a = k > .82 ? 1 - (k - .82) / .18 : 1;
+      c.save(); c.globalAlpha = a; c.translate(0, -r * .42); c.rotate(-.08); c.scale(s, s); c.font = `${Math.max(8, Math.round(r * .34))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = lw(.07); c.strokeText('BUT !', 0, 0); c.fillStyle = '#ffffff'; c.fillText('BUT !', 0, 0);
+      c.fillStyle = '#ffd23f'; c.save(); c.beginPath(); c.rect(-r, r * .02, r * 2, r); c.clip(); c.fillText('BUT !', 0, 0); c.restore(); c.restore(); }
+    c.restore();
+  } };
 
 /* Famille « Les Profondeurs » : créatures des abysses, lumières qui pulsent (cyan / rose),
    contour toujours lisible. Méduse (déjà faite) + Poisson-lanterne, Pieuvre, Nautile, Corail. */
@@ -3447,7 +3578,7 @@ function shadeHexDark(hex, k) { const n = parseInt(hex.slice(1), 16), f = v => M
 
 const DIX = [PHENIX, VIVANT, MINIMONDE, CAMELEON];
 
-SKINS.push(JULES_SKIN, ...NEW_SKINS, ...PROFONDEURS, ...MERVEILLES, RETRO_SKIN, ...DIX);
+SKINS.push(JULES_SKIN, THOMAS_SKIN, ...NEW_SKINS, ...PROFONDEURS, ...MERVEILLES, RETRO_SKIN, ...DIX);
 
 /* =========================================================
    Légendes v2 : Globe de la mort, Le Grand Œil, Fusée, Petit astronaute
@@ -4158,9 +4289,10 @@ const SECRETS = [
   { id: 'virgile', name: 'Le code du créateur', desc: 'Le ballon rouge au V, débloqué par code.', hint: 'Le créateur a laissé son nom quelque part.' },
   { id: 'hippo', name: 'Le code Hippo', desc: 'Le ballon bleu marine au H arc-en-ciel, débloqué par code.', hint: 'Un autre code secret, un animal qui aime l\'eau.' },
   { id: 'jules', name: 'Le code de Jules', desc: 'Le ballon bleu marine au canon doré qui tire un ballon de foot, débloqué par code.', hint: 'Un ami du créateur, fan des Gunners.' },
+  { id: 'thomas', name: 'Le code de Thomas', desc: 'Le ballon rouge où une petite voiture marque au boost, débloqué par code.', hint: 'Un ami du créateur, as du volant… et du ballon.' },
   { id: 'foudre', name: 'Nuage de foudre', desc: 'Scénario unique accompli. Ballon Foudre débloqué.', hint: "Le niveau secret n'est pas la fin du voyage." },
 ];
-const CODES = { VIRGILE: { skin: 'virgile', secret: 'virgile' }, HIPPO: { skin: 'hippo', secret: 'hippo' }, JULES: { skin: 'jules', secret: 'jules' } };
+const CODES = { VIRGILE: { skin: 'virgile', secret: 'virgile' }, HIPPO: { skin: 'hippo', secret: 'hippo' }, JULES: { skin: 'jules', secret: 'jules' }, THOMAS: { skin: 'thomas', secret: 'thomas' } };
 const foundCount = () => SECRETS.filter(x => S.secrets[x.id]).length;
 function findSecret(id) {
   if (S.secrets[id]) return false;
