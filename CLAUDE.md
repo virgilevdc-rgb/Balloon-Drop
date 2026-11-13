@@ -18,9 +18,21 @@ En ligne : https://virgilevdc-rgb.github.io/Balloon-Drop/ (GitHub Pages, branche
 
 ## Structure
 - `index.html` : **tout le jeu** (~10 600 lignes : CSS, HTML, JS dans 2 balises `<script>`). Lire par morceaux, jamais en entier.
-- **`docs/carte-du-code.md` : la carte du code. La consulter avant de chercher quoi que ce soit.**
+- **`docs/graphe/` (graphify) puis `docs/carte-du-code.md` : à consulter avant de chercher quoi que ce soit** (voir plus bas).
+- `outils/graphe.sh` : reconstruit le graphe du code.
 - `sw.js` : service worker (cache réseau d'abord). `music/` : musiques mp3. `icons/`, `manifest.webmanifest`.
 - `design/brouillons/` : maquettes et GIF de travail (Corbeau amélioré, concepts de boss…).
+
+## Chercher dans le code : graphify, TOUJOURS (pour économiser des tokens)
+- **Ne jamais lire `index.html` à l'aveugle.** D'abord le graphe, puis lire seulement les lignes utiles (`sed -n 'A,Bp'`).
+- Graphe : `docs/graphe/graph.json` (+ résumé `docs/graphe/GRAPH_REPORT.md`). Les numéros `L…` = lignes de `index.html`.
+- S'il manque ou date : `bash outils/graphe.sh` (installe graphify si besoin, ~10 s).
+- Questions utiles :
+  - `graphify explain "paintSkin" --graph docs/graphe/graph.json` : où est une fonction, qui l'appelle, ce qu'elle appelle.
+  - `graphify query "comment marche le dégonflage" --graph docs/graphe/graph.json --budget 800`
+  - `graphify affected "drawBalloon" --graph docs/graphe/graph.json` : ce qui casse si on la change.
+- **Après chaque modification de `index.html` commitée : relancer `bash outils/graphe.sh` et commiter `docs/graphe/`.**
+- `docs/carte-du-code.md` reste le guide « humain » (repères par sujet).
 
 ## Règles de dessin (canvas)
 - Lumière en haut à gauche (`LIGHT_X`). Un ballon = `paint(c, r, t)` puis ombre `shade` + reflet `gloss` (voir `paintSkin`) ; `t` = image (60/s).
