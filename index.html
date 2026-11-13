@@ -12231,7 +12231,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
   if (vp && !/user-scalable/.test(vp.content)) vp.content += ', maximum-scale=1, user-scalable=no';
 })();
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
-if (window.__BOT) window.__DBG = { get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES };
+if (window.__BOT) window.__DBG = { get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
 requestAnimationFrame(t => { last = t; frame(t); });
 initNet();
 
