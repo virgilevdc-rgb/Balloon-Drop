@@ -526,7 +526,7 @@ body.intro-on #home, body.intro-on #mainNav { visibility: hidden; }
 #paneWear[hidden] { display: none; }
 .tile.wear .act.on { background: var(--pink); color: #fff; }
 /* ---------- v13 : accueil allégé, barre du bas, glisser ---------- */
-#pseudoBtn { white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 40px; }
+#pseudoBtn { white-space: nowrap; min-width: 86px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 40px; }
 .mainnav { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
 body.nav-on .screen { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
 .modal { z-index: 40; }
@@ -9501,8 +9501,8 @@ const SKETCH_SKIN = { id: '_sketch', name: '', dust: '#2b2b33', flat: true, glos
 const INK_SKIN = { id: '_ink', name: '', dust: '#111116', flat: true, gloss: 0, paint: (c, r) => paintSketchBall(c, r, true) };
 
 SKINS.push(
-  { id: 'esquisse', name: "L'Esquisse", secret: true, flat: true, gloss: .18, dust: '#2b2b33', paint: (c, r, t = 0) => paintEsquisseBody(c, r, ESQ_FILL == null ? .55 : ESQ_FILL, t) },
-  { id: 'dirigeable', name: 'Dirigeable', secret: true, dust: '#c9a46a', paint: (c, r) => {
+  { id: 'esquisse', theme: 'secrets', name: "L'Esquisse", secret: true, flat: true, gloss: .18, dust: '#2b2b33', paint: (c, r, t = 0) => paintEsquisseBody(c, r, ESQ_FILL == null ? .55 : ESQ_FILL, t) },
+  { id: 'dirigeable', theme: 'secrets', name: 'Dirigeable', secret: true, dust: '#c9a46a', paint: (c, r) => {
       radial(c, r, '#fff6dc', '#c9a46a');
       c.save(); clipCircle(c, r); c.strokeStyle = 'rgba(110,75,30,0.55)'; c.lineWidth = Math.max(.8, r * .022);
       for (let a = -r * 2; a <= r * 2; a += r * .24) { c.beginPath(); c.moveTo(a - r, -r); c.lineTo(a + r, r); c.stroke(); c.beginPath(); c.moveTo(a + r, -r); c.lineTo(a - r, r); c.stroke(); }
@@ -10329,7 +10329,7 @@ BOSSES.arm = { name: 'Le Bras géant', p2: 'Les tapis roulants démarrent', p3: 
   const k = TROPHIES.findIndex(t => t.id === 'nightmare');
   TROPHIES.splice(k + 1, 0, { id: 'arm', cat: 'Aventure', name: 'Fin de service', desc: "Bats le Bras géant, à l'Usine", prog: () => [stv('boss_arm'), 1], reward: 380 });
   const s = SKINS.findIndex(x => x.id === 'nuitetoilee');
-  SKINS.splice(s + 1, 0, { id: 'boulon', name: 'Boulon', unlock: { type: 'world', w: 13 }, lockText: "Termine l'Usine", dust: '#c9d0da', paint: (c, r) => {
+  SKINS.splice(s + 1, 0, { id: 'boulon', theme: 'mondes', name: 'Boulon', unlock: { type: 'world', w: 13 }, lockText: "Termine l'Usine", dust: '#c9d0da', paint: (c, r) => {
     radial(c, r, '#f4f7fb', '#5d6672');
     c.save(); clipCircle(c, r);
     c.fillStyle = 'rgba(255,194,26,0.9)'; c.fillRect(-r, r * .62, r * 2, r * .2);
@@ -11362,7 +11362,7 @@ function renderStory(focus, reveal) {
     html += `<button class="${cls}" style="left:${p.x}px;top:${p.y}px" data-level="${i}" ${ok ? '' : 'disabled'} aria-label="Niveau ${i + 1}, ${lv.name}${ok ? ', ' + st + ' étoiles' : ', verrouillé'}">
       <span class="disc">${lv.boss ? `<canvas data-boss="${lv.boss}" width="140" height="140"></canvas>` : ok ? i + 1 : ICONS.lock}</span>
       <span class="node-stars ${st ? 'has' : ''}">${stars}</span>
-      ${i === current || lv.boss ? `<span class="node-name">${lv.boss ? 'Boss : ' : ''}${lv.name}</span>` : ''}
+      ${i === current || lv.boss ? (() => { const txt = (lv.boss ? 'Boss : ' : '') + lv.name, hw = txt.length * 3.4 + 10, sh = Math.max(0, hw + 6 - p.x) - Math.max(0, p.x + hw + 6 - cw); return `<span class="node-name"${sh ? ` style="position:relative;left:${Math.round(sh)}px"` : ''}>${txt}</span>`; })() : ''}
     </button>`;
   });
   if (sp) {
@@ -11983,7 +11983,7 @@ function boardRows(tab) {
 }
 function renderRanks() {
   for (const t of ['day', 'week', 'best', 'chrono']) $('rk-' + t).setAttribute('aria-selected', rankTab === t);
-  $('pseudoBtn').textContent = S.pseudo || 'Choisir un pseudo';
+  $('pseudoBtn').textContent = S.pseudo || 'Pseudo';
   $('pseudoBtn').setAttribute('aria-label', S.pseudo ? 'Changer de pseudo, actuellement ' + S.pseudo : 'Choisir un pseudo');
   $('rankDesc').textContent = { day: 'Meilleur score de chacun au défi du ' + frDate(dayKey()) + '.', week: 'Total des meilleurs scores au défi du jour depuis lundi.', best: 'Record de chacun en mode infini.', chrono: 'Record de chacun en Chrono, 60 secondes.' }[rankTab];
   const list = $('rankList');
@@ -12230,6 +12230,8 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
   const vp = document.querySelector('meta[name=viewport]');
   if (vp && !/user-scalable/.test(vp.content)) vp.content += ', maximum-scale=1, user-scalable=no';
 })();
+/* accès de test (uniquement si window.__BOT est défini avant le chargement) */
+if (window.__BOT) window.__DBG = { get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES };
 requestAnimationFrame(t => { last = t; frame(t); });
 initNet();
 
