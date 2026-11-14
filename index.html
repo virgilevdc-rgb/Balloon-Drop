@@ -1014,7 +1014,9 @@ try {
     S = Object.assign(freshSave(), d);
     S.daily = Object.assign(freshSave().daily, d.daily || {});
     if (!Array.isArray(S.owned) || !S.owned.length) S.owned = ['classic'];
-    for (const k of ['secrets', 'dailyHist', 'duels', 'themeBonus', 'stats', 'trophies']) if (!S[k] || typeof S[k] !== 'object') S[k] = {};
+    for (const k of ['story', 'seenTips', 'secrets', 'dailyHist', 'duels', 'themeBonus', 'stats', 'trophies']) if (!S[k] || typeof S[k] !== 'object' || Array.isArray(S[k])) S[k] = {};
+    for (const k of ['coins', 'best', 'bestLevel', 'streak', 'bestStreak', 'bestChrono']) if (!Number.isFinite(+S[k])) S[k] = 0; else S[k] = +S[k];
+    if (typeof S.skin !== 'string') S.skin = 'classic';
     if (!Array.isArray(S.newSkins)) S.newSkins = [];
     if (!S.outfit || typeof S.outfit !== 'object') S.outfit = {};
     if (!Array.isArray(S.wear)) S.wear = [];
@@ -1022,7 +1024,11 @@ try {
     S.xp = Math.max(0, +S.xp || 0); S.lvlPaid = Math.max(1, +S.lvlPaid || 1);
     if (S.daily.date && S.daily.best) S.dailyHist[S.daily.date] = Math.max(S.dailyHist[S.daily.date] || 0, S.daily.best);
   }
-} catch (e) {}
+} catch (e) {
+  /* sauvegarde illisible : on garde une copie de secours au lieu de l'écraser */
+  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) localStorage.setItem(SAVE_KEY + '-secours', raw); } catch (_) {}
+  S = freshSave();
+}
 if (!S.tutoDone && (S.best > 0 || S.coins > 0 || Object.keys(S.story).length > 0 || S.owned.length > 1)) S.tutoDone = true;
 if (S.audioFix !== 26) { S.audioFix = 26; S.muted = false; S.music = true; }
 S.audioMode = 'auto';
