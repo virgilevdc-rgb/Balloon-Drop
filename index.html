@@ -12230,6 +12230,13 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
   const vp = document.querySelector('meta[name=viewport]');
   if (vp && !/user-scalable/.test(vp.content)) vp.content += ', maximum-scale=1, user-scalable=no';
 })();
+/* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
+(() => {
+  const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
+    else if (n.nodeType === 1 && !/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/.test(n.tagName)) for (const c of n.childNodes) fix(c); };
+  fix(document.body);
+  new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') fix(m.target); else for (const n of m.addedNodes) fix(n); } }).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
 if (window.__BOT) window.__DBG = { get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
 requestAnimationFrame(t => { last = t; frame(t); });
