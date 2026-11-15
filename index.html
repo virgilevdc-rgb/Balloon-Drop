@@ -8178,7 +8178,7 @@ function updateGame() {
       const flipping = R.flip && b.ft >= R.flip.at && b.ft < R.flip.at + R.flip.len;
       if (R.flip && b.ft === R.flip.at) { floatText('Bascule !', b.x, b.y - b.r - 24, 26, 'gold'); sfx.flip(); buzz(20); FX.flipFx = 30; }
       if (b.heavy > 0) b.heavy--;
-      const grav = (G.slow > 0 ? .3 : .55) * cfg.grav * (flipping ? -.9 : 1) * (b.heavy > 0 ? 1.7 : 1) * (R.gmul || 1);
+      const grav = (G.slow > 0 ? .3 : .55) * cfg.grav * (flipping ? -.9 : 1) * (b.heavy > 0 ? 1.7 : 1) * (R.gmul || 1) * (R.bwt ? bwGrav(b) : 1);
       b.vy += grav;
       for (const ho of R.holes) {
         const dx = ho.x - b.x, dy = ho.y - b.y, d2 = dx * dx + dy * dy, d = Math.sqrt(d2) || 1, a = ho.k * 900 / Math.max(d2, 1600);
@@ -8186,7 +8186,8 @@ function updateGame() {
         if (d < 12 + b.r * .15) { if (burstBall(b, 'Aspiré !')) break; }
       }
       if (b.state !== 'fall') continue;
-      b.vx += R.wind * (G.slow > 0 ? .6 : 1);
+      b.vx += R.wind * (G.slow > 0 ? .6 : 1) * (R.bwt ? 1 + 1.6 * Math.min(1, b.inf) : 1);
+      if (R.bwt && b.vy > bwTerm(b)) b.vy += (bwTerm(b) - b.vy) * .08;
       if (R.evt && R.evt.id === 'helium') b.vx += Math.sin(G.frame * .035) * .045;
       b.vx *= .99;
       b.x += b.vx; b.y += b.vy;
@@ -12280,6 +12281,134 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
   const vp = document.querySelector('meta[name=viewport]');
   if (vp && !/user-scalable/.test(vp.content)) vp.content += ', maximum-scale=1, user-scalable=no';
 })();
+/* =========================================================
+   Monde 14 : Bouliland (prototype des mécaniques)
+   Règle du pays : plus le ballon est gonflé, plus il est léger (il tombe lentement et le vent l'emporte).
+   Boulis porteurs : ils tiennent la plateforme et courent sous le ballon, mais fuient les gros ballons.
+   Boulis souffleurs : joues qui gonflent (avertissement), puis gros souffle horizontal.
+   ========================================================= */
+const bwGrav = b => 1.25 - .8 * Math.min(1, b.inf);                 /* x1 : lourd (1.25) ; x3 : léger (~0.6) */
+const bwTerm = b => 13 - 8 * Math.min(1, b.inf);                    /* vitesse de chute maximale */
+WORLDS.push({ id: 14, name: 'Bouliland', of: 'de Bouliland', sw: ['#ffb3d1', '#7fd6c2'], sky: 'w14', desc: "Le pays de Bouli, où tout est fait de ballons. Ici, plus tu gonfles, plus ton ballon est léger. Le Baron Épingle a volé le Grand Ballon doré.", levels: [
+  { name: 'Bienvenue à Bouliland', goal: 6, plat: 1.25, bweight: 1, intro: "Ici, plus tu gonfles, plus ton ballon est léger : il descend lentement. Pas gonflé, il tombe comme une pierre.", stars: [10, 16] },
+  { name: 'Brise légère', goal: 7, plat: 1.15, bweight: 1, wind: .05, intro: "Une petite brise souffle. Un ballon gonflé se laisse emporter, un ballon pas gonflé file tout droit.", stars: [11, 18] },
+  { name: 'Les porteurs', goal: 7, plat: 1.1, bweight: 1, porters: 1, intro: "Des Boulis portent la plateforme et courent sous ton ballon. Mais ils ont peur des gros ballons : en x3, ils s'enfuient.", stars: [11, 18] },
+  { name: 'Course aux porteurs', goal: 8, bweight: 1, porters: 1.35, wind: .04, windChance: .5, intro: "Les porteurs sont plus rapides. Coince-les contre un bord pour poser un gros ballon.", stars: [13, 21] },
+  { name: 'Les souffleurs', goal: 8, plat: 1.1, bweight: 1, blowers: 1, intro: "Un Bouli souffleur gonfle ses joues… puis souffle. Regarde ses joues pour savoir quand lâcher.", stars: [13, 21] },
+  { name: 'Grand vent', goal: 8, bweight: 1, blowers: 2, move: [.5, .05], intro: "Des souffleurs des deux côtés. Un ballon léger part très loin : sers-toi du souffle.", stars: [13, 21] },
+  { name: 'Porteurs paniqués', goal: 8, bweight: 1, porters: 1.25, blowers: 1, intro: "Les souffles font aussi peur aux porteurs. Lâche quand tout le monde est calme.", stars: [13, 21] },
+  { name: 'Doublé', goal: 7, bweight: 1, dbl: .7, plat: 1.15, porters: 1, intro: "Deux ballons par manche. Les porteurs suivent le second : empile-le sur le premier.", stars: [14, 23] },
+  { name: 'Dernière ligne droite', goal: 9, bweight: 1, porters: 1.45, blowers: 2, bonus: .3, intro: "Porteurs, souffleurs et ballons légers : tout Bouliland en même temps.", stars: [16, 26] },
+  { name: 'Le repaire du Baron', goal: 10, bweight: 1, porters: 1.5, blowers: 2, wind: .05, windChance: .5, intro: "Le Baron Épingle n'est pas loin (prototype : le boss arrive bientôt).", stars: [17, 28] },
+] });
+for (const lvx of WORLDS[13].levels) lvx.stars = lvx.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
+SKIES.w14 = Object.assign({}, SKIES.w1, { top: '#86cde8', bottom: '#ffe3d2', tint: 'rgba(255,170,200,0.05)', ambient: 'clouds' });
+if (!SONGS.w14) SONGS.w14 = SONGS.w1;
+const _storyRoundB = storyRound;
+storyRound = function (lv, L, rng) {
+  const p = _storyRoundB(lv, L, rng);
+  if (lv) { if (lv.bweight) p.bweight = 1; if (lv.porters) p.porters = lv.porters; if (lv.blowers) p.blowers = lv.blowers; }
+  return p;
+};
+const _newRoundB = newRound;
+newRound = function () {
+  _newRoundB();
+  if (!R) return;
+  const p = R.p, L = R.L, P = R.plat, news = [];
+  R.bwt = !!p.bweight; R.porters = null; R.blowers = null;
+  if (R.bwt && !G.seen.bwt) { G.seen.bwt = 1; news.push(['Ballon léger', 'Plus il est gonflé, plus il tombe lentement']); }
+  if (p.porters) {
+    R.goldRound = false; R.plat2 = null; P.speed = 0; P.drift = null;
+    R.porters = { v: 0, speed: (1.5 + Math.min(L, 10) * .07) * p.porters, lag: .06 + R.rng() * .04, fear: 0, scare: 0, step: 0, flee: 0 };
+    if (!G.seen.porters) { G.seen.porters = 1; news.push(['Les porteurs', 'Ils fuient les ballons gonflés en x3']); }
+  }
+  if (p.blowers) {
+    const b0 = R.balls[0], y0 = b0.top + b0.r + 50, y1 = groundY() - 90, period = 200 - Math.min(L, 10) * 4, ph0 = Math.floor(R.rng() * period), sd = R.rng() < .5 ? -1 : 1;
+    R.blowers = [];
+    for (let k = 0; k < p.blowers; k++) R.blowers.push({ side: k ? -sd : sd, y: y0 + (y1 - y0) * (.25 + R.rng() * .5), period, ph: (ph0 + k * Math.round(period / 2)) % period, on: 46 });
+    if (!G.seen.blowers) { G.seen.blowers = 1; news.push(['Les souffleurs', 'Leurs joues gonflent, puis ils soufflent']); }
+  }
+  if (news.length) setTimeout(() => { if (R && G.phase === 'play') for (const [a, b] of news) floatText(a, PW / 2, H * .36, 26, 'gold'); }, 400);
+};
+const blPhase = (o, f = 0) => ((G.frame + f + o.ph) % o.period + o.period) % o.period;
+const blWarn = o => blPhase(o) >= o.period - 64;                    /* les joues gonflent */
+const blOn = o => blPhase(o) < o.on;                                /* le souffle */
+function bouliPre() {
+  if (!R) return;
+  const P = R.plat;
+  /* souffleurs : poussent les ballons qui tombent dans leur couloir, et effraient les porteurs */
+  let blowing = 0;
+  if (R.blowers) for (const bl of R.blowers) {
+    if (!blOn(bl)) continue; blowing = bl.side;
+    if (blPhase(bl) === 0 && G.phase === 'play') { sfx.gust && sfx.gust(); }
+    const k = Math.sin(Math.min(1, blPhase(bl) / bl.on) * Math.PI);
+    for (const b of R.balls) { if (b.state !== 'fall' || Math.abs(b.y - bl.y) > 70 + b.r * .6) continue;
+      b.vx += -bl.side * .42 * k * (R.bwt ? .6 + 1.2 * Math.min(1, b.inf) : 1); b.vx = clamp(b.vx, -7, 7);
+      if (!b.blown) { b.blown = 1; floatText('Fffff !', b.x, b.y - b.r - 18, 22, 'ink'); } }
+  }
+  /* porteurs : suivent le ballon avec un temps de réaction, tremblent en x2, fuient en x3 */
+  const Pt = R.porters;
+  if (Pt) {
+    const landed = R.balls.some(b => b.state === 'rest' && b === R.balls[R.balls.length - 1]);
+    const ball = R.balls.find(b => b.state === 'aim' || b.state === 'fall');
+    let target = P.x, fear = 0;
+    if (ball && !landed) { target = ball.state === 'fall' ? ball.x + ball.vx * 8 : ball.x; fear = ball.inf >= .66 ? 2 : ball.inf >= .33 ? 1 : 0; }
+    if (blowing && R.p.blowers && R.p.porters) { Pt.scare = 40; Pt.scareSide = blowing; }
+    if (Pt.scare > 0) { Pt.scare--; fear = Math.max(fear, 1); }
+    if (fear === 2 && ball) { const away = ball.x < PW / 2 ? PW - P.w / 2 - 6 : P.w / 2 + 6; target = Math.abs(ball.x - P.x) < PW * .5 ? (ball.x < P.x ? PW - P.w / 2 - 6 : P.w / 2 + 6) : away; if (!Pt.flee) { Pt.flee = 1; floatText('Aaah !', P.x, platY() - 40, 22, 'ink'); } }
+    else Pt.flee = 0;
+    Pt.fear = fear;
+    const sp = Pt.speed * (fear === 2 ? 1.6 : fear === 1 ? .7 : 1) * (G.slow > 0 ? .45 : 1);
+    const want = clamp(target, P.w / 2 + 6, PW - P.w / 2 - 6) - P.x;
+    Pt.v += (clamp(want * Pt.lag, -sp, sp) - Pt.v) * .25;
+    if (landed) Pt.v *= .8;
+    const dx = Pt.v + (fear === 1 && !landed ? Math.sin(G.frame * 1.7) * .6 : 0);
+    P.x = clamp(P.x + dx, P.w / 2 + 6, PW - P.w / 2 - 6); Pt.step += Math.abs(Pt.v) * .25 + .02;
+    for (const b of R.balls) if (b.state === 'rest') b.x += dx;
+  }
+}
+const _updateGameB = updateGame;
+updateGame = function () { if (R) bouliPre(); _updateGameB(); };
+/* dessin : porteurs (deux Boulis qui tiennent un drap tendu), souffleurs au bord de l'écran, jauge de poids */
+const _drawPlatformB = drawPlatform;
+drawPlatform = function (P, th) {
+  if (!R || !R.porters || P !== R.plat) return _drawPlatformB(P, th);
+  const Pt = R.porters, y = platY(), u = Math.max(14, Math.min(22, P.w * .3)), run = Pt.step, mv = Math.abs(Pt.v) > .3, hop = mv ? Math.abs(Math.sin(run)) * u * .4 : 0;
+  { const ex = { noShadow: true, noProp: true, look: [Pt.fear === 2 ? 0 : (Math.sign(Pt.v) || .2) * .8, -.6], lAng: -1.95 + (mv ? Math.sin(run) * .12 : 0), rAng: -1.2 - (mv ? Math.sin(run) * .12 : 0), lift: hop / u };
+    if (Pt.fear === 1) Object.assign(ex, { eyes: 'wide', mouth: 'o' }); if (Pt.fear === 2) Object.assign(ex, { eyes: 'wide', mouth: 'open', brows: 'sad', tear: true });
+    ctx.save(); ctx.translate(P.x + (Pt.fear === 1 ? Math.sin(G.frame * 2) * 1.5 : 0), y + 6 + u * 3.1); ctx.rotate(clamp((Pt.v || 0) * .05, -.25, .25)); drawBouli2(ctx, 0, 0, u, null, G.frame, 'aviatrice', ex); ctx.restore();
+    if (mv && !reduceMotion && G.frame % 6 === 0) FX.particles.push({ x: P.x - Math.sign(Pt.v) * u, y: y + 6 + u * 3.1, vx: -Math.sign(Pt.v) * .8, vy: -.6, g: .02, drag: .95, life: 22, size: 4, color: 'rgba(255,255,255,0.8)', rot: 0, vr: 0, shape: 'dot' });
+    if (Pt.fear === 2 && G.frame % 16 < 8) { ctx.fillStyle = '#7fd0ff'; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.ellipse(P.x + sd * u * 1.7, y + u * 1.2, 2.5, 4, 0, 0, TAU); ctx.fill(); } } }
+  /* drap tendu */
+  const sag = 6 + Math.abs(Pt.v) * 2;
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#2a2a44'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(P.x - P.w / 2, y); ctx.quadraticCurveTo(P.x, y + sag, P.x + P.w / 2, y); ctx.lineTo(P.x + P.w / 2, y + 7); ctx.quadraticCurveTo(P.x, y + sag + 7, P.x - P.w / 2, y + 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ff7aa2'; for (let i = 0; i < 5; i++) { const xx = P.x - P.w / 2 + (i + .5) * P.w / 5; ctx.beginPath(); ctx.arc(xx, y + 3.5 + Math.sin(i / 4 * Math.PI) * sag * .8, 2.4, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.roundRect(P.x - P.w * .17, y - 2, P.w * .34, 4, 2); ctx.fill();
+};
+const _drawHazardsB = drawHazards;
+drawHazards = function (th) {
+  _drawHazardsB(th);
+  if (!R) return;
+  if (R.blowers) for (const bl of R.blowers) {
+    const warn = blWarn(bl), on = blOn(bl), pw = warn ? (blPhase(bl) - (bl.period - 64)) / 64 : 0, u = 17, x = bl.side < 0 ? u * .5 : PW - u * .5;
+    ctx.save(); ctx.translate(x, bl.y + u * 1.6); ctx.rotate(bl.side < 0 ? Math.PI / 2 : -Math.PI / 2);
+    drawBouli2(ctx, 0, 0, u, null, G.frame, 'aviatrice', { noShadow: true, noProp: true, eyes: on ? 'closed' : warn ? 'wide' : 'open', mouth: on || warn ? 'o' : 'cat', look: [0, -1], lAng: Math.PI * .8, rAng: .2 });
+    if (warn || on) { const ch = on ? 1 : pw; ctx.fillStyle = 'rgba(255,120,150,0.95)'; ctx.strokeStyle = '#2a2a44'; ctx.lineWidth = 1.5; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * u * .9, -u * 1.25, u * (.25 + .45 * ch), 0, TAU); ctx.fill(); ctx.stroke(); } }
+    ctx.restore();
+    if (warn && G.frame % 20 < 10) { ctx.fillStyle = '#ffd23f'; ctx.font = '22px "Lilita One", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', bl.side < 0 ? 34 : PW - 34, bl.y - 18); }
+    if (on) { const k = Math.sin(Math.min(1, blPhase(bl) / bl.on) * Math.PI); ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineCap = 'round';
+      for (let i = 0; i < 9; i++) { const yy = bl.y + (h1(i + 40) - .5) * 120, len = 50 + h1(i + 50) * 90, x0 = (((G.frame * 9 + i * 53) % PW) / PW), xs = bl.side < 0 ? x0 * PW : PW - x0 * PW;
+        ctx.globalAlpha = .8 * k * (1 - x0 * .5); ctx.lineWidth = 4; ctx.strokeStyle = i % 3 ? 'rgba(255,255,255,0.95)' : 'rgba(160,215,255,0.95)'; ctx.beginPath(); ctx.moveTo(xs, yy); ctx.quadraticCurveTo(xs + (bl.side < 0 ? -len * .5 : len * .5), yy + Math.sin(i + G.frame * .2) * 8, xs + (bl.side < 0 ? -len : len), yy); ctx.stroke(); }
+      ctx.restore(); }
+  }
+  /* jauge de poids pendant la visée */
+  if (R.bwt) { const b = R.balls.find(x => x.state === 'aim' && x.enter >= 1); if (b) {
+    const t = b.inf >= .66 ? ['Léger', '#5fd0a8'] : b.inf >= .33 ? ['Moyen', '#ffc93a'] : ['Lourd', '#8a93a6'];
+    const y = b.y + b.r + 22; ctx.save(); ctx.font = '800 13px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const w = ctx.measureText(t[0]).width + 30;
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.roundRect(b.x - w / 2, y - 11, w, 22, 11); ctx.fill();
+    ctx.fillStyle = t[1]; ctx.beginPath(); ctx.arc(b.x - w / 2 + 12, y, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#2a2a44'; ctx.fillText(t[0], b.x + 6, y + 1); ctx.restore(); } }
+};
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
   const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
