@@ -5122,9 +5122,9 @@ const WORLDS = [
     { name: 'Brouillard', goal: 8, fog: true, intro: 'Des nappes de brouillard passent devant la plateforme.', stars: [13, 21] },
     { name: 'Double averse', goal: 7, rain: true, dbl: .6, plat: 1.1, intro: 'Des doublés sous la pluie.', stars: [14, 23] },
     { name: 'Éclairs', goal: 8, lightning: true, wind: .07, windChance: .7, intro: "Les éclairs éblouissent. Garde l'œil sur la plateforme.", stars: [13, 21] },
-    { name: 'Brume mouvante', goal: 9, fog: true, move: [1, .1], bonus: .35, intro: 'Le brouillard cache une plateforme qui bouge.', stars: [15, 24] },
+    { name: 'Coup de tonnerre', goal: 9, fog: true, move: [.7, .08], thunder: 1, bonus: .35, intro: "Un éclair dissipe le brouillard et montre où le tonnerre va pousser la plateforme. Lâche à l'aveugle, ou attends l'éclair et vise en avance.", stars: [15, 24] },
     { name: 'Mouettes', goal: 9, rain: true, birds: 185, wind: .07, windChance: .5, gust: true, intro: 'Les mouettes volent même sous la pluie.', stars: [15, 24] },
-    { name: 'Tempête', goal: 10, rain: true, fog: true, wind: .08, windChance: .7, gust: true, move: [1, .1], bonus: .35, intro: 'Pluie, rafales et brouillard.', stars: [16, 26] },
+    { name: 'Tempête', goal: 10, rain: true, fog: true, wind: .08, windChance: .7, gust: true, move: [1, .1], bonus: .35, thunder: 1, intro: 'Pluie, rafales et brouillard.', stars: [16, 26] },
     { name: "Le Nuage d'orage", boss: 'storm', hp: 11, shrink: .93, rain: true, move: [.8, .05], bonus: .3, intro: "Le cœur de l'orage. Il souffle des rafales, puis lance des éclairs : quand une colonne clignote, attends que la foudre tombe avant de lâcher.", stars: [8, 12] },
   ] },
   { id: 3, name: 'Le Volcan', of: 'du Volcan', sw: ['#ffb02e', '#b8230f'], sky: 'w3', desc: 'Lave, roche fragile, trampolines, geysers et braises.', levels: [
@@ -5516,6 +5516,7 @@ function storyRound(lv, L, rng) {
     ice: !!lv.ice, snow: !!lv.snow, fans: lv.fans || 0, spikes: !!lv.spikes, flip: !!lv.flip && rng() < .85, holes: lv.holes || 0, rocks: lv.rocks ? Math.max(130, lv.rocks - L * 4) : 0, icicles: lv.icicles ? Math.max(150, lv.icicles - L * 5) : 0, monkeys: lv.monkeys ? Math.max(140, lv.monkeys - L * 4) : 0, flower: !!lv.flower };
   if (p.drift) p.speed = 0;
   p.skite = !!lv.skite && rng() < lv.skite;
+  p.thunder = !!lv.thunder;
   return G.boss ? bossRound(G.boss, p, rng) : p;
 }
 
@@ -7879,6 +7880,7 @@ function drawBoss(th) {
 }
 function drawHazards(th) {
   if (FX.skite) drawStarKite();
+  if (R && R.th) drawThunderClap();
   if (R.tramp && R.flower) drawFlower(R.tramp, groundY() - 4);
   else if (R.tramp) {
     const T = R.tramp, y = groundY() - 4, sag = T.sq * 14;
@@ -8128,6 +8130,7 @@ function updateGame() {
   if (G.boss) updateBoss();
   updateShots();
   if (FX.skite) updateStarKite();
+  if (R.th) updateThunderClap();
   const falling = R.balls.find(b => b.state === 'fall' || b.state === 'bounce');
   if (R.p.birdEvery && !falling && --R.birdT <= 0) { spawnBird(); R.birdT = Math.round(R.p.birdEvery * (.7 + R.rng() * .6)); }
 
@@ -8408,7 +8411,7 @@ function drawSky(th) {
       if (OC.cv.width !== ctx.canvas.width || OC.cv.height !== ctx.canvas.height) { OC.cv.width = ctx.canvas.width; OC.cv.height = ctx.canvas.height; }
       const o = OC.cv.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, OC.cv.width, OC.cv.height); o.setTransform(m); ORAGESCENE.bg(o, W, H, G.frame, z, { boss }); }
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(OC.cv, 0, 0); ctx.restore();
-    if (!reduceMotion) ORAGESCENE.fx(ctx, W, H, G.frame, z, { boss, noFlash: !!(cfg && cfg.lightning) || boss, drizzle: !(cfg && cfg.rain) });
+    if (!reduceMotion) ORAGESCENE.fx(ctx, W, H, G.frame, z, { boss, noFlash: !!(cfg && cfg.lightning) || boss || !!(typeof R !== 'undefined' && R && R.th), drizzle: !(cfg && cfg.rain) });
     return;
   }
   if (th.ambient === 'clouds') {
@@ -13149,6 +13152,43 @@ function drawStarKite() {
 }
 const _newRoundK = newRound;
 newRound = function () { _newRoundK.apply(this, arguments); try { FX.skite = R && R.p && R.p.skite && !G.boss ? makeStarKite() : null; } catch (e) { FX.skite = null; } };
+/* ===== Monde 2, zone 3 : le coup de tonnerre =====
+   Un éclair rend tout net (la brume s'efface) et montre où le tonnerre va pousser la plateforme ;
+   puis le tonnerre la décale. Dilemme : lâcher à l'aveugle tout de suite, ou attendre le flash et anticiper la secousse. */
+const TH_FLASH = 56, TH_SHIFT = 22;
+function makeThunderClap() { return { st: 'wait', t: 110 + Math.floor(R.rng() * 90), dir: 1, bx: 0, k: 0 }; }
+function thunderReveal() { try { const T = R && R.th; if (!T) return 0; if (T.st === 'flash') return Math.min(1, (TH_FLASH - T.t) / 6); if (T.st === 'shift') return Math.max(0, T.t / TH_SHIFT); } catch (e) {} return 0; }
+function updateThunderClap() {
+  const T = R.th, P = R.plat;
+  if (--T.t > 0) { if (T.st === 'shift') { const lo = P.w / 2 + 8, hi = PW - P.w / 2 - 8, st = clamp(P.x + T.dir * T.step, lo, hi) - P.x; P.x += st; for (const b of R.balls) if (b.state === 'rest') b.x += st; } return; }
+  if (T.st === 'wait') {
+    T.st = 'flash'; T.t = TH_FLASH; const room = P.x - PW / 2; T.dir = Math.abs(room) > PW * .25 ? -Math.sign(room) : (R.rng() < .5 ? -1 : 1);
+    T.step = (60 + R.rng() * 30) / TH_SHIFT; T.bx = 40 + R.rng() * (PW - 80); T.seed = Math.floor(R.rng() * 999);
+    sfx.tick && sfx.tick(true); buzz(10);
+  } else if (T.st === 'flash') {
+    T.st = 'shift'; T.t = TH_SHIFT; sfx.thunder(); buzz([30, 40, 50]); shake = reduceMotion ? 0 : 8;
+    floatText('Tonnerre ' + (T.dir > 0 ? '→' : '←'), P.x, groundY() - 70, 24, 'ink'); burst(P.x, groundY(), 12, '#d8e4ff');
+  } else { T.st = 'wait'; T.t = 190 + Math.floor(R.rng() * 90); }
+}
+function drawThunderClap() {
+  const T = R.th; if (T.st !== 'flash') return;
+  const k = Math.min(1, (TH_FLASH - T.t) / 4), fade = T.t < 14 ? T.t / 14 : 1, x0 = -PX;
+  ctx.save();
+  ctx.fillStyle = `rgba(225,235,255,${(.2 * k * fade).toFixed(3)})`; ctx.fillRect(x0, 0, W, H);
+  if (T.t > TH_FLASH - 16) { /* éclair lointain */
+    ctx.strokeStyle = 'rgba(235,245,255,0.9)'; ctx.lineWidth = 2.2; ctx.shadowColor = '#9fd8ff'; ctx.shadowBlur = 12; ctx.lineJoin = 'round';
+    let x = T.bx, y = hudBottom(); ctx.beginPath(); ctx.moveTo(x, y); let i = 0; while (y < groundY() - 120) { y += 20 + ((T.seed * 7 + i * 13) % 20); x += (((T.seed + i * 31) % 37) - 18); ctx.lineTo(x, y); i++; } ctx.stroke(); ctx.shadowBlur = 0; }
+  /* flèches : où le tonnerre va pousser la plateforme */
+  const P = R.plat, gy = groundY(), a = fade * (.6 + .4 * Math.abs(Math.sin(T.t * .25)));
+  ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`; ctx.strokeStyle = `rgba(20,22,46,${(a * .6).toFixed(3)})`; ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) { const cx = P.x + T.dir * (P.w / 2 + 18 + i * 20), cy = gy - 30;
+    ctx.beginPath(); ctx.moveTo(cx - T.dir * 8, cy - 12); ctx.lineTo(cx + T.dir * 8, cy); ctx.lineTo(cx - T.dir * 8, cy + 12); ctx.lineTo(cx - T.dir * 2, cy); ctx.closePath(); ctx.stroke(); ctx.fill(); }
+  ctx.restore();
+}
+const _drawFogT = drawFog;
+drawFog = function () { const k = thunderReveal(); if (k <= 0) return _drawFogT.apply(this, arguments); ctx.save(); ctx.globalAlpha *= 1 - k * .88; _drawFogT.apply(this, arguments); ctx.restore(); };
+const _newRoundT = newRound;
+newRound = function () { _newRoundT.apply(this, arguments); try { R.th = R && R.p && R.p.thunder && !G.boss ? makeThunderClap() : null; } catch (e) {} };
 const _updateBossC = updateBoss;
 updateBoss = function () { _updateBossC(); const B = G.boss; if (B && B.type === 'crow') updateCrowFx(B); };
 
