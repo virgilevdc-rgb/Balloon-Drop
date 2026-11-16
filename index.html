@@ -12307,7 +12307,7 @@ WORLDS.push({ id: 14, name: 'Bouliland', of: 'de Bouliland', sw: ['#ffb3d1', '#7
   { name: 'Porteurs paniqués', goal: 8, bweight: 1, porters: 1.25, blowers: 1, intro: "Les souffles font aussi peur aux porteurs. Lâche quand tout le monde est calme.", stars: [13, 21] },
   { name: 'Doublé', goal: 7, bweight: 1, dbl: .7, plat: 1.15, porters: 1, intro: "Deux ballons par manche. Les porteurs suivent le second : empile-le sur le premier.", stars: [14, 23] },
   { name: 'Dernière ligne droite', goal: 9, bweight: 1, porters: 1.45, blowers: 2, bonus: .3, intro: "Porteurs, souffleurs et ballons légers : tout Bouliland en même temps.", stars: [16, 26] },
-  { name: 'Le repaire du Baron', goal: 10, bweight: 1, porters: 1.5, blowers: 2, wind: .05, windChance: .5, intro: "Le Baron Épingle n'est pas loin (prototype : le boss arrive bientôt).", stars: [17, 28] },
+  { name: 'Le Baron Épingle', boss: 'baron', hp: 18, shrink: .93, bonus: .3, intro: "Le Baron Épingle a volé le Grand Ballon. Évite ses épingles, puis son pogo, puis la rafale de son soufflet. Chaque ballon posé le frappe.", stars: [9, 14] },
 ] });
 for (const lvx of WORLDS[13].levels) lvx.stars = lvx.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
 SKIES.w14 = Object.assign({}, SKIES.w1, { top: '#7fc4ea', bottom: '#ffe2cf', tint: 'rgba(255,170,200,0.04)', ambient: 'bouli', floor: 'bouli' });
@@ -12501,7 +12501,7 @@ const BOULISCENE = (() => {
     if (Z === 2) { cloud(170, 210 + TS, 1.7, .55); cloud(-40, 170 + TS, 1.2, .5); island(92, 420, 1.0, t, 6, .85, true); cloud(-60, 470, 1.3, .7); cloud(250, 400, 1.1, .7);
       island(70, 290 + TS * .8, .55, t, 2, .55, true); island(200, 200 + TS, .35, t, 5, .7, false); island(335, 225 + TS, .45, t, 3, .6, true); island(330, 470, .95, t, 1, .2, true);
       for (let i = 0; i < 5; i++) { const x = ((i * 90 + t * (.3 + i * .05)) % (W + 60)) - 30, y = 150 + i * 46 + Math.sin(t * .05 + i) * 6; c.strokeStyle = 'rgba(42,60,90,0.55)'; c.lineWidth = 1.6; c.beginPath(); const fl = Math.sin(t * .3 + i) * 3; c.moveTo(x - 6, y - fl); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 6, y - fl); c.stroke(); } }
-    if (Z === 3) { airship(290 + Math.sin(t * .006) * 20, 190 + TS, .85, t); }
+    if (Z === 3 && !(G && G.boss)) { airship(290 + Math.sin(t * .006) * 20, 190 + TS, .85, t); }
     /* 4. collines et maisons lointaines */
     if (Z !== 2) { const top = hills(H * .66, ZONES.hillFar, 70, .35, t * .0, true);
       void top;
@@ -12595,6 +12595,7 @@ function bouliPre() {
     if (ball && !landed) { target = ball.state === 'fall' ? ball.x + ball.vx * 8 : ball.x; fear = ball.inf >= .66 ? 2 : ball.inf >= .33 ? 1 : 0; }
     if (blowing && R.p.blowers && R.p.porters) { Pt.scare = 40; Pt.scareSide = blowing; }
     if (Pt.scare > 0) { Pt.scare--; fear = Math.max(fear, 1); }
+    if (Pt.avoidX != null && Math.abs(P.x - Pt.avoidX) < 140) { fear = Math.max(fear, 1); target = P.x + (P.x < Pt.avoidX ? -220 : 220); }
     if (fear === 2 && ball) { const away = ball.x < PW / 2 ? PW - P.w / 2 - 6 : P.w / 2 + 6; target = Math.abs(ball.x - P.x) < PW * .5 ? (ball.x < P.x ? PW - P.w / 2 - 6 : P.w / 2 + 6) : away; if (!Pt.flee) { Pt.flee = 1; floatText('Aaah !', P.x, platY() - 40, 22, 'ink'); } }
     else Pt.flee = 0;
     Pt.fear = fear;
@@ -12674,6 +12675,159 @@ drawHazards = function (th) {
     ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.beginPath(); ctx.roundRect(b.x - w / 2, y - 11, w, 22, 11); ctx.fill();
     ctx.fillStyle = t[1]; ctx.beginPath(); ctx.arc(b.x - w / 2 + 12, y, 5, 0, TAU); ctx.fill(); ctx.fillStyle = '#2a2a44'; ctx.fillText(t[0], b.x + 6, y + 1); ctx.restore(); } }
 };
+/* =========================================================
+   Boss du Monde 14 : le Baron Épingle (hérisson grincheux, monocle, haut-de-forme)
+   Phase 1 : dirigeable qui lâche des épingles (cible rouge au sol avant chaque lâcher)
+   Phase 2 : dirigeable percé, il bondit sur un pogo (ombre = point d'arrivée) ; le porteur le fuit
+   Phase 3 : caché derrière le Grand Ballon volé (qui dégonfle à chaque coup), soufflet géant
+   ========================================================= */
+BOSSES.baron = { name: 'Le Baron Épingle', p2: 'Son dirigeable est percé : place au pogo !', p3: 'Il se cache derrière le Grand Ballon', reward: 420 };
+function drawBaron(c, x, y, s, o = {}) {
+  const t = o.t || 0, hurt = o.hurt, OUT = '#2a1a36', col = v => hurt ? '#ffffff' : v;
+  c.save(); c.translate(x, y); c.scale(s, s);
+  /* piquants (derrière) */
+  c.fillStyle = col('#3e2a5a'); c.beginPath();
+  for (let i = 0; i <= 18; i++) { const a = Math.PI * .95 + i * Math.PI * 1.1 / 18, r1 = 30, r2 = 46 + (i % 2) * 4 + Math.sin(t * .2 + i) * (o.angry ? 2 : .5); c.lineTo(Math.cos(a - .09) * r1, Math.sin(a - .09) * r1 - 4); c.lineTo(Math.cos(a) * r2, Math.sin(a) * r2 - 4); c.lineTo(Math.cos(a + .09) * r1, Math.sin(a + .09) * r1 - 4); }
+  c.closePath(); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke();
+  c.strokeStyle = hurt ? '#fff' : 'rgba(255,170,140,0.5)'; c.lineWidth = 2; c.beginPath(); c.arc(0, -4, 40, Math.PI * 1.1, Math.PI * 1.45); c.stroke();
+  /* corps */
+  const bg = c.createRadialGradient(-10, -14, 4, 0, 0, 36); bg.addColorStop(0, col('#f6e3c8')); bg.addColorStop(1, col('#c9a27a'));
+  c.fillStyle = bg; c.beginPath(); c.ellipse(0, 0, 30, 32, 0, 0, TAU); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2.2; c.stroke();
+  c.fillStyle = col('#fff3e2'); c.beginPath(); c.ellipse(0, 14, 17, 14, 0, 0, TAU); c.fill();
+  /* yeux, monocle doré */
+  const ey = -6, look = o.look || 0;
+  for (const sd of [-1, 1]) { c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(sd * 10, ey, 6, 7, 0, 0, TAU); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.5; c.stroke();
+    c.fillStyle = OUT; c.beginPath(); c.arc(sd * 10 + look * 2, ey + 1, o.scared ? 2 : 3.2, 0, TAU); c.fill(); }
+  c.strokeStyle = col('#e8b33a'); c.lineWidth = 2.4; c.beginPath(); c.arc(10, ey, 8.5, 0, TAU); c.stroke(); c.lineWidth = 1; c.beginPath(); c.moveTo(18, ey + 3); c.quadraticCurveTo(24, ey + 18, 18, ey + 26); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.ellipse(7, ey - 4, 2.5, 1.5, -.5, 0, TAU); c.fill();
+  /* sourcils */
+  c.strokeStyle = OUT; c.lineWidth = 2.6; c.lineCap = 'round'; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * 4, ey - (o.angry ? 8 : 11)); c.lineTo(sd * 16, ey - (o.angry ? 14 : 12) + (o.scared ? -3 : 0)); c.stroke(); }
+  /* museau, moustache en crochet */
+  c.fillStyle = col('#2a1a36'); c.beginPath(); c.ellipse(0, 6, 4.5, 3.5, 0, 0, TAU); c.fill();
+  c.strokeStyle = col('#3e2a5a'); c.lineWidth = 3; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * 2, 10); c.quadraticCurveTo(sd * 14, 6, sd * 18, 13); c.quadraticCurveTo(sd * 21, 17, sd * 16, 16); c.stroke(); }
+  c.strokeStyle = OUT; c.lineWidth = 2; c.beginPath(); if (o.scared) c.arc(0, 21, 4, 0, TAU); else if (o.angry) { c.moveTo(-6, 21); c.lineTo(6, 19); } else c.arc(0, 15, 6, .2 * Math.PI, .8 * Math.PI); c.stroke();
+  /* haut-de-forme avec épingle */
+  c.save(); c.translate(-4, -30); c.rotate(-.18);
+  c.fillStyle = col('#3a2458'); c.beginPath(); c.ellipse(0, 0, 20, 5, 0, 0, TAU); c.fill(); c.strokeStyle = OUT; c.lineWidth = 2; c.stroke();
+  c.beginPath(); c.roundRect(-12, -26, 24, 26, 3); c.fill(); c.stroke(); c.fillStyle = col('#e8333d'); c.fillRect(-12, -8, 24, 5);
+  c.strokeStyle = '#d8dce8'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(6, -6); c.lineTo(16, -30); c.stroke(); c.fillStyle = col('#e8333d'); c.beginPath(); c.arc(16, -31, 3, 0, TAU); c.fill();
+  c.restore();
+  /* bras */
+  c.strokeStyle = OUT; c.lineWidth = 2; c.fillStyle = col('#c9a27a');
+  for (const sd of [-1, 1]) { const a = o.arms != null ? o.arms : (sd < 0 ? 2.4 : .7); c.beginPath(); c.ellipse(sd * 28 + Math.cos(a) * 6 * sd, 6 + Math.sin(a) * 6, 6, 9, sd * .6, 0, TAU); c.fill(); c.stroke(); }
+  c.restore();
+}
+function drawBaronShip(c, x, y, s, t, o = {}) {
+  c.save(); c.translate(x, y); c.rotate((o.rot || 0) + Math.sin(t * .02) * .04); c.scale(s, s);
+  const g = c.createLinearGradient(0, -32, 0, 30); g.addColorStop(0, o.hurt ? '#fff' : '#8a6ab0'); g.addColorStop(1, o.hurt ? '#fff' : '#2a1a40');
+  c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, 72, 27, 0, 0, TAU); c.fill(); c.strokeStyle = '#1a1028'; c.lineWidth = 2; c.stroke();
+  c.fillStyle = '#1a1028'; for (let i = 0; i < 13; i++) { const a = Math.PI + i * Math.PI / 12, px = Math.cos(a) * 72, py = Math.sin(a) * 27; c.beginPath(); c.moveTo(px * .97 - 3, py * .97); c.lineTo(px * 1.15, py * 1.28 - 3); c.lineTo(px * .97 + 4, py * .97); c.closePath(); c.fill(); }
+  c.strokeStyle = 'rgba(255,170,140,0.55)'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 0, 68, 23, 0, Math.PI * 1.05, Math.PI * 1.55); c.stroke();
+  c.fillStyle = '#2a1a40'; c.beginPath(); c.moveTo(-78, 0); c.lineTo(-100, -20); c.lineTo(-98, 20); c.closePath(); c.fill();
+  c.strokeStyle = '#1a1028'; c.beginPath(); c.moveTo(-18, 25); c.lineTo(-14, 40); c.moveTo(18, 25); c.lineTo(14, 40); c.stroke();
+  if (o.baron !== false) drawBaron(c, 0, 36, .42, { t, angry: o.angry, hurt: o.hurt, arms: 3.6 });
+  c.fillStyle = '#3a2a50'; c.beginPath(); c.roundRect(-24, 40, 48, 15, 5); c.fill(); c.fillStyle = o.hatch ? '#ff5a5a' : '#ffcf6a'; for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(-14 + i * 14, 47.5, 3, 0, TAU); c.fill(); }
+  c.strokeStyle = '#1a1028'; c.beginPath(); c.moveTo(10, -27); c.lineTo(10, -50); c.stroke(); c.fillStyle = '#e8333d'; c.beginPath(); c.moveTo(10, -50); c.quadraticCurveTo(24, -47 + Math.sin(t * .2) * 3, 32, -43); c.lineTo(10, -40); c.closePath(); c.fill();
+  if (o.leak) { c.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 6; i++) { const q = ((t * .08 + i / 6) % 1); c.beginPath(); c.arc(40 + q * 40, -10 - q * 20, 3 + q * 6, 0, TAU); c.fill(); } }
+  c.restore();
+}
+function drawPin(c, x, y, a, h = 30) { c.save(); c.translate(x, y); c.rotate(a);
+  c.strokeStyle = '#d8dce8'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -h); c.stroke();
+  const g = c.createRadialGradient(-2, -h - 3, 1, 0, -h, 7); g.addColorStop(0, '#ff9a9a'); g.addColorStop(1, '#a01030'); c.fillStyle = g; c.beginPath(); c.arc(0, -h, 6, 0, TAU); c.fill(); c.restore(); }
+function updateBaron(B) {
+  const top = hudBottom(), gy = groundY(), Pt = R && R.porters;
+  if (!B.init) Object.assign(B, { init: 1, ax: PW / 2, adir: 1, pinT: 120, pins: [], mark: 0, mx: 0, lastP: 1, trans: 0, pogo: null, bel: { t: 120, st: 'idle' }, gside: 1, gr: 46 });
+  if (B.phase !== B.lastP) { B.lastP = B.phase; B.trans = 100; B.pins = []; B.mark = 0; if (B.phase === 2) { B.shipX = B.x; B.shipY = B.y; B.pogo = { x: B.x, y: B.y, vx: 0, vy: 0, st: 'fall', t: 0, tx: PW / 2 }; } if (B.phase === 3) { B.gside = B.x < PW / 2 ? 1 : -1; } }
+  if (B.trans > 0) B.trans--;
+  if (Pt) Pt.avoidX = null;
+  /* épingles qui tombent */
+  for (const pn of B.pins) { if (pn.stuck) { pn.stuck--; continue; } pn.vy = Math.min(9, pn.vy + .32); pn.y += pn.vy; if (pn.y >= gy - 4) { pn.y = gy - 4; pn.stuck = 70; burst(pn.x, gy - 4, 6, '#d8dce8'); } }
+  B.pins = B.pins.filter(pn => !pn.stuck || pn.stuck > 1);
+  if (B.phase === 1) {
+    if (B.mark > 0) { B.mark--; if (B.mark === 0) { B.pins.push({ x: B.ax, y: B.y + 30, vy: 1 }); sfx.tick && sfx.tick(true); } }
+    else { B.ax += B.adir * 1.1; if (B.ax > PW - 70 || B.ax < 70) B.adir = -B.adir; if (--B.pinT <= 0) { B.mark = 52; B.mx = B.ax; B.pinT = 150 - Math.min(40, (B.max - B.hp) * 3); } }
+    B.x = B.ax; B.y = top + 92 + Math.sin(B.t * .03) * 6;
+  } else if (B.phase === 2) {
+    const P = B.pogo;
+    if (B.trans > 0) { B.shipX += 3; B.shipY -= 2.2; }
+    if (P.st === 'fall') { P.vy += .35; P.y += P.vy; if (P.y >= gy - 52) { P.y = gy - 52; P.st = 'ground'; P.t = 26; } }
+    else if (P.st === 'ground') { if (--P.t <= 0) { const cand = Pt && R ? R.plat.x + (Math.random() < .5 ? -1 : 1) * (60 + Math.random() * 60) : 60 + Math.random() * (PW - 120); P.tx = clamp(cand, 50, PW - 50); const T = 70; P.vx = (P.tx - P.x) / T; P.vy = -(.32 * T / 2); P.st = 'air'; sfx.boing && sfx.boing(); } }
+    else { P.vy += .32; P.x += P.vx; P.y += P.vy; if (P.y >= gy - 52 && P.vy > 0) { P.y = gy - 52; P.st = 'ground'; P.t = 30 - Math.min(14, (B.max * .66 - B.hp) * 2); shake = reduceMotion ? 0 : 4; burst(P.x, gy, 10, '#ffffff'); } }
+    B.x = P.x; B.y = P.y; if (Pt) Pt.avoidX = P.x;
+  } else {
+    const gx = B.gside > 0 ? PW - 70 : 70, k = Math.max(.35, B.hp / (B.max / 3));
+    B.gr = 26 + 26 * Math.min(1, k); B.x += (gx - B.x) * .05; B.y += (top + 130 + Math.sin(B.t * .025) * 8 - B.y) * .05;
+    const bl = B.bel; bl.t--;
+    if (bl.st === 'idle' && bl.t <= 0) { bl.st = 'warn'; bl.t = 64; }
+    else if (bl.st === 'warn' && bl.t <= 0) { bl.st = 'blow'; bl.t = 56; sfx.gust && sfx.gust(); }
+    else if (bl.st === 'blow') { const q = Math.sin((1 - bl.t / 56) * Math.PI);
+      if (R) for (const b of R.balls) if (b.state === 'fall') { b.vx += -B.gside * .3 * q * (R.bwt ? .6 + 1.3 * Math.min(1, b.inf) : 1); b.vx = clamp(b.vx, -7, 7); if (!b.blown) { b.blown = 1; floatText('Fffff !', b.x, b.y - b.r - 18, 22, 'ink'); } }
+      if (bl.t <= 0) { bl.st = 'idle'; bl.t = 130 - Math.min(40, (B.max / 3 - B.hp) * 6); } }
+  }
+}
+const _bossRoundB = bossRound;
+bossRound = function (B, p, rng) { p = _bossRoundB(B, p, rng); if (B.type === 'baron') { p.speed = 0; p.wind = 0; p.gust = false; p.bweight = 1; p.porters = B.phase === 2 ? 1.25 : 0; p.blowers = 0; p.dbl = false; } return p; };
+const _updateBossB = updateBoss;
+updateBoss = function () { _updateBossB(); const B = G.boss; if (B && B.type === 'baron' && !B.dead) updateBaron(B); };
+const _hazardHitB = hazardHit;
+hazardHit = function (b) {
+  const B = G.boss;
+  if (B && B.type === 'baron' && !B.dead && b.state === 'fall' && !(b.immune > 0)) {
+    for (const pn of B.pins) if (!pn.stuck && Math.abs(pn.x - b.x) < b.r * .75 + 4 && pn.y > b.y - b.r && pn.y - 34 < b.y + b.r) { if (burstBall(b, 'Piqué !')) return true; }
+    if (B.phase === 2 && B.pogo && B.pogo.st === 'air' && Math.hypot(B.x - b.x, B.y - b.y) < b.r + 30) { if (burstBall(b, 'Aïe, des piquants !')) return true; }
+  }
+  return _hazardHitB(b);
+};
+function drawBaronBoss(B) {
+  if (!B.init) return;
+  const t = B.t, hurt = B.hurt % 4 > 1, gy = groundY();
+  /* épingles et cible */
+  if (B.mark > 0) { const pul = 1 + Math.sin(t * .4) * .1; ctx.save(); ctx.strokeStyle = `rgba(255,60,80,${(.5 + .5 * (Math.floor(B.mark / 6) % 2)).toFixed(2)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(B.mx, gy + 4, 22 * pul, 7 * pul, 0, 0, TAU); ctx.stroke();
+    ctx.setLineDash([4, 8]); ctx.strokeStyle = 'rgba(255,90,100,0.45)'; ctx.beginPath(); ctx.moveTo(B.mx, B.y + 40); ctx.lineTo(B.mx, gy); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
+  for (const pn of B.pins) { ctx.save(); if (pn.stuck) ctx.globalAlpha = Math.min(1, pn.stuck / 30); drawPin(ctx, pn.x, pn.y, pn.stuck ? .25 : Math.PI, 30); ctx.restore(); }
+  if (B.dead) { const d = Math.min(1, B.deadT / 120), x = B.x + Math.sin(B.deadT * .08) * 18, y = B.y - d * d * 500;
+    ctx.save(); ctx.strokeStyle = '#7a8399'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 20, y - 50); ctx.lineTo(x + 18, y - 18); ctx.stroke(); ctx.restore();
+    const g = ctx.createRadialGradient(x + 16, y - 60, 1, x + 20, y - 58, 9); g.addColorStop(0, '#fff'); g.addColorStop(1, '#ff7aa2'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x + 20, y - 58, 8, 9, 0, 0, TAU); ctx.fill();
+    drawBaron(ctx, x, y, .8, { t, scared: true, arms: -1.2 });
+    const gr = 46, gx = PW / 2, gyy = hudBottom() + 120 + Math.max(0, 140 - B.deadT * 2);
+    const gl = ctx.createRadialGradient(gx, gyy, 6, gx, gyy, gr * 2.4); gl.addColorStop(0, 'rgba(255,224,120,0.6)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(gx, gyy, gr * 2.4, 0, TAU); ctx.fill();
+    blBalloon(gx, gyy, gr, '#ffc93a'); return; }
+  if (B.phase === 1 || (B.phase === 2 && B.trans > 0)) {
+    const sx = B.phase === 1 ? B.x : B.shipX, sy = B.phase === 1 ? B.y : B.shipY;
+    drawBaronShip(ctx, sx, sy, .9, t, { hurt: B.phase === 1 && hurt, hatch: B.mark > 0, angry: B.hp < B.max * .8, baron: B.phase === 1, leak: B.phase === 2, rot: B.phase === 2 ? (100 - B.trans) * .04 : 0 });
+  }
+  if (B.phase === 2) { const P = B.pogo;
+    if (P.st === 'air') { const k = 1 - Math.min(1, Math.abs(P.y - (gy - 52)) / 200); ctx.fillStyle = `rgba(40,10,50,${(.2 + .3 * k).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(P.tx, gy + 2, 18 + 10 * k, 5 + 2 * k, 0, 0, TAU); ctx.fill(); }
+    const comp = P.st === 'ground' ? Math.min(1, (30 - P.t) / 10) * .3 : 0;
+    ctx.save(); ctx.strokeStyle = '#7a7f94'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(P.x, P.y + 22); ctx.lineTo(P.x, P.y + 50); ctx.stroke();
+    ctx.strokeStyle = '#c9ced8'; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i <= 8; i++) ctx.lineTo(P.x + (i % 2 ? 5 : -5), P.y + 34 + i * (2 - comp * 3)); ctx.stroke();
+    ctx.fillStyle = '#e8333d'; ctx.fillRect(P.x - 14, P.y + 26, 28, 4); ctx.restore();
+    drawBaron(ctx, P.x, P.y, .75, { t, hurt, angry: true, arms: .2, look: Math.sign(P.vx) }); }
+  if (B.phase === 3) { const bl = B.bel, warn = bl.st === 'warn', blow = bl.st === 'blow', side = B.gside;
+    drawBaron(ctx, B.x + side * 30, B.y + 16, .7, { t, hurt, angry: true, look: -side, arms: 3 });
+    /* soufflet */
+    const bx = B.x - side * 10, by = B.y + 40, open = warn ? .4 + .6 * (1 - bl.t / 64) : blow ? .4 * (bl.t / 56) : .4;
+    ctx.save(); ctx.translate(bx, by); ctx.scale(-side, 1); ctx.fillStyle = '#8a5a2a'; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(34, -10 - open * 14); ctx.lineTo(40, 0); ctx.lineTo(34, 10 + open * 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c9a07a'; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(i * 8, -(i * 2.4 + open * i * 3.5)); ctx.lineTo(i * 8 + 3, 0); ctx.lineTo(i * 8, i * 2.4 + open * i * 3.5); ctx.stroke(); }
+    ctx.fillStyle = '#7a7f94'; ctx.fillRect(-14, -3, 14, 6); ctx.restore();
+    /* le Grand Ballon, qui dégonfle à chaque coup */
+    const gl = ctx.createRadialGradient(B.x, B.y, 6, B.x, B.y, B.gr * 2.2); gl.addColorStop(0, 'rgba(255,224,120,0.5)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(B.x, B.y, B.gr * 2.2, 0, TAU); ctx.fill();
+    ctx.save(); if (hurt) { ctx.globalAlpha = .7; } blBalloon(B.x, B.y, B.gr, hurt ? '#ffffff' : '#ffc93a'); ctx.restore();
+    if (warn && G.frame % 20 < 10) { ctx.fillStyle = '#ffd23f'; ctx.font = '26px "Lilita One", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', bx - side * 30, by - 30); }
+    if (blow) { const k = Math.sin((1 - bl.t / 56) * Math.PI); ctx.save(); ctx.lineCap = 'round';
+      for (let i = 0; i < 12; i++) { const yy = hudBottom() + 120 + h1(i + 70) * (groundY() - hudBottom() - 160), x0 = ((G.frame * 10 + i * 61) % (PW + 80)), xs = side > 0 ? PW - x0 : x0, len = 50 + h1(i + 80) * 80;
+        ctx.globalAlpha = .7 * k; ctx.strokeStyle = 'rgba(70,130,200,0.5)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(xs, yy); ctx.lineTo(xs - side * len, yy); ctx.stroke(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.stroke(); }
+      ctx.restore(); } }
+}
+const _drawBossB = drawBoss;
+drawBoss = function (th) { const B = G.boss; if (B && B.type === 'baron') return drawBaronBoss(B); return _drawBossB(th); };
+const _drawBossIconB = drawBossIcon;
+drawBossIcon = function (cnv, type) {
+  if (type !== 'baron') return _drawBossIconB(cnv, type);
+  const c = cnv.getContext('2d'), k = cnv.width / 120; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cnv.width, cnv.height); c.scale(k, k); drawBaron(c, 60, 66, 1.05, { t: 0 });
+};
+{ const k = TROPHIES.findIndex(t => t.id === 'arm'); TROPHIES.splice(k + 1, 0, { id: 'baron', cat: 'Aventure', name: 'Le Grand Ballon retrouvé', desc: 'Bats le Baron Épingle, à Bouliland', prog: () => [stv('boss_baron'), 1], reward: 420 }); }
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
   const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
