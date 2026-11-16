@@ -9021,9 +9021,9 @@ function frame(now) {
   acc += Math.min(100, now - last) * (G.phase === 'play' ? timeScale(now) : 1); last = now;
   if (JUICE.gold > 0) JUICE.gold = Math.max(0, JUICE.gold - .012);
   let n = 0;
-  while (acc >= STEP && n < 5) { update(); acc -= STEP; n++; }
+  try { while (acc >= STEP && n < 5) { update(); acc -= STEP; n++; } } catch (e) { acc = 0; if (!frame.err) { frame.err = 1; console.error('update', e); } }
   if (n === 5) acc = 0;
-  draw();
+  try { draw(); } catch (e) { try { ctx.restore(); ctx.setTransform(1, 0, 0, 1, 0, 0); } catch (_) {} if (!frame.err2) { frame.err2 = 1; console.error('draw', e); } }
   requestAnimationFrame(frame);
 }
 
@@ -12735,10 +12735,13 @@ function drawBaronShip(c, x, y, s, t, o = {}) {
 function drawPin(c, x, y, a, h = 30) { c.save(); c.translate(x, y); c.rotate(a);
   c.strokeStyle = '#d8dce8'; c.lineWidth = 2.4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -h); c.stroke();
   const g = c.createRadialGradient(-2, -h - 3, 1, 0, -h, 7); g.addColorStop(0, '#ff9a9a'); g.addColorStop(1, '#a01030'); c.fillStyle = g; c.beginPath(); c.arc(0, -h, 6, 0, TAU); c.fill(); c.restore(); }
+function baronSync(B) {
+  if (!B.init) Object.assign(B, { init: 1, ax: PW / 2, adir: 1, pinT: 120, pins: [], mark: 0, mx: 0, lastP: 1, trans: 0, pogo: null, bel: { t: 120, st: 'idle' }, gside: 1, gr: 46 });
+  if (B.phase !== B.lastP) { B.lastP = B.phase; B.trans = 100; B.pins = []; B.mark = 0; if (B.phase >= 2 && !B.pogo) { B.shipX = B.x; B.shipY = B.y; B.pogo = { x: B.x, y: B.y, vx: 0, vy: 0, st: 'fall', t: 0, tx: PW / 2 }; } if (B.phase === 3) { B.gside = B.x < PW / 2 ? 1 : -1; } }
+}
 function updateBaron(B) {
   const top = hudBottom(), gy = groundY(), Pt = R && R.porters;
-  if (!B.init) Object.assign(B, { init: 1, ax: PW / 2, adir: 1, pinT: 120, pins: [], mark: 0, mx: 0, lastP: 1, trans: 0, pogo: null, bel: { t: 120, st: 'idle' }, gside: 1, gr: 46 });
-  if (B.phase !== B.lastP) { B.lastP = B.phase; B.trans = 100; B.pins = []; B.mark = 0; if (B.phase === 2) { B.shipX = B.x; B.shipY = B.y; B.pogo = { x: B.x, y: B.y, vx: 0, vy: 0, st: 'fall', t: 0, tx: PW / 2 }; } if (B.phase === 3) { B.gside = B.x < PW / 2 ? 1 : -1; } }
+  baronSync(B);
   if (B.trans > 0) B.trans--;
   if (Pt) Pt.avoidX = null;
   /* épingles qui tombent */
@@ -12780,7 +12783,7 @@ hazardHit = function (b) {
   return _hazardHitB(b);
 };
 function drawBaronBoss(B) {
-  if (!B.init) return;
+  baronSync(B); if (B.phase === 2 && !B.pogo) return;
   const t = B.t, hurt = B.hurt % 4 > 1, gy = groundY();
   /* épingles et cible */
   if (B.mark > 0) { const pul = 1 + Math.sin(t * .4) * .1; ctx.save(); ctx.strokeStyle = `rgba(255,60,80,${(.5 + .5 * (Math.floor(B.mark / 6) % 2)).toFixed(2)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(B.mx, gy + 4, 22 * pul, 7 * pul, 0, 0, TAU); ctx.stroke();
