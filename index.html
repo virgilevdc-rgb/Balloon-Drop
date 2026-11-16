@@ -4953,6 +4953,7 @@ const SECRETS = [
   { id: 'konami', name: 'Le code du joueur', desc: '↑↑↓↓←→←→BA au clavier : les pièces deviennent des ballons de foot.', hint: 'Sur ordinateur, un vieux code de joueur.' },
   { id: 'virgile', name: 'Le code du créateur', desc: 'Le ballon rouge au V, débloqué par code.', hint: 'Le créateur a laissé son nom quelque part.' },
   { id: 'hippo', name: 'Le code Hippo', desc: 'Le ballon bleu marine au H arc-en-ciel, débloqué par code.', hint: 'Un autre code secret, un animal qui aime l\'eau.' },
+  { id: 'grenier', name: 'Le Grenier de Bouli', desc: 'Tu as trouvé le grenier secret de Bouli, à Bouliland.', hint: 'À Bouliland, quelqu\'un te fait signe en haut de la carte.' },
   { id: 'jules', name: 'Le code de Jules', desc: 'Le ballon bleu marine au canon doré qui tire un ballon de foot, débloqué par code.', hint: 'Un ami du créateur, fan des Gunners.' },
   { id: 'thomas', name: 'Le code de Thomas', desc: 'Le ballon rouge où une petite voiture marque au boost, débloqué par code.', hint: 'Un ami du créateur, as du volant… et du ballon.' },
   { id: 'foudre', name: 'Nuage de foudre', desc: 'Scénario unique accompli. Ballon Foudre débloqué.', hint: "Le niveau secret n'est pas la fin du voyage." },
@@ -5283,9 +5284,9 @@ const UNIQUE_LEVEL = { name: 'Nuage de foudre', unique: true, boss: 'storm', enr
 const HC_LEVEL = { name: 'Hors-Carte', hc: true, goal: 15, shrink: .94, plat: 1.05, coins: 0, bonus: 0, intro: 'Trois épreuves dans un seul niveau : Crayon, Encre, Couleur. Trois vies.', stars: [26, 40] };
 const STAR_SCALE = [1.5, 2];
 for (const lvx of WORLDS.flatMap(w => w.levels).concat([SECRET_LEVEL, UNIQUE_LEVEL, HC_LEVEL])) lvx.stars = lvx.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
-const getLevel = (w, i) => i === 's' ? SECRET_LEVEL : i === 'u' ? UNIQUE_LEVEL : i === 'h' ? HC_LEVEL : WORLDS[w - 1].levels[i];
-const levelLabel = (w, i) => i === 's' ? 'Niveau secret' : i === 'u' ? 'Scénario unique' : i === 'h' ? 'Hors-Carte' : WORLDS[w - 1].name + ', niveau ' + (i + 1);
-const levelKey = (w, i) => w + '-' + (i === 's' || i === 'u' || i === 'h' ? i : i + 1);
+const getLevel = (w, i) => i === 'g' ? GRENIER_LEVEL : i === 's' ? SECRET_LEVEL : i === 'u' ? UNIQUE_LEVEL : i === 'h' ? HC_LEVEL : WORLDS[w - 1].levels[i];
+const levelLabel = (w, i) => i === 'g' ? 'Bouliland, niveau secret' : i === 's' ? 'Niveau secret' : i === 'u' ? 'Scénario unique' : i === 'h' ? 'Hors-Carte' : WORLDS[w - 1].name + ', niveau ' + (i + 1);
+const levelKey = (w, i) => w + '-' + (i === 's' || i === 'u' || i === 'h' || i === 'g' ? i : i + 1);
 const starsOf = (w, i) => S.story[levelKey(w, i)] || 0;
 const worldStars = w => WORLDS[w - 1].levels.reduce((n, _, i) => n + starsOf(w, i), 0);
 const totalStars = () => WORLDS.reduce((n, w) => n + worldStars(w.id), 0);
@@ -5564,7 +5565,7 @@ function startGame(mode, o = {}) {
   G.boss = cfg.lv && cfg.lv.boss ? makeBoss(cfg.lv) : null;
   FX.fog = cfg.fog ? makeFog() : [];
   boltTimer = cfg.lightning ? 150 : 0; flash = 0; bolt = null; shake = 0;
-  setView(mode === 'daily' ? 'daily' : mode === 'zen' ? 'zen' : mode === 'chrono' ? 'chrono' : mode === 'story' ? (G.level === 's' ? 'moon' : G.level === 'u' ? 'w2x' : G.level === 'h' ? 'hc' : WORLDS[G.world - 1].sky) : 'arcade');
+  setView(mode === 'daily' ? 'daily' : mode === 'zen' ? 'zen' : mode === 'chrono' ? 'chrono' : mode === 'story' ? (G.level === 's' ? 'moon' : G.level === 'u' ? 'w2x' : G.level === 'h' ? 'hc' : G.level === 'g' ? 'w14g' : WORLDS[G.world - 1].sky) : 'arcade');
   showScreen(null); closeModal();
   $('hud').hidden = false;
   $('score').textContent = '0'; G.shown = 0;
@@ -12554,7 +12555,7 @@ newRound = function () {
   _newRoundB();
   if (!R) return;
   const p = R.p, L = R.L, P = R.plat, news = [];
-  if (cfg.mode === 'story' && cfg.world === 14) { const want = bouliZone() === 3 ? 'w14n' : 'w14'; if (view !== want) setView(want); }
+  if (cfg.mode === 'story' && cfg.world === 14) { const want = G.level === 'g' ? 'w14g' : bouliZone() === 3 ? 'w14n' : 'w14'; if (view !== want) setView(want); }
   R.bwt = !!p.bweight; R.porters = null; R.blowers = null;
   if (R.bwt && !G.seen.bwt) { G.seen.bwt = 1; news.push(['Ballon léger', 'Plus il est gonflé, plus il tombe lentement']); }
   if (p.porters) {
@@ -12900,6 +12901,131 @@ startGame = function (mode, o = {}) {
 const _renderStoryS = renderStory;
 renderStory = function (focus, reveal) { _renderStoryS(focus, reveal); try { S.b14 = S.b14 || {}; if (storyWorld === 14 && starsOf(14, 9) > 0 && !S.b14[4] && $('modal').hidden) setTimeout(() => { if ($('modal').hidden) playBouliStory(4); }, 600); } catch (e) {} };
 if (window.__BOT) window.__STORY = (id) => playBouliStory(id);
+/* =========================================================
+   Monde 14 : la Flamme de Bouliland (ballon gagné en battant le Baron)
+   Ballon de verre soufflé, flamme vivante en 4 couches, braises, lueur chaude, petite coupelle dorée
+   ========================================================= */
+const FLAMME_SKIN = { id: 'flamme', theme: 'mondes', name: 'La Flamme de Bouliland', unlock: { type: 'world', w: 14 }, lockText: 'Bats le Baron Épingle', dust: '#ffb04a', gloss: .7, string: true,
+  paint: (c, r, t = 0) => {
+    /* verre fumé chaud */
+    const g = c.createRadialGradient(-r * .2, r * .25, r * .05, 0, 0, r * 1.05); g.addColorStop(0, '#5a2410'); g.addColorStop(.55, '#2a1020'); g.addColorStop(1, '#140818');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); c.beginPath(); c.arc(0, 0, r * .985, 0, TAU); c.clip();
+    const fl = k => Math.sin(t * .21 + k) * .5 + Math.sin(t * .37 + k * 1.7) * .3 + Math.sin(t * .83 + k * 2.3) * .2;
+    /* halo qui respire */
+    const br = 1 + fl(9) * .06, hg = c.createRadialGradient(0, r * .2, 0, 0, r * .1, r * .95 * br); hg.addColorStop(0, 'rgba(255,190,90,0.75)'); hg.addColorStop(.45, 'rgba(255,110,40,0.3)'); hg.addColorStop(1, 'rgba(255,80,30,0)');
+    c.fillStyle = hg; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    /* reflets de la flamme sur la paroi du verre */
+    c.strokeStyle = `rgba(255,170,80,${(.25 + fl(4) * .08).toFixed(3)})`; c.lineWidth = r * .05; c.beginPath(); c.arc(0, 0, r * .9, .25, Math.PI - .25); c.stroke();
+    /* coupelle dorée */
+    const cy = r * .52, cw = r * .3;
+    const cg = c.createLinearGradient(0, cy - r * .06, 0, cy + r * .2); cg.addColorStop(0, '#fff1b8'); cg.addColorStop(.4, '#f2c14e'); cg.addColorStop(1, '#7a4a10');
+    c.fillStyle = cg; c.beginPath(); c.moveTo(-cw, cy); c.quadraticCurveTo(0, cy + r * .2, cw, cy); c.lineTo(cw * .82, cy - r * .03); c.lineTo(-cw * .82, cy - r * .03); c.closePath(); c.fill();
+    c.fillStyle = '#7a4a10'; c.fillRect(-r * .05, cy + r * .1, r * .1, r * .22);
+    /* la flamme : 4 couches, du rouge au cœur blanc */
+    const layer = (h, w, col, k, sway) => { const tipX = fl(k) * r * .12 * sway, tipY = cy - h - fl(k + 3) * r * .06;
+      c.fillStyle = col; c.beginPath(); c.moveTo(-w, cy - r * .02);
+      c.bezierCurveTo(-w * 1.15, cy - h * .45, tipX - w * .55 + fl(k + 1) * r * .05, cy - h * .7, tipX, tipY);
+      c.bezierCurveTo(tipX + w * .55 + fl(k + 2) * r * .05, cy - h * .7, w * 1.15, cy - h * .45, w, cy - r * .02);
+      c.quadraticCurveTo(0, cy + r * .06, -w, cy - r * .02); c.fill(); };
+    layer(r * .98, r * .3, 'rgba(220,40,30,0.85)', 0, 1.4);
+    layer(r * .82, r * .25, '#ff6a1a', 1.3, 1.2);
+    layer(r * .62, r * .19, '#ffb627', 2.6, 1);
+    layer(r * .4, r * .12, '#fff3b0', 3.9, .7);
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(0, cy - r * .08, r * .05, r * .1, 0, 0, TAU); c.fill();
+    /* langues de feu détachées */
+    for (let i = 0; i < 3; i++) { const q = ((t * .025 + i / 3) % 1), x = fl(i * 5) * r * .2, y = cy - r * .7 - q * r * .5, s = (1 - q) * r * .07;
+      c.fillStyle = `rgba(255,${(160 - q * 80) | 0},40,${(.9 * (1 - q)).toFixed(3)})`; c.beginPath(); c.moveTo(x, y - s * 2); c.quadraticCurveTo(x + s, y, x, y + s); c.quadraticCurveTo(x - s, y, x, y - s * 2); c.fill(); }
+    /* braises qui montent en spirale */
+    for (let i = 0; i < 14; i++) { const q = ((t * (.006 + (i % 4) * .002) + i * .071) % 1), a = i * 2.4 + t * .02, x = Math.sin(a) * r * (.15 + q * .5), y = cy - q * r * 1.45, s = r * (.018 + (i % 3) * .008) * (1 - q * .6);
+      c.fillStyle = `rgba(255,${(220 - q * 120) | 0},${(120 - q * 100) | 0},${(1 - q).toFixed(3)})`; c.beginPath(); c.arc(x, y, s, 0, TAU); c.fill(); }
+    c.restore();
+    /* verre : liseré et bulles d'air figées */
+    c.strokeStyle = 'rgba(255,220,180,0.35)'; c.lineWidth = Math.max(1, r * .03); c.beginPath(); c.arc(0, 0, r * .97, 0, TAU); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = Math.max(.6, r * .012); for (const [x, y, s] of [[-.5, -.2, .03], [.45, -.45, .022], [.55, .2, .018], [-.3, .55, .02]]) { c.beginPath(); c.arc(x * r, y * r, s * r, 0, TAU); c.stroke(); }
+  } };
+{ const s0 = SKINS.findIndex(x => x.id === 'boulon'); SKINS.splice(s0 + 1, 0, FLAMME_SKIN); }
+
+/* =========================================================
+   Monde 14 : le Grenier de Bouli (niveau secret)
+   Déblocage : sur la carte de Bouliland, Bouli fait coucou depuis sa lucarne en haut : le toucher 5 fois.
+   Ambiance : grenier sous les toits, poutres, lucarne au clair de lune, poussière dorée, vieux jouets.
+   Mécanique : la lampe-tempête de Bouli ne s'allume que par moments : il faut lâcher dans la lumière.
+   ========================================================= */
+const GRENIER_LEVEL = { name: 'Le Grenier de Bouli', goal: 8, bweight: 1, porters: 1.1, attic: 1, coins: 1, bonus: .4, intro: "Le grenier secret de Bouli : il y range ses souvenirs. La lampe clignote : lâche quand elle éclaire la plateforme.", stars: [13, 21] };
+GRENIER_LEVEL.stars = GRENIER_LEVEL.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
+SKIES.w14g = Object.assign({}, SKIES.w14n, { top: '#3a2418', bottom: '#7a4a2a', ambient: 'grenier', floor: 'bouli', chip: 'rgba(40,20,10,0.35)' });
+SONGS.w14g = SONGS.w14;
+const _storyRoundG = storyRound;
+storyRound = function (lv, L, rng) { const p = _storyRoundG(lv, L, rng); if (lv && lv.attic) { p.attic = 1; p.porters = lv.porters; p.bweight = 1; } return p; };
+const atticLight = () => { const ph = (G.frame % 260) / 260; return ph < .62 ? 1 : ph < .7 ? 1 - (ph - .62) / .08 : ph < .92 ? 0 : (ph - .92) / .08; };
+function drawGrenierSky() {
+  const t = G.frame, w = W, h = H, gy = groundY();
+  const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2a1810'); g.addColorStop(1, '#5a3420'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  /* toit en pente et poutres */
+  ctx.fillStyle = '#1e120c'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w * .5, 0); ctx.lineTo(0, h * .45); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(w, 0); ctx.lineTo(w * .5, 0); ctx.lineTo(w, h * .45); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#6a4228'; ctx.lineWidth = 12; for (let i = 0; i < 5; i++) { const x = w * (.1 + i * .2); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, gy); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(255,200,140,0.12)'; ctx.lineWidth = 3; for (let i = 0; i < 5; i++) { const x = w * (.1 + i * .2) - 4; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, gy); ctx.stroke(); }
+  ctx.fillStyle = '#5a3820'; ctx.fillRect(0, h * .2, w, 14); ctx.fillStyle = 'rgba(255,200,140,0.15)'; ctx.fillRect(0, h * .2, w, 3);
+  /* lucarne ronde au clair de lune */
+  const lx = w * .72, ly = h * .12, lr = Math.min(w, h) * .09;
+  const mg = ctx.createRadialGradient(lx, ly, lr * .3, lx, ly + lr, h * .6); mg.addColorStop(0, 'rgba(190,210,255,0.35)'); mg.addColorStop(1, 'rgba(190,210,255,0)');
+  ctx.fillStyle = mg; ctx.beginPath(); ctx.moveTo(lx - lr, ly); ctx.lineTo(lx - lr * 3.5, gy); ctx.lineTo(lx + lr * 2, gy); ctx.lineTo(lx + lr, ly); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#16243e'; ctx.beginPath(); ctx.arc(lx, ly, lr, 0, TAU); ctx.fill(); ctx.fillStyle = '#f2ecd0'; ctx.beginPath(); ctx.arc(lx + lr * .3, ly - lr * .2, lr * .35, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(lx, ly, lr, 0, TAU); ctx.moveTo(lx - lr, ly); ctx.lineTo(lx + lr, ly); ctx.moveTo(lx, ly - lr); ctx.lineTo(lx, ly + lr); ctx.stroke();
+  /* vieux jouets : malle, cheval à bascule, ballons dégonflés, photo de Bouli */
+  const fy = gy;
+  ctx.fillStyle = '#7a4a24'; ctx.beginPath(); ctx.roundRect(w * .04, fy - 60, 90, 60, 8); ctx.fill(); ctx.fillStyle = '#9a6a34'; ctx.beginPath(); ctx.roundRect(w * .04, fy - 70, 90, 18, 9); ctx.fill(); ctx.fillStyle = '#e8b33a'; ctx.fillRect(w * .04 + 40, fy - 56, 10, 14);
+  const hx = w * .86, rock = Math.sin(t * .03) * .12; ctx.save(); ctx.translate(hx, fy - 4); ctx.rotate(rock);
+  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, -10, 40, .35, Math.PI - .35); ctx.stroke();
+  ctx.fillStyle = '#e8d3b0'; ctx.beginPath(); ctx.ellipse(0, -46, 26, 12, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(22, -62, 10, 13, -.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8333d'; ctx.fillRect(-6, -58, 12, 8);
+  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 3; for (const x of [-16, 16]) { ctx.beginPath(); ctx.moveTo(x, -40); ctx.lineTo(x * 1.4, -14); ctx.stroke(); } ctx.restore();
+  ctx.save(); ctx.translate(w * .28, h * .3); ctx.rotate(-.06); ctx.fillStyle = '#c9a07a'; ctx.fillRect(-26, -32, 52, 62); ctx.fillStyle = '#f6ecd6'; ctx.fillRect(-21, -27, 42, 44);
+  drawBouli2(ctx, 0, 12, 6, null, 0, 'aviatrice', { noShadow: true, noProp: true, eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8 }); ctx.restore();
+  /* poussière dorée dans le rayon de lune */
+  for (let i = 0; i < 30; i++) { const x = lx - lr * 2 + h1(i + 400) * lr * 4 + Math.sin(t * .01 + i) * 10, y = ly + ((t * .15 * (.5 + h1(i + 410)) + h1(i + 420) * h) % (gy - ly)); ctx.fillStyle = `rgba(255,236,190,${(.25 + .4 * h1(i + 430)).toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, 1 + h1(i + 440) * 1.5, 0, TAU); ctx.fill(); }
+  /* plancher */
+  ctx.fillStyle = '#4a2c18'; ctx.fillRect(0, fy, w, h - fy); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 2; for (let x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x, fy); ctx.lineTo(x - 20, h); ctx.stroke(); }
+}
+/* lampe-tempête : quand elle s'éteint, l'ombre recouvre tout sauf le ballon */
+function drawGrenierLamp() {
+  if (!R || G.level !== 'g' || cfg.world !== 14) return;
+  const k = atticLight(), P = R.plat, lx = P.x, ly = platY() - 150;
+  ctx.save(); ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx, hudBottom()); ctx.lineTo(lx, ly - 18); ctx.stroke();
+  ctx.fillStyle = '#5a3a20'; ctx.beginPath(); ctx.roundRect(lx - 12, ly - 18, 24, 6, 3); ctx.fill(); ctx.beginPath(); ctx.roundRect(lx - 10, ly + 14, 20, 6, 3); ctx.fill();
+  ctx.fillStyle = `rgba(255,${(200 + 40 * k) | 0},120,${(.35 + .6 * k).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(lx, ly + 1, 9, 13, 0, 0, TAU); ctx.fill();
+  if (k > .02) { const g = ctx.createRadialGradient(lx, ly, 6, lx, ly + 80, 230); g.addColorStop(0, `rgba(255,214,140,${(.35 * k).toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(lx - 10, ly); ctx.lineTo(lx - 160, platY() + 20); ctx.lineTo(lx + 160, platY() + 20); ctx.lineTo(lx + 10, ly); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+  if (k < .98) { ctx.save(); ctx.globalAlpha = .82 * (1 - k); ctx.fillStyle = '#0c0608'; ctx.beginPath(); ctx.rect(-PX, 0, W, H);
+    for (const b of R.balls) { ctx.moveTo(b.x + b.r * 1.5, b.y); ctx.arc(b.x, b.y, b.r * 1.5, 0, TAU, true); } ctx.fill('evenodd'); ctx.restore();
+    if (k < .1 && G.frame % 30 < 15) { ctx.fillStyle = '#ffd23f'; ctx.font = '18px "Lilita One", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('La lampe s\'est éteinte…', PW / 2, hudBottom() + 70); } }
+}
+/* le ballon tombé dans le noir rate la plateforme (on ne la voit plus : elle est rangée) */
+const _checkLandingG = checkLanding;
+checkLanding = function (b) { if (R && G.level === 'g' && cfg.world === 14 && atticLight() < .3 && b.y + b.r >= platY() - 4) { const off = b.x - R.plat.x; if (Math.abs(off) < R.plat.w / 2 + b.r * .12) { floatText('Dans le noir !', b.x, b.y - b.r - 20, 22, 'ink'); return miss(b, off); } } return _checkLandingG(b); };
+const _drawHazardsG = drawHazards;
+drawHazards = function (th) { _drawHazardsG(th); try { drawGrenierLamp(); } catch (e) {} };
+/* sur la carte de Bouliland : Bouli fait coucou depuis sa lucarne, 5 touchers ouvrent le grenier */
+const _renderStoryG = renderStory;
+renderStory = function (focus, reveal) {
+  _renderStoryG(focus, reveal);
+  try { if (storyWorld !== 14) return; const path = $('path'); if (!path) return;
+    const old = path.querySelector('.grenier-peek'); if (old) old.remove();
+    const found = !!S.secrets.grenier, b = document.createElement('button');
+    b.className = found ? 'node secret grenier-peek' : 'grenier-peek'; b.setAttribute('aria-label', found ? 'Niveau secret, Le Grenier de Bouli' : 'Une lucarne');
+    b.style.cssText = `position:absolute;left:50%;top:18px;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;border:4px solid #8a5a30;background:#16243e;overflow:hidden;padding:0;cursor:pointer;z-index:3`;
+    b.innerHTML = `<canvas width="128" height="128" style="width:56px;height:56px"></canvas>`; path.appendChild(b);
+    const cx = b.querySelector('canvas').getContext('2d'); cx.scale(2, 2); drawBouli2(cx, 28, 64, 9, null, 0, 'aviatrice', { noShadow: true, noProp: true, eyes: found ? 'happy' : 'open', mouth: 'open', lAng: Math.PI * .7, rAng: -1.1 });
+    let taps = 0;
+    b.addEventListener('click', () => {
+      if (S.secrets.grenier) return showLevelIntro(14, 'g');
+      taps++; sfx.tap(taps); b.animate([{ transform: 'translateX(-50%) scale(1)' }, { transform: 'translateX(-50%) scale(1.15)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 220 });
+      if (taps >= 5) { findSecret('grenier'); save(); toast('Un grenier secret !'); renderStory(); }
+    }); } catch (e) {}
+};
+const _drawSkyG = drawSky;
+drawSky = function (th) { if (th.ambient === 'grenier') return drawGrenierSky(); return _drawSkyG(th); };
+{ const k = TROPHIES.findIndex(t => t.id === 'baron'); TROPHIES.splice(k + 1, 0, { id: 'grenier', cat: 'Aventure', name: 'Souvenirs de Bouli', desc: 'Termine le Grenier de Bouli', prog: () => [starsOf(14, 'g') > 0 ? 1 : 0, 1], reward: 250 }); }
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
   const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
