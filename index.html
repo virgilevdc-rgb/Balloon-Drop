@@ -13069,6 +13069,64 @@ const RAPIECE_SKIN = { id: 'rapiece', theme: 'secrets', name: 'Le Ballon rapiéc
     c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = `${Math.max(6, Math.round(r * .32))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B', .05 * r, .14 * r);
     c.restore();
   } };
+/* saynète sur le dessus : bébé Bouli dort, son vieux ballon s'envole, il le rattrape, le câline et se rendort (360 images) */
+RAPIECE_SKIN.prev = .3; RAPIECE_SKIN.string = false;
+RAPIECE_SKIN.after = (c, r, t) => {
+  const f = t % 360, u = r * .15, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }, mix = (a, b, k) => a + (b - a) * k;
+  c.save(); c.translate(0, -r);
+  const bedX = -u * .6, inBed = f < 150 || f >= 292, OL = '#2a2a44';
+  /* position de Bouli */
+  let bx = bedX, lift = 0;
+  if (f >= 150 && f < 176) { const k = (f - 150) / 26; bx = mix(bedX, u * 2.6, sm(k)); lift = Math.abs(Math.sin(k * Math.PI * 2)) * .9; }
+  else if (f >= 176 && f < 250) { bx = u * 2.6; lift = f < 206 ? Math.sin((f - 176) / 30 * Math.PI) * 3.2 : Math.abs(Math.sin((f - 206) / 22 * Math.PI)) * .5; }
+  else if (f >= 250 && f < 292) { const k = (f - 250) / 42; bx = mix(u * 2.6, bedX, sm(k)); lift = Math.abs(Math.sin(k * Math.PI * 2)) * .9; }
+  const hand = [bx + u * 2.1, -u * (4.1 + lift)];
+  /* le vieux ballon rouge */
+  const tied = [u * 2.35, -u * 5.4 + Math.sin(t * .06) * u * .2], post = [u * 1.65, -u * 1.9];
+  let bp = tied, held = false;
+  if (f >= 112 && f < 192) { const k = (f - 112) / 80; bp = [mix(tied[0], u * 3.4, k) + Math.sin(k * 7) * u * .3, mix(tied[1], -u * 9.2, sm(k))]; }
+  else if (f >= 192 && f < 300) { held = true; bp = [hand[0] + u * .4, hand[1] - u * 2.1 + Math.sin(t * .1) * u * .15]; }
+  else if (f >= 300 && f < 318) { const k = (f - 300) / 18; bp = [mix(hand[0] + u * .4, tied[0], sm(k)), mix(hand[1] - u * 2.1, tied[1], sm(k))]; }
+  /* lit : tête de lit */
+  c.fillStyle = '#a8703c'; c.strokeStyle = OL; c.lineWidth = Math.max(.6, u * .1); c.beginPath(); c.roundRect(-u * 3.2, -u * 3.3, u * .6, u * 3.3, u * .25); c.fill(); c.stroke();
+  c.beginPath(); c.arc(-u * 2.9, -u * 3.3, u * .38, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#fff6e8'; c.beginPath(); c.ellipse(-u * 2.1, -u * 1.55, u * .75, u * .45, -.2, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#c98a4a'; c.beginPath(); c.roundRect(-u * 3.1, -u * 1.2, u * 4.9, u * .6, u * .2); c.fill(); c.stroke();
+  /* ficelle */
+  const from = held ? hand : f >= 112 && f < 192 ? [bp[0], bp[1] + u * 3.4] : post;
+  c.strokeStyle = 'rgba(42,42,68,0.7)'; c.lineWidth = Math.max(.5, u * .06); c.beginPath(); c.moveTo(from[0], from[1]); c.quadraticCurveTo((from[0] + bp[0]) / 2 + u * .4, (from[1] + bp[1]) / 2 + u * .5, bp[0], bp[1] + u * 1.15); c.stroke();
+  /* Bouli */
+  const ex = { noShadow: true, noProp: true, lift, lAng: Math.PI * .72, rAng: .5 };
+  if (inBed && (f < 128 || f >= 336)) Object.assign(ex, { eyes: 'closed', mouth: 'cat' });
+  else if (f >= 128 && f < 150) Object.assign(ex, { eyes: 'wide', mouth: 'o', look: [1, -1], rAng: -1 });
+  else if (f >= 150 && f < 206) Object.assign(ex, { eyes: 'wide', mouth: 'o', look: [.6, -1], rAng: -1.15, lAng: -2.2 });
+  else if (f >= 206 && f < 292) Object.assign(ex, { eyes: 'happy', mouth: 'open', rAng: -1.15, lAng: -.3 });
+  else if (f >= 318 && f < 336) Object.assign(ex, { eyes: 'closed', mouth: 'o' });
+  drawBouli2(c, bx, inBed ? -u * .9 : 0, u, null, t, 'aviatrice', ex);
+  /* bonnet de nuit */
+  const hx = bx, hy = (inBed ? -u * .9 : 0) - u * (3.1 + lift);
+  c.fillStyle = '#7fb8e8'; c.strokeStyle = OL; c.lineWidth = Math.max(.6, u * .1); c.beginPath(); c.moveTo(hx - u * 1.2, hy + u * .25); c.quadraticCurveTo(hx, hy - u * .9, hx + u * 1.2, hy + u * .25); c.quadraticCurveTo(hx + u * 1.6, hy - u * .6, hx + u * 1.9 + Math.sin(t * .08) * u * .2, hy + u * .5); c.quadraticCurveTo(hx + u * .3, hy - u * .1, hx - u * 1.2, hy + u * .25); c.fill(); c.stroke();
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(hx + u * 1.95 + Math.sin(t * .08) * u * .2, hy + u * .55, u * .3, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(hx - u * .6 + i * u * .45, hy - u * .1 - Math.sin(i) * u * .1, u * .08, 0, TAU); c.fill(); }
+  /* couverture à carreaux */
+  if (inBed) { c.fillStyle = '#e8889e'; c.strokeStyle = OL; c.beginPath(); c.moveTo(-u * 2.4, -u * 1.2); c.quadraticCurveTo(bedX, -u * 2.6 - Math.sin(t * .07) * u * .12, u * 1.6, -u * 1.2); c.closePath(); c.fill(); c.stroke();
+    c.save(); c.clip(); c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = Math.max(.5, u * .07); for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(bedX + k * u * .6, -u * 3); c.lineTo(bedX + k * u * .6, -u * 1); c.stroke(); } c.beginPath(); c.moveTo(-u * 3, -u * 1.8); c.lineTo(u * 2, -u * 1.8); c.stroke(); c.restore(); }
+  /* pied de lit */
+  c.fillStyle = '#a8703c'; c.strokeStyle = OL; c.beginPath(); c.roundRect(u * 1.4, -u * 2.2, u * .5, u * 2.2, u * .2); c.fill(); c.stroke();
+  /* le ballon rouge */
+  const g = c.createRadialGradient(bp[0] - u * .35, bp[1] - u * .4, u * .1, bp[0], bp[1], u * 1.1); g.addColorStop(0, '#ff9a9a'); g.addColorStop(.4, '#e8333d'); g.addColorStop(1, '#8a1020');
+  c.fillStyle = g; c.strokeStyle = OL; c.beginPath(); c.ellipse(bp[0], bp[1], u * .9, u * 1.05, 0, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#8a1020'; c.beginPath(); c.moveTo(bp[0], bp[1] + u * 1); c.lineTo(bp[0] - u * .18, bp[1] + u * 1.22); c.lineTo(bp[0] + u * .18, bp[1] + u * 1.22); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.ellipse(bp[0] - u * .35, bp[1] - u * .45, u * .14, u * .24, -.5, 0, TAU); c.fill();
+  c.strokeStyle = 'rgba(70,40,30,0.9)'; c.lineWidth = Math.max(.5, u * .06); c.setLineDash([u * .12, u * .1]); c.beginPath(); c.roundRect(bp[0] + u * .05, bp[1] + u * .05, u * .5, u * .4, u * .05); c.stroke(); c.setLineDash([]);
+  /* z z z, « ! », cœurs, bâillement */
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (inBed && (f < 112 || f >= 336)) for (let i = 0; i < 3; i++) { const q = ((t * .012 + i / 3) % 1); c.globalAlpha = Math.sin(q * Math.PI); c.fillStyle = '#fff'; c.strokeStyle = OL; c.lineWidth = Math.max(.5, u * .08); c.font = `${Math.max(5, u * (.7 + q * .5))}px "Lilita One", sans-serif`; c.strokeText('z', bedX - u * 1.6 - q * u * 1.5, -u * 4.5 - q * u * 2.2); c.fillText('z', bedX - u * 1.6 - q * u * 1.5, -u * 4.5 - q * u * 2.2); } c.globalAlpha = 1;
+  if (f >= 126 && f < 156) { const k = Math.min(1, (f - 126) / 6); c.save(); c.translate(bx, -u * 5.8); c.scale(k, k); c.fillStyle = '#ffd23f'; c.strokeStyle = OL; c.lineWidth = Math.max(.6, u * .1); c.beginPath(); c.roundRect(-u * .22, -u * 1.1, u * .44, u * .85, u * .2); c.fill(); c.stroke(); c.beginPath(); c.arc(0, u * .1, u * .22, 0, TAU); c.fill(); c.stroke(); c.restore(); }
+  if (f >= 206 && f < 260) for (let i = 0; i < 3; i++) { const q = ((f - 206) / 54 + i / 3) % 1, x = bx + u * (1 - i) * 1.1, y = -u * (5 + lift) - q * u * 2.5, s2 = u * .32 * (1 - q * .4);
+    c.globalAlpha = Math.sin(q * Math.PI); c.fillStyle = '#ff5a8c'; c.beginPath(); c.moveTo(x, y + s2); c.bezierCurveTo(x - s2 * 2, y - s2 * .5, x - s2 * .6, y - s2 * 1.8, x, y - s2 * .6); c.bezierCurveTo(x + s2 * .6, y - s2 * 1.8, x + s2 * 2, y - s2 * .5, x, y + s2); c.fill(); } c.globalAlpha = 1;
+  c.restore();
+};
 SKINS.push(RAPIECE_SKIN);
 const _endRunG = endRun;
 endRun = function (win) { const r = _endRunG(win); try { if (win && cfg && cfg.world === 14 && G.level === 'g' && unlockSecretSkin('rapiece')) { toast('Ballon secret : le Ballon rapiécé'); } } catch (e) {} return r; };
