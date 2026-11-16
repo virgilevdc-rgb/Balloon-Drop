@@ -12298,7 +12298,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { me
    ========================================================= */
 const bwGrav = b => 1.25 - .8 * Math.min(1, b.inf);                 /* x1 : lourd (1.25) ; x3 : léger (~0.6) */
 const bwTerm = b => 13 - 8 * Math.min(1, b.inf);                    /* vitesse de chute maximale */
-WORLDS.push({ id: 14, name: 'Bouliland', of: 'de Bouliland', sw: ['#ffb3d1', '#7fd6c2'], sky: 'w14', desc: "Le pays de Bouli, où tout est fait de ballons. Ici, plus tu gonfles, plus ton ballon est léger. Le Baron Épingle a volé le Grand Ballon doré.", levels: [
+WORLDS.push({ id: 14, name: 'Bouliland', of: 'de Bouliland', sw: ['#ffb3d1', '#7fd6c2'], sky: 'w14', desc: "Le pays de Bouli, où tout est fait de ballons. Ici, plus tu gonfles, plus ton ballon est léger. Le Baron Épingle a volé la Flamme sacrée.", levels: [
   { name: 'Bienvenue à Bouliland', goal: 6, plat: 1.25, bweight: 1, intro: "Ici, plus tu gonfles, plus ton ballon est léger : il descend lentement. Pas gonflé, il tombe comme une pierre.", stars: [10, 16] },
   { name: 'Brise légère', goal: 7, plat: 1.15, bweight: 1, wind: .05, intro: "Une petite brise souffle. Un ballon gonflé se laisse emporter, un ballon pas gonflé file tout droit.", stars: [11, 18] },
   { name: 'Les porteurs', goal: 7, plat: 1.1, bweight: 1, porters: 1, intro: "Des Boulis portent la plateforme et courent sous ton ballon. Mais ils ont peur des gros ballons : en x3, ils s'enfuient.", stars: [11, 18] },
@@ -12308,7 +12308,7 @@ WORLDS.push({ id: 14, name: 'Bouliland', of: 'de Bouliland', sw: ['#ffb3d1', '#7
   { name: 'Porteurs paniqués', goal: 8, bweight: 1, porters: 1.25, blowers: 1, intro: "Les souffles font aussi peur aux porteurs. Lâche quand tout le monde est calme.", stars: [13, 21] },
   { name: 'Doublé', goal: 7, bweight: 1, dbl: .7, plat: 1.15, porters: 1, intro: "Deux ballons par manche. Les porteurs suivent le second : empile-le sur le premier.", stars: [14, 23] },
   { name: 'Dernière ligne droite', goal: 9, bweight: 1, porters: 1.45, blowers: 2, bonus: .3, intro: "Porteurs, souffleurs et ballons légers : tout Bouliland en même temps.", stars: [16, 26] },
-  { name: 'Le Baron Épingle', boss: 'baron', hp: 18, shrink: .93, bonus: .3, intro: "Le Baron Épingle a volé le Grand Ballon. Évite ses épingles, puis son pogo, puis la rafale de son soufflet. Chaque ballon posé le frappe.", stars: [9, 14] },
+  { name: 'Le Baron Épingle', boss: 'baron', hp: 18, shrink: .93, bonus: .3, intro: "Le Baron Épingle a volé la Flamme sacrée. Évite ses épingles, puis son pogo, puis la rafale de son soufflet. Chaque ballon posé le frappe.", stars: [9, 14] },
 ] });
 for (const lvx of WORLDS[13].levels) lvx.stars = lvx.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
 SKIES.w14 = Object.assign({}, SKIES.w1, { top: '#7fc4ea', bottom: '#ffe2cf', tint: 'rgba(255,170,200,0.04)', ambient: 'bouli', floor: 'bouli' });
@@ -12498,7 +12498,7 @@ const BOULISCENE = (() => {
       if (!OPT.noGB) { const gx = 290, gy = 470 + Math.sin(t * .015) * 4, gr = 42;
       const gl = c.createRadialGradient(gx, gy, 10, gx, gy, gr * 2.4); gl.addColorStop(0, 'rgba(255,224,120,0.5)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); c.fillStyle = gl; c.fillRect(gx - gr * 3, gy - gr * 3, gr * 6, gr * 6);
       c.strokeStyle = 'rgba(120,80,30,0.55)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(gx, gy + gr); c.quadraticCurveTo(gx + 10, gy + gr + 25, gx + 2, 548); c.stroke();
-      balloon(gx, gy, gr, '#ffc93a', { str: 0 }); } }
+      c.save(); c.translate(gx, gy); paintSkin(c, FLAMME_SKIN, gr, t); c.restore(); } }
     if (Z === 2) { cloud(170, 210 + TS, 1.7, .55); cloud(-40, 170 + TS, 1.2, .5); island(92, 420, 1.0, t, 6, .85, true); cloud(-60, 470, 1.3, .7); cloud(250, 400, 1.1, .7);
       island(70, 290 + TS * .8, .55, t, 2, .55, true); island(200, 200 + TS, .35, t, 5, .7, false); island(335, 225 + TS, .45, t, 3, .6, true); island(330, 470, .95, t, 1, .2, true);
       for (let i = 0; i < 5; i++) { const x = ((i * 90 + t * (.3 + i * .05)) % (W + 60)) - 30, y = 150 + i * 46 + Math.sin(t * .05 + i) * 6; c.strokeStyle = 'rgba(42,60,90,0.55)'; c.lineWidth = 1.6; c.beginPath(); const fl = Math.sin(t * .3 + i) * 3; c.moveTo(x - 6, y - fl); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 6, y - fl); c.stroke(); } }
@@ -12680,9 +12680,9 @@ drawHazards = function (th) {
    Boss du Monde 14 : le Baron Épingle (hérisson grincheux, monocle, haut-de-forme)
    Phase 1 : dirigeable qui lâche des épingles (cible rouge au sol avant chaque lâcher)
    Phase 2 : dirigeable percé, il bondit sur un pogo (ombre = point d'arrivée) ; le porteur le fuit
-   Phase 3 : caché derrière le Grand Ballon volé (qui dégonfle à chaque coup), soufflet géant
+   Phase 3 : caché derrière la Flamme sacrée volée (qui faiblit à chaque coup), soufflet géant
    ========================================================= */
-BOSSES.baron = { name: 'Le Baron Épingle', p2: 'Son dirigeable est percé : place au pogo !', p3: 'Il se cache derrière le Grand Ballon', reward: 420 };
+BOSSES.baron = { name: 'Le Baron Épingle', p2: 'Son dirigeable est percé : place au pogo !', p3: 'Il se cache derrière la Flamme sacrée', reward: 420 };
 function drawBaron(c, x, y, s, o = {}) {
   const t = o.t || 0, hurt = o.hurt, OUT = '#2a1a36', col = v => hurt ? '#ffffff' : v;
   c.save(); c.translate(x, y); c.scale(s, s);
@@ -12792,7 +12792,7 @@ function drawBaronBoss(B) {
     drawBaron(ctx, x, y, .8, { t, scared: true, arms: -1.2 });
     const gr = 46, gx = PW / 2, gyy = hudBottom() + 120 + Math.max(0, 140 - B.deadT * 2);
     const gl = ctx.createRadialGradient(gx, gyy, 6, gx, gyy, gr * 2.4); gl.addColorStop(0, 'rgba(255,224,120,0.6)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(gx, gyy, gr * 2.4, 0, TAU); ctx.fill();
-    blBalloon(gx, gyy, gr, '#ffc93a'); return; }
+    ctx.save(); ctx.translate(gx, gyy); paintSkin(ctx, FLAMME_SKIN, gr, G.frame); ctx.restore(); return; }
   if (B.phase === 1 || (B.phase === 2 && B.trans > 0)) {
     const sx = B.phase === 1 ? B.x : B.shipX, sy = B.phase === 1 ? B.y : B.shipY;
     drawBaronShip(ctx, sx, sy, .9, t, { hurt: B.phase === 1 && hurt, hatch: B.mark > 0, angry: B.hp < B.max * .8, baron: B.phase === 1, leak: B.phase === 2, rot: B.phase === 2 ? (100 - B.trans) * .04 : 0 });
@@ -12812,9 +12812,9 @@ function drawBaronBoss(B) {
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(34, -10 - open * 14); ctx.lineTo(40, 0); ctx.lineTo(34, 10 + open * 14); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#c9a07a'; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(i * 8, -(i * 2.4 + open * i * 3.5)); ctx.lineTo(i * 8 + 3, 0); ctx.lineTo(i * 8, i * 2.4 + open * i * 3.5); ctx.stroke(); }
     ctx.fillStyle = '#7a7f94'; ctx.fillRect(-14, -3, 14, 6); ctx.restore();
-    /* le Grand Ballon, qui dégonfle à chaque coup */
+    /* la Flamme sacrée, qui faiblit à chaque coup */
     const gl = ctx.createRadialGradient(B.x, B.y, 6, B.x, B.y, B.gr * 2.2); gl.addColorStop(0, 'rgba(255,224,120,0.5)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(B.x, B.y, B.gr * 2.2, 0, TAU); ctx.fill();
-    ctx.save(); if (hurt) { ctx.globalAlpha = .7; } blBalloon(B.x, B.y, B.gr, hurt ? '#ffffff' : '#ffc93a'); ctx.restore();
+    ctx.save(); ctx.translate(B.x, B.y); paintSkin(ctx, FLAMME_SKIN, B.gr, G.frame); if (hurt) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(0, 0, B.gr, 0, TAU); ctx.fill(); } ctx.restore();
     if (warn && G.frame % 20 < 10) { ctx.fillStyle = '#ffd23f'; ctx.font = '26px "Lilita One", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', bx - side * 30, by - 30); }
     if (blow) { const k = Math.sin((1 - bl.t / 56) * Math.PI); ctx.save(); ctx.lineCap = 'round';
       for (let i = 0; i < 12; i++) { const yy = hudBottom() + 120 + h1(i + 70) * (groundY() - hudBottom() - 160), x0 = ((G.frame * 10 + i * 61) % (PW + 80)), xs = side > 0 ? PW - x0 : x0, len = 50 + h1(i + 80) * 80;
@@ -12828,24 +12828,24 @@ drawBossIcon = function (cnv, type) {
   if (type !== 'baron') return _drawBossIconB(cnv, type);
   const c = cnv.getContext('2d'), k = cnv.width / 120; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cnv.width, cnv.height); c.scale(k, k); drawBaron(c, 60, 66, 1.05, { t: 0 });
 };
-{ const k = TROPHIES.findIndex(t => t.id === 'arm'); TROPHIES.splice(k + 1, 0, { id: 'baron', cat: 'Aventure', name: 'Le Grand Ballon retrouvé', desc: 'Bats le Baron Épingle, à Bouliland', prog: () => [stv('boss_baron'), 1], reward: 420 }); }
+{ const k = TROPHIES.findIndex(t => t.id === 'arm'); TROPHIES.splice(k + 1, 0, { id: 'baron', cat: 'Aventure', name: 'La Flamme retrouvée', desc: 'Bats le Baron Épingle, à Bouliland', prog: () => [stv('boss_baron'), 1], reward: 420 }); }
 /* =========================================================
    Monde 14 : scènes d'histoire (une seule fois chacune)
    0 avant le niveau 1, 1 avant le 4, 2 avant le 7, 3 avant le boss, 4 la fin
    ========================================================= */
 const BOULI_STORY = [
-  { z: 1, lines: ['Bouli rentre chez lui pour la Fête des Ballons.', 'Mais le Baron Épingle surgit… et vole le Grand Ballon doré !', 'Sans lui, Bouliland va se dégonfler. À toi de jouer !'] },
-  { z: 2, lines: ['Sans le Grand Ballon, les îles perdent de l\'air…', 'Une épingle ! Le Baron est passé par là.', 'Direction les Îles flottantes !'] },
-  { z: 3, lines: ['Le dirigeable du Baron file vers son repaire.', 'Le Grand Ballon est attaché dessous !', 'Discrètement… on le suit.'] },
-  { z: 3, lines: ['« Ho ho ! Ce Grand Ballon est à MOI ! »', '« Personne ne me le reprendra… surtout pas un ballon tout mou ! »', 'Bouli gonfle ses joues : c\'est l\'heure du combat !'] },
-  { z: 1, lines: ['Le Grand Ballon est de retour !', 'Bouliland se regonfle : la Fête des Ballons commence !', 'Merci, champion. Bouli ne t\'oubliera jamais.'] },
+  { z: 1, lines: ['Bouli rentre chez lui pour la Fête des Ballons.', 'Mais le Baron Épingle surgit… et vole la Flamme sacrée de Bouliland !', 'Sans elle, Bouliland va se dégonfler. À toi de jouer !'] },
+  { z: 2, lines: ['Sans la Flamme sacrée, les îles perdent de l\'air…', 'Une épingle ! Le Baron est passé par là.', 'Direction les Îles flottantes !'] },
+  { z: 3, lines: ['Le dirigeable du Baron file vers son repaire.', 'La Flamme sacrée est accrochée dessous !', 'Discrètement… on le suit.'] },
+  { z: 3, lines: ['« Ho ho ! Cette Flamme est à MOI ! »', '« Personne ne me le reprendra… surtout pas un ballon tout mou ! »', 'Bouli gonfle ses joues : c\'est l\'heure du combat !'] },
+  { z: 1, lines: ['La Flamme sacrée est de retour !', 'Bouliland se regonfle : la Fête des Ballons commence !', 'Merci, champion. Bouli ne t\'oubliera jamais.'] },
 ];
 const SEG = 200;
 function drawStoryScene(c, w, h, id, t) {
   const sc = BOULI_STORY[id], k = Math.min(3, Math.floor(t / SEG)), u = t - k * SEG, e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
   BOULISCENE.bg(c, w, h, t, sc.z, { noGB: true, noFolk: true });
   const gx = w * .72, gy = h * .36, bx = w * .24, by = h * .9;
-  const ballon = (x, y, r) => { const gl = c.createRadialGradient(x, y, 4, x, y, r * 2.3); gl.addColorStop(0, 'rgba(255,224,120,0.55)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); c.fillStyle = gl; c.beginPath(); c.arc(x, y, r * 2.3, 0, TAU); c.fill(); const o = ctx; ctx = c; blBalloon(x, y, r, '#ffc93a'); ctx = o; };
+  const ballon = (x, y, r) => { const gl = c.createRadialGradient(x, y, 4, x, y, r * 2.3); gl.addColorStop(0, 'rgba(255,170,80,0.55)'); gl.addColorStop(1, 'rgba(255,150,60,0)'); c.fillStyle = gl; c.beginPath(); c.arc(x, y, r * 2.3, 0, TAU); c.fill(); c.save(); c.translate(x, y); paintSkin(c, FLAMME_SKIN, r, t); c.restore(); };
   const bouli = (x, y, s, ex) => drawBouli2(c, x, y, s * 1.45, null, t, 'aviatrice', Object.assign({ noShadow: true, noProp: true }, ex));
   if (id === 0) {
     const grab = k >= 1 ? e(u / 120) : 0, away = k >= 2 ? e(u / 140) : 0;
@@ -12952,7 +12952,7 @@ const FLAMME_SKIN = { id: 'flamme', theme: 'mondes', name: 'La Flamme de Boulila
    Ambiance : grenier sous les toits, poutres, lucarne au clair de lune, poussière dorée, vieux jouets.
    Mécanique : la lampe-tempête de Bouli ne s'allume que par moments : il faut lâcher dans la lumière.
    ========================================================= */
-const GRENIER_LEVEL = { name: 'Le Grenier de Bouli', goal: 8, bweight: 1, porters: 1.1, attic: 1, coins: 1, bonus: .4, intro: "Le grenier secret de Bouli : il y range ses souvenirs. La lampe clignote : lâche quand elle éclaire la plateforme.", stars: [13, 21] };
+const GRENIER_LEVEL = { name: 'Le Grenier de Bouli', goal: 8, bweight: 1, porters: 1.1, attic: 1, coins: 1, bonus: .4, intro: "Le grenier secret de Bouli : il y range ses souvenirs. La lampe clignote : lâche quand elle éclaire la plateforme. Termine-le pour gagner son vieux ballon d'enfance.", stars: [13, 21] };
 GRENIER_LEVEL.stars = GRENIER_LEVEL.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
 SKIES.w14g = Object.assign({}, SKIES.w14n, { top: '#3a2418', bottom: '#7a4a2a', ambient: 'grenier', floor: 'bouli', chip: 'rgba(40,20,10,0.35)' });
 SONGS.w14g = SONGS.w14;
@@ -12976,10 +12976,29 @@ function drawGrenierSky() {
   /* vieux jouets : malle, cheval à bascule, ballons dégonflés, photo de Bouli */
   const fy = gy;
   ctx.fillStyle = '#7a4a24'; ctx.beginPath(); ctx.roundRect(w * .04, fy - 60, 90, 60, 8); ctx.fill(); ctx.fillStyle = '#9a6a34'; ctx.beginPath(); ctx.roundRect(w * .04, fy - 70, 90, 18, 9); ctx.fill(); ctx.fillStyle = '#e8b33a'; ctx.fillRect(w * .04 + 40, fy - 56, 10, 14);
-  const hx = w * .86, rock = Math.sin(t * .03) * .12; ctx.save(); ctx.translate(hx, fy - 4); ctx.rotate(rock);
-  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, -10, 40, .35, Math.PI - .35); ctx.stroke();
-  ctx.fillStyle = '#e8d3b0'; ctx.beginPath(); ctx.ellipse(0, -46, 26, 12, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(22, -62, 10, 13, -.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8333d'; ctx.fillRect(-6, -58, 12, 8);
-  ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 3; for (const x of [-16, 16]) { ctx.beginPath(); ctx.moveTo(x, -40); ctx.lineTo(x * 1.4, -14); ctx.stroke(); } ctx.restore();
+  /* petit poêle en fonte, feu qui danse derrière la porte vitrée, tuyau jusqu'au toit */
+  { const sx = w * .84, sy = fy, fk = Math.sin(t * .23) * .5 + Math.sin(t * .37) * .3 + Math.sin(t * .71) * .2;
+    const glow = ctx.createRadialGradient(sx, sy - 30, 8, sx, sy - 20, 170); glow.addColorStop(0, `rgba(255,150,60,${(.32 + fk * .05).toFixed(3)})`); glow.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sx, sy - 20, 170, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2a2024'; ctx.fillRect(sx - 6, 0, 12, sy - 74); ctx.fillStyle = 'rgba(255,170,90,0.25)'; ctx.fillRect(sx - 6, 0, 3, sy - 74);
+    ctx.fillStyle = '#3a2e34'; ctx.beginPath(); ctx.roundRect(sx - 34, sy - 76, 68, 66, 10); ctx.fill(); ctx.fillStyle = '#4a3c44'; ctx.beginPath(); ctx.roundRect(sx - 40, sy - 80, 80, 10, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,190,120,0.3)'; ctx.fillRect(sx - 30, sy - 78, 40, 3);
+    ctx.fillStyle = '#2a2024'; for (const d of [-26, 26]) ctx.fillRect(sx + d - 4, sy - 12, 8, 12);
+    ctx.fillStyle = '#1a0e10'; ctx.beginPath(); ctx.roundRect(sx - 22, sy - 62, 44, 36, 14); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.roundRect(sx - 22, sy - 62, 44, 36, 14); ctx.clip();
+    for (const [h0, w0, col, k] of [[34, 18, '#e8301a', 0], [27, 14, '#ff7a1a', 1.4], [19, 9, '#ffc93a', 2.8], [10, 5, '#fff3b0', 4]]) { const tip = Math.sin(t * .2 + k) * 4; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx - w0, sy - 26); ctx.quadraticCurveTo(sx - w0, sy - 26 - h0 * .6, sx + tip, sy - 26 - h0 - fk * 3); ctx.quadraticCurveTo(sx + w0, sy - 26 - h0 * .6, sx + w0, sy - 26); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#5a3420'; ctx.fillRect(sx - 16, sy - 30, 32, 5); ctx.restore();
+    ctx.strokeStyle = '#6a5a60'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(sx - 22, sy - 62, 44, 36, 14); ctx.moveTo(sx, sy - 62); ctx.lineTo(sx, sy - 26); ctx.stroke();
+    for (let i = 0; i < 6; i++) { const q = ((t * .012 + i / 6) % 1); ctx.fillStyle = `rgba(255,${(200 - q * 100) | 0},90,${(1 - q).toFixed(2)})`; ctx.beginPath(); ctx.arc(sx + Math.sin(i * 2 + t * .03) * 14, sy - 84 - q * 60, 1.6 * (1 - q * .5), 0, TAU); ctx.fill(); }
+    /* bûches empilées */
+    for (const [x, y] of [[sx - 62, sy - 8], [sx - 50, sy - 8], [sx - 56, sy - 18]]) { ctx.fillStyle = '#8a5a30'; ctx.beginPath(); ctx.ellipse(x, y, 9, 7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8c08a'; ctx.beginPath(); ctx.ellipse(x - 2, y, 4, 4, 0, 0, TAU); ctx.fill(); } }
+  /* petite fenêtre à rideaux : nuit étoilée et quelques ballons de Bouliland qui passent */
+  { const fx = w * .14, fyy = h * .12, fw = Math.min(w, h) * .16, fh = fw * 1.15;
+    ctx.fillStyle = '#1a2a50'; ctx.fillRect(fx - fw / 2, fyy - fh / 2, fw, fh);
+    for (let i = 0; i < 7; i++) { ctx.fillStyle = `rgba(255,255,230,${(.4 + .4 * Math.sin(t / 25 + i)).toFixed(2)})`; ctx.beginPath(); ctx.arc(fx - fw / 2 + h1(i + 600) * fw, fyy - fh / 2 + h1(i + 610) * fh * .7, 1.3, 0, TAU); ctx.fill(); }
+    const by = fyy + fh / 2 - ((t * .3) % (fh + 30)); ctx.save(); ctx.beginPath(); ctx.rect(fx - fw / 2, fyy - fh / 2, fw, fh); ctx.clip(); ctx.fillStyle = '#ff8fb8'; ctx.beginPath(); ctx.ellipse(fx + fw * .15, by, 6, 7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#8fd3ff'; ctx.beginPath(); ctx.ellipse(fx - fw * .2, by + 26, 5, 6, 0, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 6; ctx.strokeRect(fx - fw / 2, fyy - fh / 2, fw, fh); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, fyy - fh / 2); ctx.lineTo(fx, fyy + fh / 2); ctx.moveTo(fx - fw / 2, fyy); ctx.lineTo(fx + fw / 2, fyy); ctx.stroke();
+    ctx.fillStyle = '#c9506a'; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(fx + sd * fw * .62, fyy - fh * .62); ctx.quadraticCurveTo(fx + sd * fw * .35, fyy, fx + sd * fw * .58, fyy + fh * .6); ctx.lineTo(fx + sd * fw * .68, fyy + fh * .6); ctx.lineTo(fx + sd * fw * .68, fyy - fh * .62); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#6a4228'; ctx.fillRect(fx - fw * .7, fyy - fh * .66, fw * 1.4, 5); }
   ctx.save(); ctx.translate(w * .28, h * .3); ctx.rotate(-.06); ctx.fillStyle = '#c9a07a'; ctx.fillRect(-26, -32, 52, 62); ctx.fillStyle = '#f6ecd6'; ctx.fillRect(-21, -27, 42, 44);
   drawBouli2(ctx, 0, 12, 6, null, 0, 'aviatrice', { noShadow: true, noProp: true, eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8 }); ctx.restore();
   /* poussière dorée dans le rayon de lune */
@@ -13025,6 +13044,34 @@ renderStory = function (focus, reveal) {
 };
 const _drawSkyG = drawSky;
 drawSky = function (th) { if (th.ambient === 'grenier') return drawGrenierSky(); return _drawSkyG(th); };
+/* Ballon secret du Grenier : « Le Ballon rapiécé », le vieux ballon d'enfance de Bouli, recousu de pièces de tissu */
+const RAPIECE_SKIN = { id: 'rapiece', theme: 'secrets', name: 'Le Ballon rapiécé', secret: true, dust: '#e8a0b4', gloss: .35,
+  paint: (c, r, t = 0) => {
+    const g = c.createRadialGradient(-r * .3, -r * .35, r * .05, 0, 0, r); g.addColorStop(0, '#ffd0de'); g.addColorStop(.6, '#e8889e'); g.addColorStop(1, '#a8506a'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); c.beginPath(); c.arc(0, 0, r * .99, 0, TAU); c.clip();
+    const patch = (x, y, w, h, a, col, motif) => { c.save(); c.translate(x * r, y * r); c.rotate(a); c.fillStyle = col; c.beginPath(); c.roundRect(-w * r / 2, -h * r / 2, w * r, h * r, r * .04); c.fill();
+      if (motif === 'carreaux') { c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = Math.max(.6, r * .018); for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(k * w * r / 5, -h * r / 2); c.lineTo(k * w * r / 5, h * r / 2); c.moveTo(-w * r / 2, k * h * r / 5); c.lineTo(w * r / 2, k * h * r / 5); c.stroke(); } }
+      if (motif === 'pois') { c.fillStyle = 'rgba(255,255,255,0.75)'; for (let k = 0; k < 6; k++) { c.beginPath(); c.arc((h1(k + 50) - .5) * w * r * .8, (h1(k + 60) - .5) * h * r * .8, r * .025, 0, TAU); c.fill(); } }
+      if (motif === 'rayures') { c.fillStyle = 'rgba(255,255,255,0.35)'; for (let k = -3; k <= 3; k += 2) c.fillRect(k * w * r / 7, -h * r / 2, w * r / 7, h * r); }
+      c.strokeStyle = 'rgba(70,40,30,0.85)'; c.lineWidth = Math.max(.7, r * .018); c.setLineDash([r * .045, r * .035]); c.beginPath(); c.roundRect(-w * r / 2 + r * .03, -h * r / 2 + r * .03, w * r - r * .06, h * r - r * .06, r * .03); c.stroke(); c.setLineDash([]);
+      c.restore(); };
+    patch(-.42, .28, .42, .36, -.25, '#7fb8e8', 'carreaux'); patch(.38, -.36, .34, .3, .3, '#ffd166', 'pois'); patch(.42, .46, .3, .26, -.1, '#9bd8a8', 'rayures');
+    /* couture en zigzag (vieille déchirure recousue) */
+    c.strokeStyle = 'rgba(70,40,30,0.9)'; c.lineWidth = Math.max(.8, r * .022); c.beginPath(); c.moveTo(-.1 * r, -.62 * r); c.lineTo(.08 * r, -.18 * r); c.stroke();
+    c.lineWidth = Math.max(.6, r * .016); for (let k = 0; k < 6; k++) { const q = k / 5, x = (-.1 + .18 * q) * r, y = (-.62 + .44 * q) * r; c.beginPath(); c.moveTo(x - r * .05, y - r * .02); c.lineTo(x + r * .05, y + r * .02); c.stroke(); }
+    /* deux boutons cousus */
+    for (const [x, y, col] of [[-.05, .55, '#e8333d'], [.62, .02, '#5a6ab8']]) { c.fillStyle = col; c.beginPath(); c.arc(x * r, y * r, r * .07, 0, TAU); c.fill(); c.fillStyle = 'rgba(0,0,0,0.35)'; for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { c.beginPath(); c.arc(x * r + dx * r * .022, y * r + dy * r * .022, r * .011, 0, TAU); c.fill(); } }
+    /* l'autocollant étoile, un peu décollé */
+    c.save(); c.translate(-.4 * r, -.42 * r); c.rotate(-.2 + Math.sin(t * .03) * .03); c.fillStyle = '#ffd23f'; c.strokeStyle = '#c98a1c'; c.lineWidth = Math.max(.6, r * .015); c.beginPath();
+    for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = (k % 2 ? .06 : .14) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(r * .06, -r * .1); c.lineTo(r * .14, -r * .05); c.lineTo(r * .08, -r * .02); c.closePath(); c.fill(); c.restore();
+    /* « B » brodé */
+    c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = `${Math.max(6, Math.round(r * .32))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B', .05 * r, .14 * r);
+    c.restore();
+  } };
+SKINS.push(RAPIECE_SKIN);
+const _endRunG = endRun;
+endRun = function (win) { const r = _endRunG(win); try { if (win && cfg && cfg.world === 14 && G.level === 'g' && unlockSecretSkin('rapiece')) { toast('Ballon secret : le Ballon rapiécé'); } } catch (e) {} return r; };
 { const k = TROPHIES.findIndex(t => t.id === 'baron'); TROPHIES.splice(k + 1, 0, { id: 'grenier', cat: 'Aventure', name: 'Souvenirs de Bouli', desc: 'Termine le Grenier de Bouli', prog: () => [starsOf(14, 'g') > 0 ? 1 : 0, 1], reward: 250 }); }
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
