@@ -12317,7 +12317,7 @@ SONGS.w14n = SONGS.w14;
 /* ---------- Monde 14 : décor de Bouliland (3 zones : Village, Îles flottantes, Repaire du Baron) ----------
    Repris de la maquette validée (design/…/da.html), dessiné à l'échelle d'un écran 390×844, cadré en bas. */
 const BOULISCENE = (() => {
-  const W = 390, H = 844; let c = null, Z = 1, TS = 0;
+  const W = 390, H = 844; let c = null, Z = 1, TS = 0, OPT = {};
   const ZALL = {
     1: { name: 'Le Village', sky: [[0, '#7fc4ea'], [.5, '#bfe4f2'], [1, '#ffe2cf']], sun: [70, 150, '#fff6d8'], fog: '#e8f2f4', rim: '#ffd0e0', shadow: 'rgba(150,80,140,0.22)',
          far: ['#c7b8ea', '#b6dde3', '#f3c8d8', '#f5ddb4'], mid: ['#9fd6c8', '#f4b2c8', '#b7c2f2', '#f8d39a'], hillFar: '#c3e6cc', hillMid: '#aee2a2', ground: ['#a6e392', '#6fc56c'], fx: 'confetti' },
@@ -12494,10 +12494,10 @@ const BOULISCENE = (() => {
     for (const [x0, y, s] of Z === 2 ? [[40, 110, 1], [260, 250, .8], [-40, 380, 1.1]] : [[230, 100, .9], [300, 300, .7], [-40, 420, 1]]) cloud(((x0 + t * .05 * s) % (W + 160)) - 80, y + (y < 320 ? TS : 0), s, Z === 3 ? .5 : .85);
     /* 3. lointain : îles / Grand Ballon / dirigeable */
     if (Z === 1) { island(318, 250 + TS * .8, .75, t, 0, .45, true);
-      const gx = 290, gy = 470 + Math.sin(t * .015) * 4, gr = 42;
+      if (!OPT.noGB) { const gx = 290, gy = 470 + Math.sin(t * .015) * 4, gr = 42;
       const gl = c.createRadialGradient(gx, gy, 10, gx, gy, gr * 2.4); gl.addColorStop(0, 'rgba(255,224,120,0.5)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); c.fillStyle = gl; c.fillRect(gx - gr * 3, gy - gr * 3, gr * 6, gr * 6);
       c.strokeStyle = 'rgba(120,80,30,0.55)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(gx, gy + gr); c.quadraticCurveTo(gx + 10, gy + gr + 25, gx + 2, 548); c.stroke();
-      balloon(gx, gy, gr, '#ffc93a', { str: 0 }); }
+      balloon(gx, gy, gr, '#ffc93a', { str: 0 }); } }
     if (Z === 2) { cloud(170, 210 + TS, 1.7, .55); cloud(-40, 170 + TS, 1.2, .5); island(92, 420, 1.0, t, 6, .85, true); cloud(-60, 470, 1.3, .7); cloud(250, 400, 1.1, .7);
       island(70, 290 + TS * .8, .55, t, 2, .55, true); island(200, 200 + TS, .35, t, 5, .7, false); island(335, 225 + TS, .45, t, 3, .6, true); island(330, 470, .95, t, 1, .2, true);
       for (let i = 0; i < 5; i++) { const x = ((i * 90 + t * (.3 + i * .05)) % (W + 60)) - 30, y = 150 + i * 46 + Math.sin(t * .05 + i) * 6; c.strokeStyle = 'rgba(42,60,90,0.55)'; c.lineWidth = 1.6; c.beginPath(); const fl = Math.sin(t * .3 + i) * 3; c.moveTo(x - 6, y - fl); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 6, y - fl); c.stroke(); } }
@@ -12514,9 +12514,9 @@ const BOULISCENE = (() => {
       house(38, vy + 8, 46, ZONES.mid[0], t, 1, { bouli: true, roof: '#ffd166' }); house(140, vy - 4, 56, ZONES.mid[3], t, 2, { bouli: true, hat: 'peche', roof: '#8fd3ff' }); house(338, vy + 4, 50, ZONES.mid[2], t, 3, { bouli: true, roof: '#ff9ec4' });
       tree(92, vy + 24, 1.05, t); tree(268, vy + 26, .95, t);
       hills(H * .84, ZONES.ground[0], 32, 1, 0);
-      villager(128, H * .93, 12, t, { seed: 1, hat: 'golf', ex: { eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8 + Math.sin(t * .25) * .3, lift: Math.abs(Math.sin(t * .12)) * .5 } });
-      villager(300, H * .925, 10.5, t, { seed: 2, antenna: true, ex: { eyes: 'open', mouth: 'open', lAng: -2.2 + Math.sin(t * .3) * .3, rAng: -.9 } });
-      villager(352, H * .945, 8.5, t, { seed: 3, ex: { eyes: 'happy', mouth: 'cat', lAng: Math.PI * .7, rAng: -1 + Math.sin(t * .3) * .4 } });
+      if (!OPT.noFolk) villager(128, H * .93, 12, t, { seed: 1, hat: 'golf', ex: { eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8 + Math.sin(t * .25) * .3, lift: Math.abs(Math.sin(t * .12)) * .5 } });
+      if (!OPT.noFolk) villager(300, H * .925, 10.5, t, { seed: 2, antenna: true, ex: { eyes: 'open', mouth: 'open', lAng: -2.2 + Math.sin(t * .3) * .3, rAng: -.9 } });
+      if (!OPT.noFolk) villager(352, H * .945, 8.5, t, { seed: 3, ex: { eyes: 'happy', mouth: 'cat', lAng: Math.PI * .7, rAng: -1 + Math.sin(t * .3) * .4 } });
       for (let i = 0; i < 9; i++) { const x = 16 + i * 46 + h1(i + 60) * 18, y = H * .9 + h1(i + 70) * 30; c.strokeStyle = '#5aa858'; c.lineWidth = 2; c.beginPath(); c.moveTo(x, y + 10); c.lineTo(x, y); c.stroke(); balloon(x, y - 4, 5, ['#ffd166', '#ff9ec4', '#a6c8ff'][i % 3], { knot: false }); }
     }
     if (Z === 2) {
@@ -12540,7 +12540,7 @@ const BOULISCENE = (() => {
     }
     }
   const frame = (ctx, w, h, z, fn) => { c = ctx; Z = z; ZONES = ZALL[z]; const k = Math.max(w / W, h / H); TS = Math.max(0, (H * k - h) / k) * .9; ctx.save(); ctx.translate((w - W * k) / 2, h - H * k); ctx.scale(k, k); fn(); ctx.restore(); };
-  return { bg: (ctx, w, h, t, z) => frame(ctx, w, h, z, () => draw(t)), fx: (ctx, w, h, t, z) => frame(ctx, w, h, z, () => fxLayer(t)) };
+  return { bg: (ctx, w, h, t, z, o) => { OPT = o || {}; frame(ctx, w, h, z, () => draw(t)); OPT = {}; }, fx: (ctx, w, h, t, z) => frame(ctx, w, h, z, () => fxLayer(t)) };
 })();
 const bouliZone = () => { try { const l = G.level; return typeof l === 'number' ? (l < 3 ? 1 : l < 6 ? 2 : 3) : 1; } catch (e) { return 1; } };
 const _storyRoundB = storyRound;
@@ -12828,6 +12828,78 @@ drawBossIcon = function (cnv, type) {
   const c = cnv.getContext('2d'), k = cnv.width / 120; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, cnv.width, cnv.height); c.scale(k, k); drawBaron(c, 60, 66, 1.05, { t: 0 });
 };
 { const k = TROPHIES.findIndex(t => t.id === 'arm'); TROPHIES.splice(k + 1, 0, { id: 'baron', cat: 'Aventure', name: 'Le Grand Ballon retrouvé', desc: 'Bats le Baron Épingle, à Bouliland', prog: () => [stv('boss_baron'), 1], reward: 420 }); }
+/* =========================================================
+   Monde 14 : scènes d'histoire (une seule fois chacune)
+   0 avant le niveau 1, 1 avant le 4, 2 avant le 7, 3 avant le boss, 4 la fin
+   ========================================================= */
+const BOULI_STORY = [
+  { z: 1, lines: ['Bouli rentre chez lui pour la Fête des Ballons.', 'Mais le Baron Épingle surgit… et vole le Grand Ballon doré !', 'Sans lui, Bouliland va se dégonfler. À toi de jouer !'] },
+  { z: 2, lines: ['Sans le Grand Ballon, les îles perdent de l\'air…', 'Une épingle ! Le Baron est passé par là.', 'Direction les Îles flottantes !'] },
+  { z: 3, lines: ['Le dirigeable du Baron file vers son repaire.', 'Le Grand Ballon est attaché dessous !', 'Discrètement… on le suit.'] },
+  { z: 3, lines: ['« Ho ho ! Ce Grand Ballon est à MOI ! »', '« Personne ne me le reprendra… surtout pas un ballon tout mou ! »', 'Bouli gonfle ses joues : c\'est l\'heure du combat !'] },
+  { z: 1, lines: ['Le Grand Ballon est de retour !', 'Bouliland se regonfle : la Fête des Ballons commence !', 'Merci, champion. Bouli ne t\'oubliera jamais.'] },
+];
+const SEG = 200;
+function drawStoryScene(c, w, h, id, t) {
+  const sc = BOULI_STORY[id], k = Math.min(3, Math.floor(t / SEG)), u = t - k * SEG, e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+  BOULISCENE.bg(c, w, h, t, sc.z, { noGB: true, noFolk: true });
+  const gx = w * .72, gy = h * .36, bx = w * .24, by = h * .9;
+  const ballon = (x, y, r) => { const gl = c.createRadialGradient(x, y, 4, x, y, r * 2.3); gl.addColorStop(0, 'rgba(255,224,120,0.55)'); gl.addColorStop(1, 'rgba(255,224,120,0)'); c.fillStyle = gl; c.beginPath(); c.arc(x, y, r * 2.3, 0, TAU); c.fill(); const o = ctx; ctx = c; blBalloon(x, y, r, '#ffc93a'); ctx = o; };
+  const bouli = (x, y, s, ex) => drawBouli2(c, x, y, s * 1.45, null, t, 'aviatrice', Object.assign({ noShadow: true, noProp: true }, ex));
+  if (id === 0) {
+    const grab = k >= 1 ? e(u / 120) : 0, away = k >= 2 ? e(u / 140) : 0;
+    const shx = k === 0 ? -120 : k === 1 ? -120 + (gx + 30) * e(u / 80) : gx - 10 + away * w, shy = h * .14;
+    if (k < 1) ballon(gx, gy + Math.sin(t * .03) * 3, 28);
+    else { const lx = shx + 10, gyy = gy - grab * 40 * (k >= 2 ? 1 : 0); c.strokeStyle = '#3a2a50'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(lx, shy + 30); c.lineTo(k >= 2 ? lx : gx, k >= 2 ? shy + 60 : gy - 28); c.stroke(); ballon(k >= 2 ? lx : gx, k >= 2 ? shy + 90 : gy, 28); }
+    if (k >= 1) drawBaronShip(c, shx, shy, .55, t, { angry: false });
+    bouli(bx, by, 9, k === 0 ? { eyes: 'happy', mouth: 'open', rAng: -1 + Math.sin(t * .2) * .3 } : k === 1 ? { eyes: 'wide', mouth: 'o', lAng: -2.3, rAng: -.8 } : { eyes: 'open', mouth: 'grr', brows: 'angry', look: [1, -.3] });
+  } else if (id === 1) {
+    const sink = e(t / 400); c.save(); c.translate(0, sink * 30); c.globalAlpha = 1; c.restore();
+    const px = w * .62, py = h * .82; c.save(); c.translate(px, py); c.rotate(.3); c.strokeStyle = '#d8dce8'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -24); c.stroke(); c.fillStyle = '#c01030'; c.beginPath(); c.arc(0, -25, 4.5, 0, TAU); c.fill(); c.restore();
+    if (k >= 1) { c.fillStyle = '#ffd23f'; c.font = '20px "Lilita One", sans-serif'; c.textAlign = 'center'; c.fillText('!', px + 6, py - 40 + Math.sin(t * .2) * 2); }
+    bouli(bx + (k >= 1 ? e(u / 100) * 60 : 0), by, 9, k === 0 ? { eyes: 'sad', mouth: 'sad', look: [.5, .5] } : k === 1 ? { eyes: 'wide', mouth: 'o', look: [1, .4] } : { eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8 });
+  } else if (id === 2) {
+    const sx = w * .7 - t * .15, sy = h * .2; c.strokeStyle = '#2a1a40'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(sx, sy + 26); c.lineTo(sx, sy + 52); c.stroke(); ballon(sx, sy + 70, 16); drawBaronShip(c, sx, sy, .45, t, {});
+    bouli(bx + Math.min(60, t * .15), by, 9, k === 2 ? { eyes: 'closed', mouth: 'cat', look: [1, -.5] } : { eyes: 'open', mouth: 'o', look: [1, -1] });
+    c.save(); c.globalAlpha = .9; c.fillStyle = '#241634'; c.beginPath(); c.moveTo(bx + 30, by + 2); c.quadraticCurveTo(bx + 26, by - 40, bx + 40, by - 64); c.quadraticCurveTo(bx + 46, by - 40, bx + 46, by + 2); c.fill(); c.restore();
+  } else if (id === 3) {
+    const lx = w * .62, ly = h * .5; ballon(lx + 40, ly - 50, 24); drawBaron(c, lx, ly + Math.sin(t * .15) * 3, 1.35, { t, angry: k >= 1, look: -1, arms: k === 0 ? -1 : 2 });
+    if (k === 0 && t % 30 < 20) { c.fillStyle = '#ffffff'; c.font = '16px "Lilita One", sans-serif'; c.textAlign = 'center'; c.fillText('HO HO !', lx, ly - 60); }
+    const puff = k === 2 ? e(u / 80) : 0; c.save(); c.translate(bx, by); c.scale(1 + puff * .2, 1 + puff * .12); bouli(0, 0, 10, k === 2 ? { eyes: 'wide', mouth: 'o', brows: 'angry', look: [1, -.4] } : { eyes: 'open', mouth: 'grr', brows: 'angry', look: [1, -.4] }); c.restore();
+  } else {
+    ballon(gx, gy - 20 + Math.sin(t * .03) * 3, 30);
+    for (let i = 0; i < 4; i++) { const q = ((t * .012 + i * .25) % 1), fx = w * (.2 + i * .2), fy = h * (.5 - q * .35); if (q > .55) { const r = (q - .55) * 90; for (let j = 0; j < 10; j++) { const a = j * TAU / 10; c.fillStyle = ['#ffd166', '#ff8fb8', '#8fd3ff', '#9be89b'][(i + j) % 4]; c.globalAlpha = 1 - (q - .55) / .45; c.beginPath(); c.arc(fx + Math.cos(a) * r, fy + Math.sin(a) * r, 2.5, 0, TAU); c.fill(); } c.globalAlpha = 1; } else { c.fillStyle = '#fff6c8'; c.beginPath(); c.arc(fx, h * .85 - q / .55 * (h * .85 - fy), 2, 0, TAU); c.fill(); } }
+    for (let i = 0; i < 3; i++) bouli(w * (.2 + i * .3), by - Math.abs(Math.sin(t * .12 + i)) * 12, 8 + (i === 0 ? 1.5 : 0), { eyes: 'happy', mouth: 'open', lAng: -2.3, rAng: -.8, lift: 0 });
+    drawBaron(c, w * .86, h * .1 - t * .05, .35, { t, scared: true, arms: -1.2 });
+  }
+}
+function playBouliStory(id, done) {
+  S.b14 = S.b14 || {}; let line = 0, t = 0, raf = 0;
+  openModal(`<div class="kicker">Bouliland</div><canvas id="stCv" width="600" height="520" style="width:100%;max-width:300px;aspect-ratio:300/260;border-radius:20px;display:block;margin:8px auto 0"></canvas>
+    <p class="sub" id="stTxt" style="min-height:3em"></p><div class="btns two"><button class="btn btn-secondary" data-act="skip">Passer</button><button class="btn btn-primary" data-act="next" data-focus>Suivant</button></div>`, card => {
+    const cv = card.querySelector('#stCv'), cx = cv.getContext('2d'), txt = card.querySelector('#stTxt'), sc = BOULI_STORY[id];
+    const show = () => { txt.textContent = sc.lines[line]; card.querySelector('[data-act=next]').textContent = line >= sc.lines.length - 1 ? 'Continuer' : 'Suivant'; };
+    const end = () => { cancelAnimationFrame(raf); S.b14[id] = 1; save(); closeModal(); if (done) done(); };
+    const loop = () => { if (!document.body.contains(cv)) return; t++; const want = Math.min(sc.lines.length - 1, Math.floor(t / SEG)); if (want > line) { line = want; show(); }
+      cx.setTransform(2, 0, 0, 2, 0, 0); cx.clearRect(0, 0, 300, 260); try { drawStoryScene(cx, 300, 260, id, t); } catch (e) {} raf = requestAnimationFrame(loop); };
+    show(); loop();
+    on(card, '[data-act=next]', () => { sfx.tap(1); if (line >= sc.lines.length - 1) return end(); line++; t = line * SEG; show(); });
+    on(card, '[data-act=skip]', () => { sfx.tap(0); end(); });
+  });
+}
+const _startGameS = startGame;
+startGame = function (mode, o = {}) {
+  S.b14 = S.b14 || {};
+  if (mode === 'story' && o.world === 14 && typeof o.level === 'number' && !window.__BOT) {
+    const id = { 0: 0, 3: 1, 6: 2, 9: 3 }[o.level];
+    if (starsOf(14, 9) > 0 && !S.b14[4]) return playBouliStory(4, () => _startGameS(mode, o));
+    if (id != null && !S.b14[id]) return playBouliStory(id, () => _startGameS(mode, o));
+  }
+  return _startGameS(mode, o);
+};
+const _renderStoryS = renderStory;
+renderStory = function (focus, reveal) { _renderStoryS(focus, reveal); try { S.b14 = S.b14 || {}; if (storyWorld === 14 && starsOf(14, 9) > 0 && !S.b14[4] && $('modal').hidden) setTimeout(() => { if ($('modal').hidden) playBouliStory(4); }, 600); } catch (e) {} };
+if (window.__BOT) window.__STORY = (id) => playBouliStory(id);
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
   const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
