@@ -226,13 +226,99 @@ function hud() {
   c.font = '800 11px Nunito'; c.fillStyle = 'rgba(255,243,230,0.6)'; c.fillText(ZN.levels.toUpperCase(), W / 2, 146); c.textAlign = 'left';
 }
 function coin(x, y, t) { const s = Math.abs(Math.cos(t * .05)); c.fillStyle = '#f2b705'; c.beginPath(); c.ellipse(x, y, 9 * s + 1, 9, 0, 0, TAU); c.fill(); c.fillStyle = '#ffe58a'; c.beginPath(); c.ellipse(x - 2 * s, y - 2, 4 * s, 4, 0, 0, TAU); c.fill(); }
+
+/* ===== démos des deux mécaniques (?m=1 îlot d'obsidienne, ?m=2 chaleur montante) ===== */
+const M = +(Q.get('m') || 0);
+if (M === 1) { ZN.name = "Îlot d'obsidienne"; ZN.levels = '×2, mais il s’enfonce'; }
+if (M === 2) { ZN.name = 'Chaleur montante'; ZN.levels = 'Plus bas = plus vite… trop ?'; }
+const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+function floatTxt(txt, x, y, k, col, size = 28) { if (k <= 0 || k >= 1) return; c.save(); c.globalAlpha = k < .15 ? k / .15 : 1 - Math.max(0, (k - .6) / .4);
+  const sc = 1 + .25 * Math.max(0, 1 - k * 6); c.translate(x, y - k * 40); c.scale(sc, sc); c.font = size + 'px "Lilita One"'; c.textAlign = 'center'; c.lineWidth = 5; c.strokeStyle = 'rgba(20,8,16,0.75)'; c.strokeText(txt, 0, 0); c.fillStyle = col; c.fillText(txt, 0, 0); c.restore(); }
+function finger(x, y, down) { c.save(); c.globalAlpha = .9; c.fillStyle = 'rgba(255,255,255,0.25)'; c.beginPath(); c.arc(x, y, down ? 22 : 16, 0, TAU); c.fill();
+  c.fillStyle = '#ffffff'; c.strokeStyle = '#2b1d1f'; c.lineWidth = 2; c.beginPath(); c.roundRect(x - 7, y - 4, 14, 30, 7); c.fill(); c.stroke(); c.restore(); }
+function ballR(x, y, r, col, o = {}) { // ballon simple + jauge de gonflage
+  c.save(); if (o.shake) c.translate((Math.random() - .5) * o.shake, (Math.random() - .5) * o.shake);
+  if (o.hot) { const g = c.createRadialGradient(x, y, r * .6, x, y, r * 1.8); g.addColorStop(0, `rgba(255,80,40,${(.45 * o.hot).toFixed(3)})`); g.addColorStop(1, 'rgba(255,80,40,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 1.8, 0, TAU); c.fill(); }
+  c.strokeStyle = 'rgba(255,230,220,0.6)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x + 8, y - r - 14, x + 2, y - r - 26); c.stroke();
+  const cc = o.hot ? mix(col, '#ff3a1a', o.hot * .5) : col;
+  const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, mix(cc, '#ffffff', .35)); g.addColorStop(.6, cc); g.addColorStop(1, mix(cc, '#2a0a30', .35));
+  c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r * (o.sq || 1), r / (o.sq || 1), 0, 0, TAU); c.fill();
+  c.strokeStyle = rgba('#ff9a4a', .6); c.lineWidth = 3; c.beginPath(); c.arc(x, y, r - 1.5, Math.PI * .2, Math.PI * .8); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill();
+  if (o.gauge != null) { const a0 = -Math.PI / 2; c.lineCap = 'round'; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.arc(x, y, r + 10, 0, TAU); c.stroke();
+    c.strokeStyle = o.gauge > .95 ? '#ff4a3a' : o.gauge > .5 ? '#ff9a3a' : '#ffffff'; c.beginPath(); c.arc(x, y, r + 10, a0, a0 + TAU * Math.min(1, o.gauge)); c.stroke();
+    c.font = '16px "Lilita One"'; c.textAlign = 'center'; c.fillStyle = '#fff3e6'; c.fillText(o.gauge >= 1 ? '×3' : o.gauge >= .5 ? '×2' : '×1', x, y - r - 20); }
+  c.restore(); }
+function popFx(x, y, k, col) { for (let i = 0; i < 14; i++) { const a = i / 14 * TAU, d = ease(k) * 50; c.fillStyle = i % 2 ? col : '#ffd27a'; c.globalAlpha = 1 - k; c.beginPath(); c.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 3, 0, TAU); c.fill(); } c.globalAlpha = 1; }
+function obsIsle(x, y, w, k, timer) { // îlot d'obsidienne qui flotte dans la lave
+  c.save(); c.beginPath(); c.rect(0, 0, W, LAVA_Y + 2); c.clip();
+  const pts = [[x - w / 2, y + 16], [x - w / 2 + 4, y - 2], [x - w * .2, y - 8], [x + w * .25, y - 6], [x + w / 2, y + 2], [x + w / 2 - 4, y + 16]];
+  rockShape(pts, { col: '#1a0e1e', warm: .9 });
+  c.strokeStyle = rgba('#ffb04a', (.5 + .5 * (1 - timer)) * BR); c.lineWidth = 1.6; c.beginPath(); c.moveTo(x - w * .3, y - 4); c.lineTo(x - w * .1, y + 4); c.lineTo(x + w * .05, y - 2); c.lineTo(x + w * .3, y + 6); c.stroke();
+  c.restore();
+  if (timer > 0) { c.lineWidth = 4; c.lineCap = 'round'; c.strokeStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(x, y - 40, 14, 0, TAU); c.stroke(); c.strokeStyle = '#ff9a3a'; c.beginPath(); c.arc(x, y - 40, 14, -Math.PI / 2, -Math.PI / 2 + TAU * timer); c.stroke(); }
+}
+function mech1(t) { // cycle 300
+  const T = t % 300, VX = 252;
+  platform(110, 640); c.font = '800 12px Nunito'; c.textAlign = 'center'; c.fillStyle = 'rgba(255,243,230,0.8)'; c.fillText('sûr : ×1', 110, 670);
+  // bombe
+  if (T < 44) { const q = T / 44, x = VX + (300 - VX) * q, y = 330 - Math.sin(q * Math.PI) * 160 + q * 465; bomb(x, y, 7, t); }
+  if (T >= 44 && T < 70) { const k = (T - 44) / 26; for (let i = 0; i < 10; i++) { const a = Math.PI + i / 9 * Math.PI, d = ease(k) * 40; c.fillStyle = `rgba(255,${180 + i * 6},90,${(1 - k).toFixed(3)})`; c.beginPath(); c.arc(300 + Math.cos(a) * d, 798 + Math.sin(a) * d * 1.4 + k * k * 30, 3, 0, TAU); c.fill(); } }
+  // îlot
+  let iy = 820, sink = 0, timer = 0;
+  if (T >= 50) iy = 820 - ease((T - 50) / 30) * 34;
+  if (T >= 160) { sink = Math.min(1, (T - 160) / 100); iy += sink * sink * 40; timer = 1 - sink; } else if (T >= 80) timer = 1;
+  if (T >= 50 && T < 268) obsIsle(300, iy, 76, 1, timer);
+  if (T >= 80 && T < 160) { const k = Math.min(1, (T - 80) / 10); c.save(); c.translate(300, iy - 40); c.scale(k, k); c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(-22, -13, 44, 26, 13); c.fill(); c.font = '18px "Lilita One"'; c.textAlign = 'center'; c.fillStyle = '#2b1d1f'; c.fillText('×2', 0, 6); c.restore(); }
+  // ballon
+  const r = 30; let bx = 300, by = 300 + Math.sin(t * .05) * 2, sq = 1;
+  if (T < 100) { finger(bx, by + r + 38, true); }
+  else if (T < 140) { const q = (T - 100) / 40; by = 300 + (iy - 8 - r - 300) * q * q; }
+  else { by = iy - 8 - r; sq = T < 148 ? 1.15 : 1; }
+  if (T >= 140 && T < 268) by += 0; 
+  if (T < 268) { c.save(); if (T >= 140) { c.beginPath(); c.rect(0, 0, W, LAVA_Y + 2); c.clip(); } ballR(bx, by, r, '#e23a6e', { sq }); c.restore(); }
+  floatTxt('+4', 300, 700, (T - 142) / 60, '#ffd23f', 34);
+  floatTxt('×2 !', 300, 630, (T - 142) / 60 - .05, '#fff3e6', 22);
+  floatTxt('Il s’enfonce…', 300, 760, (T - 200) / 70, '#fff3e6', 20);
+}
+function mech2(t) { // cycle 380
+  const T = t % 380, HZ = 470;
+  // zone de chaleur au-dessus de la plateforme
+  const g = c.createLinearGradient(0, HZ, 0, 640); g.addColorStop(0, 'rgba(255,90,40,0)'); g.addColorStop(1, `rgba(255,90,40,${(.28 * BR).toFixed(3)})`); c.fillStyle = g; c.fillRect(0, HZ, W, 640 - HZ);
+  c.strokeStyle = 'rgba(255,170,110,0.35)'; c.lineWidth = 1.4; for (let i = 0; i < 6; i++) { const y = HZ + 20 + i * 26; c.beginPath(); for (let x = 0; x <= W; x += 8) { const v = y + Math.sin(x * .05 + t * .12 + i) * 3; x ? c.lineTo(x, v) : c.moveTo(x, v); } c.stroke(); }
+  c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,200,150,0.6)'; c.beginPath(); c.moveTo(0, HZ); c.lineTo(W, HZ); c.stroke(); c.setLineDash([]);
+  c.font = '800 12px Nunito'; c.textAlign = 'left'; c.fillStyle = 'rgba(255,220,190,0.9)'; c.fillText('Zone de chaleur', 12, HZ - 8);
+  platform(200, 640);
+  const X = 200; let y = 280, g2 = 0, r = 28, hot = 0, shake = 0, pop = -1, fy = null;
+  if (T < 180) { // essai réussi
+    if (T < 40) { g2 = T / 40 * .2; }
+    else if (T < 80) { const q = ease((T - 40) / 40); y = 280 + q * 260; g2 = .2 + (T - 40) / 40 * .08; }
+    else if (T < 130) { y = 540; g2 = .28 + (T - 80) / 50 * .74; hot = Math.min(1, (T - 80) / 40); shake = hot * 2; }
+    else if (T < 146) { const q = (T - 130) / 16; y = 540 + q * q * (640 - 8 - 42 - 540); g2 = 1.02; hot = 1 - q; }
+    else { y = 640 - 8 - 42; g2 = 1.02; fy = 1; }
+    r = 28 + Math.min(1, g2) * 14;
+    if (T < 130) finger(X, y + r + 38, true);
+    ballR(X, y, r, '#e23a6e', { gauge: T < 146 ? g2 : null, hot, shake, sq: T >= 146 && T < 152 ? 1.15 : 1 });
+    floatTxt('Ça chauffe !', X + 80, 520, (T - 95) / 50, '#ffb04a', 20);
+    floatTxt('+6', X, 560, (T - 148) / 50, '#ffd23f', 36);
+  } else { // trop longtemps
+    const U = T - 180;
+    if (U < 40) { const q = ease(U / 40); y = 280 + q * 260; g2 = q * .2; }
+    else if (U < 150) { y = 540; g2 = .2 + (U - 40) / 60 * .8; hot = Math.min(1, (U - 40) / 40); shake = 2 + Math.max(0, (U - 100) / 50) * 6; }
+    else pop = (U - 150) / 30;
+    r = 28 + Math.min(1.25, g2) * 14;
+    if (U < 150) { finger(X, y + r + 38, true); ballR(X, 540 > y ? y : 540, r, '#e23a6e', { gauge: g2, hot, shake }); if (U > 100 && Math.floor(U / 5) % 2) { c.strokeStyle = 'rgba(255,60,40,0.9)'; c.lineWidth = 3; c.beginPath(); c.arc(X, y, r + 18, 0, TAU); c.stroke(); } }
+    else if (pop < 1) popFx(X, 540, pop, '#e23a6e');
+    floatTxt('Trop chaud !', X, 470, (U - 110) / 60, '#ff6a4a', 26);
+    floatTxt('Pop !', X, 560, (U - 150) / 50, '#fff3e6', 32);
+  }
+}
 function frame(t) {
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   BR = 1 + Math.sin(t * .025) * .15;
   [zone1, zone2, zone3][Z - 1](t);
-  platform(160 + Math.sin(t * .012) * 40 * (Z > 1), 640);
-  coin(300, 520, t);
-  balloon(200, 300, 52, '#e23a6e', t);
+  if (M === 1) mech1(t); else if (M === 2) mech2(t);
+  else { platform(160 + Math.sin(t * .012) * 40 * (Z > 1), 640); coin(300, 520, t); balloon(200, 300, 52, '#e23a6e', t); }
   hud();
 }
 Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
