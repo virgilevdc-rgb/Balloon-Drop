@@ -4259,18 +4259,65 @@ SKINS.push(...ARTS, ...FETES, ...MECAS);
 
 /* Ballon secret du Monde 3 : l'Œuf de lave (toucher 5 fois l'œuf du milieu dans le nid du dragon, zone Éruption) */
 const OEUF_LAVE = { id: 'oeuflave', name: 'Œuf de lave', secret: true, dust: '#ff8a3a', paint: (c, r, t = 0) => {
-    const g = c.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#6a4a8a'); g.addColorStop(.5, '#3a2a5a'); g.addColorStop(1, '#160c26');
-    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
-    const br = .6 + .4 * Math.sin(t * .05);
-    const ig = c.createRadialGradient(0, r * .2, 0, 0, r * .2, r * .9); ig.addColorStop(0, `rgba(255,140,50,${(.35 * br).toFixed(3)})`); ig.addColorStop(1, 'rgba(255,90,30,0)'); c.fillStyle = ig; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    /* Bébé dragon qui sort de l'œuf (design B validé le 17/11/2026).
+       Toutes les ~4 s : il gonfle les joues… et ne crache qu'une flammèche qui finit en petit nuage. */
+    const shellG = () => { const g = c.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#6a4a8a'); g.addColorStop(.5, '#3a2a5a'); g.addColorStop(1, '#160c26'); return g; };
+    const k = t % 260, inhale = k >= 186 && k < 208 ? Math.sin((k - 186) / 22 * Math.PI / 2) : k >= 208 && k < 214 ? 1 - (k - 208) / 6 : 0;
+    const blow = k >= 208 && k < 232 ? (k - 208) / 24 : -1, shy = k >= 226 && k < 258, br = .6 + .4 * Math.sin(t * .05), bob = Math.sin(t * .06) * r * .03;
+    /* intérieur de l'œuf */
+    const ig = c.createRadialGradient(0, -r * .1, r * .05, 0, 0, r); ig.addColorStop(0, '#9a3a2a'); ig.addColorStop(.6, '#5a1a24'); ig.addColorStop(1, '#2a0c1c'); c.fillStyle = ig; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); c.translate(0, bob); c.scale(1 + inhale * .05, 1 + inhale * .07);
+    /* collerette de piquants + petites cornes */
+    for (const s of [-1, 1]) { c.fillStyle = '#c8361a';
+      for (const [y0, len] of [[-r * .28, .26], [-r * .1, .22], [r * .06, .16]]) { c.beginPath(); c.moveTo(s * r * .36, y0 - r * .07); c.lineTo(s * r * (.36 + len + inhale * .04), y0 + r * .02); c.lineTo(s * r * .38, y0 + r * .08); c.closePath(); c.fill(); }
+      c.fillStyle = '#ffe2a8'; c.beginPath(); c.moveTo(s * r * .14, -r * .48); c.quadraticCurveTo(s * r * .3, -r * .62, s * r * .44, -r * .64); c.quadraticCurveTo(s * r * .3, -r * .5, s * r * .26, -r * .42); c.closePath(); c.fill(); }
+    const hg = c.createRadialGradient(-r * .15, -r * .3, r * .05, 0, -r * .1, r * .5); hg.addColorStop(0, '#ff9a4a'); hg.addColorStop(1, '#e8481e');
+    c.fillStyle = hg; c.beginPath(); c.ellipse(0, -r * .14, r * (.44 + inhale * .04), r * .4, 0, 0, TAU); c.fill();
+    /* museau, narines */
+    c.fillStyle = '#f2642a'; c.beginPath(); c.ellipse(0, r * .1, r * .24, r * .11, 0, 0, TAU); c.fill();
+    c.fillStyle = '#9a2a14'; c.beginPath(); c.ellipse(-r * .1, r * .03, r * .035, r * .018, -.4, 0, TAU); c.ellipse(r * .1, r * .03, r * .035, r * .018, .4, 0, TAU); c.fill();
+    /* joues : rosées, très gonflées quand il prend son souffle */
+    c.fillStyle = `rgba(255,90,90,${(.45 + inhale * .3).toFixed(3)})`; c.beginPath(); c.ellipse(-r * .3, -r * .02, r * (.07 + inhale * .06), r * (.04 + inhale * .04), 0, 0, TAU); c.ellipse(r * .3, -r * .02, r * (.07 + inhale * .06), r * (.04 + inhale * .04), 0, 0, TAU); c.fill();
+    /* bouche : sourire avec croc, joues pleines (bouche pincée), puis petit « o » */
+    c.strokeStyle = '#9a2a14'; c.lineWidth = Math.max(.8, r * .025); c.lineCap = 'round';
+    if (blow >= 0) { c.fillStyle = '#5a1010'; c.beginPath(); c.ellipse(0, r * .15, r * .055, r * .045, 0, 0, TAU); c.fill(); }
+    else if (inhale > .3) { c.beginPath(); c.moveTo(-r * .05, r * .15); c.lineTo(r * .05, r * .15); c.stroke(); }
+    else { c.beginPath(); c.moveTo(-r * .16, r * .14); c.quadraticCurveTo(0, r * .2, r * .16, r * .14); c.stroke();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(r * .06, r * .16); c.lineTo(r * .1, r * .16); c.lineTo(r * .08, r * .22); c.closePath(); c.fill(); }
+    /* yeux : ronds et brillants ; plissés (> <) pendant l'effort ; gênés après */
+    const blink = (t % 200) < 7 ? .12 : 1;
+    for (const s of [-1, 1]) {
+      if (inhale > .3 || (blow >= 0 && blow < .5)) { c.strokeStyle = '#1a0a10'; c.lineWidth = Math.max(1, r * .035); c.beginPath(); c.moveTo(s * r * .26, -r * .26); c.lineTo(s * r * .15, -r * .2); c.lineTo(s * r * .26, -r * .14); c.stroke(); continue; }
+      c.fillStyle = '#fff'; c.beginPath(); c.ellipse(s * r * .19, -r * .2, r * .12, r * .13 * blink * (shy ? .6 : 1), 0, 0, TAU); c.fill();
+      c.fillStyle = '#1a0a10'; c.beginPath(); c.ellipse(s * r * .17 + (shy ? -r * .03 : 0), -r * .18 + (shy ? r * .03 : 0), r * .065, r * .08 * blink * (shy ? .6 : 1), 0, 0, TAU); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(s * r * .15, -r * .22, r * .025, 0, TAU); c.fill();
+      if (shy) { c.strokeStyle = '#9a2a14'; c.lineWidth = Math.max(.8, r * .022); c.beginPath(); c.moveTo(s * r * .1, -r * .4); c.lineTo(s * r * .28, -r * .33); c.stroke(); } }
+    /* calotte de coquille sur la tête */
+    c.save(); c.translate(-r * .02, -r * .5); c.rotate(-.18 + (blow >= 0 && blow < .3 ? Math.sin(blow * 30) * .06 : 0));
+    c.fillStyle = shellG(); c.beginPath(); c.moveTo(-r * .42, r * .04); c.quadraticCurveTo(0, -r * .42, r * .42, r * .04);
+    for (let i = 0; i <= 6; i++) c.lineTo(r * .42 - i * r * .14, r * (i % 2 ? .14 : .04)); c.closePath(); c.fill();
+    c.restore(); c.restore();
+    /* bas de coquille, bord en zigzag, veines de feu */
+    c.save(); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.clip();
+    c.fillStyle = shellG(); c.beginPath(); c.moveTo(-r, r * .2);
+    for (let i = 0; i <= 10; i++) c.lineTo(-r + i * r * .2, r * (i % 2 ? .14 : .28)); c.lineTo(r, r); c.lineTo(-r, r); c.closePath(); c.fill();
     c.lineCap = 'round'; c.lineJoin = 'round';
     for (const [lw, col] of [[r * .1, `rgba(255,120,40,${(.4 * br).toFixed(3)})`], [r * .045, '#ffb04a'], [r * .018, '#fff0b0']]) { c.strokeStyle = col; c.lineWidth = Math.max(.8, lw);
-      c.beginPath(); c.moveTo(-r * .7, -r * .2); c.lineTo(-r * .35, r * .05); c.lineTo(-r * .1, -r * .25); c.lineTo(r * .2, r * .1); c.lineTo(r * .45, -r * .12); c.lineTo(r * .72, r * .15);
-      c.moveTo(-r * .1, -r * .25); c.lineTo(-r * .02, -r * .6); c.moveTo(r * .2, r * .1); c.lineTo(r * .12, r * .55); c.stroke(); }
-    /* un petit œil qui regarde par la fêlure */
-    const blink = (t % 220) < 8 ? .15 : 1;
-    c.fillStyle = '#ffd27a'; c.beginPath(); c.ellipse(-r * .1, -r * .02, r * .09, r * .09 * blink, 0, 0, TAU); c.fill();
-    c.fillStyle = '#1a0a10'; c.beginPath(); c.ellipse(-r * .08, -r * .02, r * .03, r * .06 * blink, 0, 0, TAU); c.fill();
+      c.beginPath(); for (const P of [[[-.6, .45], [-.35, .6], [-.1, .45], [.15, .7]], [[.3, .4], [.5, .62], [.7, .5]]]) P.forEach(([x, y], i) => i ? c.lineTo(x * r, y * r) : c.moveTo(x * r, y * r)); c.stroke(); }
+    c.restore();
+    /* la flammèche ratée : elle naît, vacille… et finit en petit nuage */
+    if (blow >= 0) {
+      const fx = r * .02, fy = r * .22 + bob;
+      if (blow < .45) { const q = blow / .45, s = Math.sin(q * Math.PI) * r * .2, fl = .65 + .35 * Math.sin(t * 1.3);
+        const fg = c.createRadialGradient(fx, fy + s, 1, fx, fy + s, s * 2.4); fg.addColorStop(0, 'rgba(255,200,90,0.55)'); fg.addColorStop(1, 'rgba(255,140,40,0)'); c.fillStyle = fg; c.beginPath(); c.arc(fx, fy + s, s * 2.4, 0, TAU); c.fill();
+        c.fillStyle = '#ff8a2a'; c.beginPath(); c.moveTo(fx - s * .6, fy); c.quadraticCurveTo(fx - s * .5, fy + s * 1.4 * fl, fx, fy + s * 2 * fl); c.quadraticCurveTo(fx + s * .5, fy + s * 1.4 * fl, fx + s * .6, fy); c.closePath(); c.fill();
+        c.fillStyle = '#ffe08a'; c.beginPath(); c.ellipse(fx, fy + s * .7, s * .25, s * .55 * fl, 0, 0, TAU); c.fill(); }
+      const q2 = Math.max(0, (blow - .35) / .65);
+      if (q2 > 0) for (let i = 0; i < 3; i++) { const qq = Math.min(1, q2 * 1.2 - i * .12); if (qq <= 0) continue;
+        c.fillStyle = `rgba(200,190,210,${(.85 * (1 - qq)).toFixed(3)})`; c.beginPath(); c.arc(fx + (i - 1) * r * .09 + qq * r * .06, fy + r * .06 - qq * r * .3, r * (.06 + qq * .08), 0, TAU); c.fill(); }
+    }
+    if (shy) { const q = (k - 226) / 32; c.fillStyle = `rgba(150,210,255,${(.9 * (1 - q * .6)).toFixed(3)})`; c.beginPath(); c.moveTo(-r * .42, -r * .44 + q * r * .12); c.quadraticCurveTo(-r * .36, -r * .33 + q * r * .12, -r * .42, -r * .29 + q * r * .12); c.quadraticCurveTo(-r * .48, -r * .33 + q * r * .12, -r * .42, -r * .44 + q * r * .12); c.fill(); }
+    if (shy && k < 250) { c.strokeStyle = 'rgba(255,240,220,0.8)'; c.lineWidth = Math.max(.8, r * .015); for (const [dx, dy] of [[.3, .14], [.36, .2]]) { c.beginPath(); c.moveTo(r * dx, r * dy); c.lineTo(r * (dx + .06), r * (dy - .02)); c.stroke(); } }
   } };
 SKINS.push(OEUF_LAVE);
 /* ====================== Famille « Bouli » : la mascotte du jeu dans de petites saynètes ======================
