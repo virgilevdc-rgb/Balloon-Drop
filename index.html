@@ -5152,9 +5152,9 @@ const WORLDS = [
     { name: 'Geysers', goal: 8, geysers: 1, intro: 'Un geyser crache de la vapeur qui soulève le ballon. Lâche juste après un jet.', stars: [13, 21] },
     { name: 'Braises', goal: 8, embers: 250, intro: 'Des braises montent de la lave. Si une braise touche le ballon pendant sa chute, il éclate.', stars: [13, 21] },
     { name: 'Double fournaise', goal: 7, dbl: .6, crumble: 300, plat: 1.1, intro: 'Des doublés sur une roche qui se fissure.', stars: [14, 23] },
-    { name: 'Coulée de lave', goal: 9, move: [.9, .08], tramp: .6, wind: .05, windChance: .5, bonus: .35, intro: 'La plateforme glisse sur la lave. Le trampoline peut te sauver.', stars: [15, 24] },
+    { name: "Îlots d'obsidienne", goal: 9, move: [.8, .08], isle: .75, bonus: .35, intro: "Une bombe de lave forme un îlot noir. Pose ton ballon dessus pour doubler les points, avant qu'il ne s'enfonce.", stars: [16, 26] },
     { name: 'Champ de geysers', goal: 9, geysers: 2, embers: 300, intro: 'Deux geysers et des braises.', stars: [15, 24] },
-    { name: 'Éruption', goal: 10, crumble: 240, embers: 260, move: [.9, .08], tramp: .4, bonus: .35, intro: 'Tout le volcan se réveille.', stars: [16, 26] },
+    { name: 'Éruption', goal: 10, crumble: 240, embers: 260, move: [.9, .08], tramp: .4, isle: .4, bonus: .35, intro: 'Tout le volcan se réveille.', stars: [16, 26] },
     { name: 'Le Dragon de lave', boss: 'dragon', hp: 12, shrink: .93, bonus: .3, intro: 'Le maître du Volcan. Sa gueule rougit avant chaque boule de feu : lâche entre deux tirs.', stars: [9, 14] },
   ] },
   { id: 4, name: "L'Océan", of: "de l'Océan", sw: ['#5fe0f0', '#0b6f9e'], sky: 'w4', desc: 'Une bouée sur la houle, du courant, des poissons volants et des bulles.', levels: [
@@ -5535,6 +5535,7 @@ function storyRound(lv, L, rng) {
   if (p.drift) p.speed = 0;
   p.skite = !!lv.skite && rng() < lv.skite;
   p.thunder = !!lv.thunder;
+  p.isle = !!lv.isle && rng() < lv.isle;
   return G.boss ? bossRound(G.boss, p, rng) : p;
 }
 
@@ -5827,6 +5828,7 @@ function surfaceFor(b) {
   if (b !== first) return { kind: 'ball', y: first.y - first.r, cx: first.x, half: first.r * .55 + b.r * .1, perf: first.r * .16, gold: !!first.onGold };
   let P = R.plat;
   if (R.plat2 && Math.abs(b.x - R.plat2.x) < Math.abs(b.x - P.x)) P = R.plat2;
+  if (R.isle && R.isle.st === 'float' && Math.abs(b.x - R.isle.x) < R.isle.w / 2 + b.r * .1 && Math.abs(b.x - P.x) > P.w / 2 + b.r * .12) return { kind: 'isle', y: R.isle.y - 8, cx: R.isle.x, half: R.isle.w / 2 + b.r * .1, perf: R.isle.w * .16, gold: false };
   if (R.tramp && Math.abs(b.x - R.tramp.x) < Math.abs(b.x - P.x)) return { kind: 'tramp', T: R.tramp, y: groundY() - 4, cx: R.tramp.x, half: R.tramp.w / 2 + b.r * .1, perf: -1 };
   if (P === R.plat && P.mod && !platSolid(P)) return { kind: 'plat', P, y: platY(), cx: P.x, half: -1, perf: -1, gold: false };
   if (P === R.plat && R.crumble && R.crumble.st !== 'ok') return { kind: 'plat', P, y: platY(), cx: P.x, half: -1, perf: -1, gold: false };
@@ -5839,6 +5841,7 @@ function checkLanding(b) {
   const off = b.x - sf.cx;
   if (Math.abs(off) > sf.half) return miss(b, off);
   if (sf.kind === 'tramp') return trampoline(b, off, sf);
+  if (sf.kind === 'isle') { b.isled = 1; return land(b, Math.abs(off) <= sf.perf, sf.y, sf); }
   if (Math.abs(off - (sf.zo || 0)) <= sf.perf * (R.ice && sf.kind === 'plat' ? .8 : 1)) return land(b, true, sf.y, sf);
   const k = Math.abs(off) / sf.half;
   if (sf.kind === 'plat' && sf.P && sf.P.mod === 'balancoire' && k > .55) { sf.P.tiltTo = Math.sign(off) * .28; floatText('Ça bascule !', b.x, b.y - b.r - 20, 22, 'ink'); sfx.boing(); buzz(15); b.vx = Math.sign(off) * 2.4; return miss(b, off); }
@@ -5857,7 +5860,7 @@ function land(b, perfect, surfaceY, sf) {
   { const P = b.onGold && R.plat2 ? R.plat2 : R.plat; if (P && sf && sf.kind === 'plat' && !reduceMotion) { P.dip = 1;
       for (const s of [-1, 1]) for (let i = 0; i < 4; i++) FX.particles.push({ x: P.x + s * (P.w / 2 + 2), y: surfaceY + 3, vx: s * (1.4 + Math.random() * 2), vy: -.4 - Math.random() * 1.4, g: .03, drag: .92, life: 30 + Math.random() * 12, size: 7 + Math.random() * 6, color: 'rgba(255,255,255,0.95)', rot: 0, vr: 0, shape: 'dot' }); } }
   b.onGold = !!(sf && sf.gold);
-  const mult = (b.mult || 1) * (b.onGold ? 3 : 1) * (b.tramped ? 2 : 1) * (R.evt && R.evt.id === 'plomb' ? 2 : 1);
+  const mult = (b.mult || 1) * (b.onGold ? 3 : 1) * (b.tramped ? 2 : 1) * (b.isled ? 2 : 1) * (R.evt && R.evt.id === 'plomb' ? 2 : 1);
   const skin = skinById(S.skin);
   let pts = 1, coins = 1;
   if (perfect) {
@@ -5889,6 +5892,7 @@ function land(b, perfect, surfaceY, sf) {
   floatText('+' + pts, b.x, b.y - b.r - (perfect ? 58 : 22), mult > 1 ? 26 : 22, 'ink');
   if (mult > 1) floatText('x' + mult, b.x + b.r * .9, b.y - b.r - 4, 24, 'gold');
   if (b.onGold && b === R.balls[0]) { confetti(b.x, b.y - b.r, 24); sfx.goal(); missionEvent('gold'); }
+  if (b.isled && R.isle) { floatText('Îlot ×2 !', b.x, b.y - b.r - (perfect ? 92 : 56), 24, 'gold'); R.isle.used = 1; R.isle.st = 'hold'; R.isle.t = 34; stat('isleLands'); }
   if (b.tramped) { floatText('Trampoline !', b.x, b.y - b.r - (perfect ? 92 : 56), 24, 'gold'); stat('trampLands'); }
   if (G.boss && !G.boss.dead && G.boss.hp > 0) bossDamage((perfect ? 2 : 1) + (b.mult === 3 ? 1 : 0), b);
   addScore(pts);
@@ -7901,6 +7905,7 @@ function drawBoss(th) {
 function drawHazards(th) {
   if (FX.skite) drawStarKite();
   if (R && R.th) drawThunderClap();
+  if (R && R.isle) drawIsle();
   if (R.tramp && R.flower) drawFlower(R.tramp, groundY() - 4);
   else if (R.tramp) {
     const T = R.tramp, y = groundY() - 4, sag = T.sq * 14;
@@ -8151,6 +8156,7 @@ function updateGame() {
   updateShots();
   if (FX.skite) updateStarKite();
   if (R.th) updateThunderClap();
+  if (R.isle) updateIsle();
   const falling = R.balls.find(b => b.state === 'fall' || b.state === 'bounce');
   if (R.p.birdEvery && !falling && --R.birdT <= 0) { spawnBird(); R.birdT = Math.round(R.p.birdEvery * (.7 + R.rng() * .6)); }
 
@@ -13480,6 +13486,57 @@ const _drawFogT = drawFog;
 drawFog = function () { const k = thunderReveal(); if (k <= 0) return _drawFogT.apply(this, arguments); ctx.save(); ctx.globalAlpha *= 1 - k * .88; _drawFogT.apply(this, arguments); ctx.restore(); };
 const _newRoundT = newRound;
 newRound = function () { _newRoundT.apply(this, arguments); try { R.th = R && R.p && R.p.thunder && !G.boss ? makeThunderClap() : null; } catch (e) {} };
+/* ===== Monde 3, zone 3 : l'îlot d'obsidienne =====
+   Une bombe de lave tombe et forme un îlot. Poser dessus double les points, mais il s'enfonce vite.
+   Dilemme : la plateforme sûre (×1) ou l'îlot bas et éphémère (×2). */
+const ISLE_FLY = 42, ISLE_RISE = 22, ISLE_FLOAT = 150, ISLE_SINK = 40;
+function makeIsle() {
+  const P = R.plat, w = 64; let x = 0;
+  for (let k = 0; k < 12; k++) { x = 44 + R.rng() * (PW - 88); if (Math.abs(x - P.x) > P.w / 2 + w / 2 + 50 && !(R.tramp && Math.abs(x - R.tramp.x) < R.tramp.w / 2 + w / 2 + 20)) break; }
+  return { st: 'wait', t: 40 + Math.floor(R.rng() * 50), x, w, y: lavaY() + 30, x0: R.rng() < .5 ? PW * .2 : PW * .8 };
+}
+function updateIsle() {
+  const I = R.isle, ly = lavaY();
+  if (I.st === 'gone') return;
+  if (I.st === 'float' && I.t % 30 === 0 && I.t < 70) sfx.tick && sfx.tick(false);
+  if (--I.t > 0) {
+    if (I.st === 'rise') I.y = ly + 30 - (36) * (1 - I.t / ISLE_RISE);
+    if (I.st === 'sink') { const dy = 1.2; I.y += dy; for (const b of R.balls) if (b.isled && b.state === 'rest') b.y += dy; }
+    return;
+  }
+  if (I.st === 'wait') { I.st = 'fly'; I.t = ISLE_FLY; }
+  else if (I.st === 'fly') { I.st = 'rise'; I.t = ISLE_RISE; burst(I.x, ly, 22, '#ff8a2a'); sfx.fire && sfx.fire(); buzz(15); }
+  else if (I.st === 'rise') { I.st = 'float'; I.t = ISLE_FLOAT; I.y = ly - 6; if (!G.seen.isle) { G.seen.isle = 1; floatText('Îlot ×2', I.x, ly - 60, 24, 'gold'); } }
+  else if (I.st === 'float' || I.st === 'hold') { I.st = 'sink'; I.t = ISLE_SINK; sfx.gust && sfx.gust(); }
+  else if (I.st === 'sink') { I.st = 'gone'; }
+}
+function drawIsle() {
+  const I = R.isle, ly = lavaY();
+  if (I.st === 'wait' || I.st === 'gone') return;
+  if (I.st === 'fly') { const q = 1 - I.t / ISLE_FLY, x = I.x0 + (I.x - I.x0) * q, y = -20 + (ly + 20) * q * q - Math.sin(q * Math.PI) * 60, r = 8;
+    const g = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, r); g.addColorStop(0, '#ffd27a'); g.addColorStop(.5, '#ff6a1a'); g.addColorStop(1, '#7a1a10');
+    ctx.strokeStyle = 'rgba(255,140,60,0.4)'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - (I.x - I.x0) * .05, y - 26); ctx.stroke();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); return; }
+  const x = I.x, y = I.y, w = I.w, warn = I.st === 'float' ? 1 - I.t / ISLE_FLOAT : 1;
+  ctx.save();
+  const g = ctx.createRadialGradient(x, ly, 4, x, ly, w); g.addColorStop(0, 'rgba(255,170,70,0.5)'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, ly, w, 0, TAU); ctx.fill();
+  const rg = ctx.createLinearGradient(0, y - 10, 0, y + 24); rg.addColorStop(0, '#3a2c48'); rg.addColorStop(.35, '#1a1020'); rg.addColorStop(1, '#5a2014'); ctx.fillStyle = rg;
+  ctx.beginPath(); ctx.moveTo(x - w / 2, y + 24); ctx.lineTo(x - w / 2 + 3, y - 2); ctx.lineTo(x - w * .2, y - 9); ctx.lineTo(x + w * .25, y - 8); ctx.lineTo(x + w / 2, y - 1); ctx.lineTo(x + w / 2 - 3, y + 24); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(190,170,240,0.6)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - w / 2 + 3, y - 2); ctx.lineTo(x - w * .2, y - 9); ctx.lineTo(x + w * .25, y - 8); ctx.stroke();
+  const cr = .45 + .55 * warn; ctx.strokeStyle = `rgba(255,${(200 - warn * 80) | 0},90,${cr.toFixed(3)})`; ctx.lineWidth = 1.6 + warn;
+  ctx.beginPath(); ctx.moveTo(x - w * .32, y - 3); ctx.lineTo(x - w * .1, y + 4); ctx.lineTo(x + w * .05, y - 4); ctx.lineTo(x + w * .3, y + 5); ctx.stroke();
+  if (I.st === 'float') {
+    const k = Math.min(1, (ISLE_FLOAT - I.t) / 8), cy = y - 34;
+    ctx.translate(x, cy); ctx.scale(k, k);
+    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(0, 0, 17, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = warn > .7 ? '#ff4a3a' : '#ff9a3a'; ctx.beginPath(); ctx.arc(0, 0, 17, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - warn)); ctx.stroke();
+    ctx.fillStyle = '#f2b705'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill();
+    ctx.font = '15px "Lilita One"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#2b1d1f'; ctx.fillText('×2', 0, 1);
+  }
+  ctx.restore();
+}
+const _newRoundI = newRound;
+newRound = function () { _newRoundI.apply(this, arguments); try { R.isle = R && R.p && R.p.isle && !G.boss ? makeIsle() : null; } catch (e) {} };
 const _updateBossC = updateBoss;
 updateBoss = function () { _updateBossC(); const B = G.boss; if (B && B.type === 'crow') updateCrowFx(B); };
 
