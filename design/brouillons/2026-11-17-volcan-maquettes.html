@@ -21,9 +21,9 @@ const LAVA_Y = 800;
 let BR = 1; /* respiration de la lave (0.85 → 1.15) */
 
 const ZONES = {
-  1: { name: 'Les Pentes fumantes', levels: 'Niveaux 1 à 3', sky: [[0, '#2a2152'], [.42, '#6a3b72'], [.72, '#d4705c'], [1, '#f6a66c']], sun: [74, 168, 30, '#ffe6bf'], rock: '#3a2440', rim: '#b9a6e6', warm: '#ff7a3a', haze: '#e08a72' },
-  2: { name: 'La Forge', levels: 'Niveaux 4 à 6', sky: [[0, '#1c0d1c'], [.5, '#3b1420'], [1, '#6a1e1a']], sun: [70, 120, 0, '#ffd2a0'], rock: '#2b1622', rim: '#c4a0d8', warm: '#ff6a2a', haze: '#7a2a2a' },
-  3: { name: 'Le Cratère', levels: 'Niveaux 7 à 10', sky: [[0, '#120a22'], [.4, '#3e1230'], [.75, '#8e2a22'], [1, '#d4521e']], sun: [80, 170, 44, '#ff8a6a'], rock: '#231226', rim: '#9a86d0', warm: '#ff5a1e', haze: '#a03a26' },
+  1: { name: 'Le Réveil', levels: 'Niveaux 1 à 3', sky: [[0, '#2a2152'], [.42, '#6a3b72'], [.72, '#d4705c'], [1, '#f6a66c']], sun: [74, 168, 30, '#ffe6bf'], rock: '#3a2440', rim: '#b9a6e6', warm: '#ff7a3a', haze: '#e08a72' },
+  2: { name: 'Les Grondements', levels: 'Niveaux 4 à 6', sky: [[0, '#2a1838'], [.4, '#5a2440'], [.72, '#b44a32'], [1, '#e2763c']], sun: [76, 168, 32, '#ffc48a'], rock: '#33203a', rim: '#b49ad8', warm: '#ff6a2a', haze: '#b85a44' },
+  3: { name: "L'Éruption", levels: 'Niveaux 7 à 10', sky: [[0, '#120a22'], [.4, '#3e1230'], [.75, '#8e2a22'], [1, '#d4521e']], sun: [80, 170, 44, '#ff8a6a'], rock: '#231226', rim: '#9a86d0', warm: '#ff5a1e', haze: '#a03a26' },
 };
 const ZN = ZONES[Z];
 
@@ -120,82 +120,67 @@ function lavaSea(t) {
   c.strokeStyle = 'rgba(120,20,10,0.35)'; c.lineWidth = 2; for (let i = 0; i < 5; i++) { const y = LAVA_Y + 12 + i * 8; c.beginPath(); c.moveTo(((t * .4 + i * 90) % (W + 80)) - 80, y); c.lineTo(((t * .4 + i * 90) % (W + 80)) - 20, y); c.stroke(); }
 }
 
-/* ===== zones ===== */
-function zone1(t) {
+/* ===== zones : le même volcan, de plus en plus en ébullition (K = 0, .5, 1) ===== */
+function lavaRiver(pts, w, a) { for (const [lw, col] of [[w * 2.2, rgba('#ff6a1a', .22 * a * BR)], [w, rgba('#ff7a2a', .92 * a)], [w * .35, rgba('#ffe08a', .95 * a)]]) {
+  c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) c.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+  c.lineTo(...pts[pts.length - 1]); c.stroke(); } }
+function lavaPool(x, y, w, t) {
+  c.fillStyle = '#1e0e18'; c.beginPath(); c.ellipse(x, y + 2, w + 5, w * .3 + 3, 0, 0, TAU); c.fill();
+  c.fillStyle = lg(y - w * .3, y + w * .3, [[0, '#ffd27a'], [.5, '#ff7a2a'], [1, '#c2361a']]); c.beginPath(); c.ellipse(x, y, w, w * .3, 0, 0, TAU); c.fill();
+  for (let i = 0; i < 3; i++) { const q = ((t * .02 + i / 3 + x * .01) % 1); c.strokeStyle = `rgba(255,240,190,${(.8 * (1 - q)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x + (i - 1) * w * .4, y, 2 + q * 6, Math.PI, TAU); c.stroke(); }
+  const g = c.createRadialGradient(x, y, 4, x, y, w * 1.8); g.addColorStop(0, rgba('#ff8a3a', .4 * BR)); g.addColorStop(1, rgba('#ff8a3a', 0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, w * 1.8, 0, TAU); c.fill();
+}
+function bubblePool(x, y, w, t) { pool(x, y, w, t); for (let i = 0; i < 4; i++) { const q = ((t * .05 + i / 4) % 1); c.strokeStyle = `rgba(230,255,250,${(.9 * (1 - q)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x + (i - 1.5) * w * .35, y - 2, 2 + q * 4, 0, TAU); c.stroke(); }
+  steam(x, y - 4, 1.2, t * 1.6, x + 7); }
+function zoneV(t) {
+  const K = (Z - 1) / 2, VX = 252, VB = 580;
   sky(t);
-  // volcan lointain + panache
-  haze(300, 560, ZN.haze, .35);
-  smoke(262, 300, 1, t, 1, .45, '#5a3a60');
-  const g = c.createRadialGradient(262, 312, 4, 262, 312, 70); g.addColorStop(0, rgba('#ffb04a', .7 * BR)); g.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = g; c.beginPath(); c.arc(262, 312, 70, 0, TAU); c.fill();
-  mountain(262, 560, 420, 250, 3, { col: mix(ZN.rock, ZN.haze, .35), warm: .35, crater: 1 });
-  for (const [lw, col] of [[14, rgba('#ff6a1a', .25 * BR)], [7, rgba('#ff7a2a', .9)], [2.5, rgba('#ffe08a', .95)]]) { c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.beginPath(); c.moveTo(262, 322); c.quadraticCurveTo(246, 380, 270, 430); c.quadraticCurveTo(292, 480, 262, 552); c.stroke(); }
-  c.fillStyle = rgba('#ffd27a', .9); c.beginPath(); c.ellipse(262, 318, 22, 5, 0, 0, TAU); c.fill();
+  if (K === 1) { const [mx, my] = ZN.sun; c.fillStyle = 'rgba(120,30,40,0.35)'; for (const [dx, dy, r] of [[-12, -8, 9], [10, 6, 12], [-4, 18, 6]]) { c.beginPath(); c.arc(mx + dx, my + dy, r, 0, TAU); c.fill(); } }
+  // panache : vapeur blanche → fumée sombre → colonne d'éruption
+  if (K === 0) smoke(VX, 330, .7, t, 1, .5, '#d8c8e0');
+  else smoke(VX, 330, 1 + K * .7, t, 1, .5 + K * .15, K === 1 ? '#6a3038' : '#4a3450');
+  if (K === 1) { c.fillStyle = 'rgba(30,12,30,0.55)'; c.beginPath(); c.roundRect(-20, 196, W + 40, 10, 5); c.fill(); c.beginPath(); c.roundRect(40, 214, 220, 7, 4); c.fill(); }
+  const cg = c.createRadialGradient(VX, 330, 6, VX, 330, 60 + K * 120); cg.addColorStop(0, rgba('#ffcf6a', (.45 + K * .45) * BR)); cg.addColorStop(.4, rgba('#ff6a1a', (.15 + K * .3) * BR)); cg.addColorStop(1, rgba('#ff6a1a', 0));
+  c.fillStyle = cg; c.beginPath(); c.arc(VX, 330, 60 + K * 120, 0, TAU); c.fill();
+  if (K === 1) { for (let i = 0; i < 6; i++) { const q = ((t * .007 + i / 6) % 1), dir = i % 2 ? 1 : -1, x = VX + dir * q * (70 + i * 22), y = 320 - Math.sin(q * Math.PI) * (130 + i * 18) + q * 60; bomb(x, y, 3.5 + (i % 3), t); }
+    /* fontaine de lave : gerbe en éventail + cœur lumineux */
+    const fg = c.createLinearGradient(0, 180, 0, 330); fg.addColorStop(0, rgba('#ff6a1a', 0)); fg.addColorStop(.5, rgba('#ff8a2a', .55 * BR)); fg.addColorStop(1, rgba('#ffe08a', .95));
+    c.fillStyle = fg; c.beginPath(); c.moveTo(VX - 12, 330); c.quadraticCurveTo(VX - 30, 250, VX - 6 + Math.sin(t * .06) * 6, 180); c.quadraticCurveTo(VX + 30, 250, VX + 12, 330); c.fill();
+    for (let i = 0; i < 34; i++) { const q = ((t * (.012 + h1(i) * .01) + h1(i * 3)) % 1), vx = (h1(i * 7) - .5) * 160, vh = 110 + h1(i * 9) * 110;
+      const x = VX + vx * q, y = 330 - vh * (4 * q * (1 - q)) * 1.1 + q * 30, r = 1.6 + h1(i * 5) * 2.2;
+      c.fillStyle = `rgba(255,${(230 - q * 110) | 0},${(140 - q * 100) | 0},${(1 - q * .5).toFixed(3)})`; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } }
+  haze(330, 580, ZN.haze, .25 + K * .1);
+  // le volcan (même silhouette dans les 3 zones)
+  if (K > 0) mountain(40, 600, 240, 120 + K * 20, 21, { col: mix(ZN.rock, ZN.haze, .3), warm: .3 });
+  mountain(VX, VB, 440, 252, 3, { col: mix(ZN.rock, ZN.haze, .3 - K * .15), warm: .3 + K * .2, crater: 1 });
+  c.fillStyle = rgba('#ffd27a', .7 + K * .3); c.beginPath(); c.ellipse(VX, 330, 20 + K * 6, 4 + K, 0, 0, TAU); c.fill();
+  // coulées : 1 → 2 → 3
+  lavaRiver([[VX - 4, 334], [VX - 18, 390], [VX + 10, 440], [VX - 6, 500], [VX + 4, VB - 6]], 4 + K * 3, 1);
+  if (K > 0) lavaRiver([[VX + 10, 336], [VX + 40, 400], [VX + 60, 460], [VX + 92, 520], [VX + 110, VB - 10]], 3 + K * 3, K * 2);
+  if (K === 1) lavaRiver([[VX - 12, 338], [VX - 60, 400], [VX - 70, 470], [VX - 120, 540], [VX - 150, VB - 4]], 6, 1);
+  cableCar(30, 600, 210, 380, K === 1 ? 0 : t); // à l'arrêt pendant l'éruption
+  haze(470, 640, ZN.haze, .2);
+  // pente moyenne : village (lanternes allumées → éteintes, fissures de lave)
+  rockShape([[0, 720], [0, 600], [70, 585], [150, 600], [230, 590], [320, 606], [390, 596], [390, 720]], { col: '#3a2240', warm: .4 + K * .25 });
   for (let i = 0; i < 11; i++) { const x = 20 + i * 36 + h1(i) * 14, y = 596 + h1(i * 2) * 10, hgt = 18 + h1(i * 5) * 16; c.fillStyle = '#2a1a34';
     c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x + 7, y); c.fill(); c.fillStyle = rgba(ZN.rim, .35); c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x - 1, y); c.fill(); }
-  cableCar(30, 600, 230, 340, t);
-  haze(470, 640, ZN.haze, .2);
-  // pente moyenne avec village thermal
-  rockShape([[0, 720], [0, 600], [70, 585], [150, 600], [230, 590], [320, 606], [390, 596], [390, 720]], { col: '#3a2240', warm: .4 });
   hut(60, 598, .9, '#e9d8c8', '#c94a5a', t); hut(116, 600, .75, '#d8c8e8', '#6a7fd0', t); hut(330, 608, .85, '#f0d8c0', '#3fb8a8', t);
-  for (const [x, y] of [[40, 570], [90, 566], [140, 576], [300, 580], [360, 576]]) lantern(x, y, .8, t);
-  c.strokeStyle = 'rgba(40,20,40,0.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(40, 570); c.quadraticCurveTo(90, 580, 140, 576); c.stroke(); c.beginPath(); c.moveTo(300, 580); c.quadraticCurveTo(330, 588, 360, 576); c.stroke();
-  // premier plan : sources chaudes turquoise + orgues basaltiques
+  if (K < 1) for (const [x, y] of [[40, 570], [90, 566], [140, 576], [300, 580], [360, 576]]) lantern(x, y, .8, t);
+  if (K > 0) { c.strokeStyle = rgba('#ff8a2a', .8 * BR); c.lineWidth = 2; for (const [x0, y0] of [[180, 620], [240, 650], [40, 660]]) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + 12, y0 + 8); c.lineTo(x0 + 6, y0 + 18); c.lineTo(x0 + 20, y0 + 28); c.stroke(); } }
+  // premier plan : sources turquoise → qui bouillonnent → devenues lave
   rockShape([[0, 800], [0, 690], [60, 676], [130, 690], [200, 680], [270, 694], [390, 680], [390, 800]], { col: '#26142a', warm: .7 });
-  pool(110, 712, 44, t); pool(300, 720, 34, t);
+  if (K === 0) { pool(110, 712, 44, t); pool(300, 720, 34, t); }
+  else if (K === .5) { bubblePool(110, 712, 44, t); bubblePool(300, 720, 34, t); }
+  else { lavaPool(110, 712, 44, t); lavaPool(300, 720, 34, t); }
   basalt(-6, 790, 5, 1.1); basalt(318, 790, 6, 1);
-  lavaGlow(LAVA_Y, 110, .3); lavaSea(t); embers(t, 14);
+  if (K === 1) { rockShape([[236, 690], [248, 664], [300, 650], [356, 656], [384, 690]], { col: '#2a1828', warm: .7 });
+    c.strokeStyle = '#3a2418'; c.lineWidth = 3; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(262 + i * 10, 662); c.lineTo(276 + i * 9, 650 - (i % 3) * 3); c.stroke(); }
+    for (const [x, col, s2] of [[288, '#5a1a3a', 1.2], [312, '#3a2a5a', 1.35], [336, '#6a2a1a', 1.15]]) egg(x, 660, s2, t, col); }
+  lavaGlow(LAVA_Y, 110 + K * 30, .3 + K * .08); lavaSea(t);
+  if (K === 0) embers(t, 6); else if (K === .5) { ash(t, 18); embers(t, 12); } else { ash(t, 46); embers(t, 18); }
 }
-function zone2(t) {
-  sky(t);
-  // ouverture de la grotte en haut à gauche (la lumière froide vient de là)
-  const og = c.createRadialGradient(70, 120, 10, 70, 120, 230); og.addColorStop(0, 'rgba(200,180,255,0.45)'); og.addColorStop(1, 'rgba(200,180,255,0)'); c.fillStyle = og; c.fillRect(0, 0, W, H);
-  c.fillStyle = lg(40, 180, [[0, '#2a2a5a'], [1, '#8a6ab0']]); c.beginPath(); [[20, 150], [10, 96], [40, 60], [86, 52], [120, 80], [134, 128], [108, 166], [60, 172]].forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.fill();
-  for (let i = 0; i < 12; i++) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.arc(30 + h1(i) * 90, 70 + h1(i * 3) * 80, .9, 0, TAU); c.fill(); }
-  c.fillStyle = 'rgba(210,190,255,0.09)'; c.beginPath(); c.moveTo(30, 150); c.lineTo(150, 600); c.lineTo(290, 600); c.lineTo(126, 120); c.fill(); // rai de lumière
-  // cascades de lave au fond
-  lavaFall(40, 200, 640, 10, t, .8); lavaFall(345, 160, 640, 14, t);
-  // engrenages et chaînes
-  gear(318, 330, 56, t, 1, '#3a2030'); gear(262, 404, 30, t, -1.9, '#4a2638');
-  // parois de la grotte qui cadrent la scène
-  rockShape([[0, 0], [150, 0], [150, 30], [110, 40], [60, 60], [10, 180], [26, 300], [0, 380]], { col: '#1a0c16', warm: .2 });
-  rockShape([[390, 0], [210, 0], [240, 24], [330, 40], [376, 120], [362, 230], [390, 300]], { col: '#1a0c16', warm: .2 });
-  rockShape([[0, 380], [26, 330], [14, 470], [30, 600], [0, 640]], { col: '#1e0e18', warm: .7 });
-  rockShape([[390, 300], [372, 360], [384, 480], [366, 610], [390, 640]], { col: '#1e0e18', warm: .7 });
-  for (const x of [150, 250, 370]) chain(x, 0, 220 + (x % 3) * 40, t);
-  haze(380, 620, ZN.haze, .45);
-  // sol de la forge
-  rockShape([[0, 680], [0, 610], [80, 596], [170, 612], [260, 600], [390, 616], [390, 680]], { warm: .6 });
-  crystal(90, 610, 1.1, t, '#2a1a3a'); crystal(115, 612, .7, t, '#34204a'); crystal(310, 612, 1.3, t, '#2a1a3a'); crystal(340, 616, .8, t, '#34204a');
-  anvil(210, 608, 1.2);
-  // premier plan
-  rockShape([[0, 800], [0, 700], [50, 690], [110, 712], [170, 700], [240, 716], [320, 694], [390, 706], [390, 800]], { col: '#1e0e18', warm: .75 });
-  lavaGlow(LAVA_Y, 120, .32); lavaSea(t);
-  // étincelles
-  for (let i = 0; i < 14; i++) { const q = ((t * .02 + i / 14) % 1), x = 210 + Math.cos(i * 2.3) * q * 90, y = 590 - Math.sin(i * 1.7 + 1) * q * 80 + q * q * 60;
-    c.fillStyle = `rgba(255,${(220 - q * 120) | 0},120,${(1 - q).toFixed(3)})`; c.beginPath(); c.arc(x, y, 1.6, 0, TAU); c.fill(); }
-}
-function zone3(t) {
-  sky(t);
-  // colonne d'éruption + bombes de lave
-  smoke(220, 360, 1.6, t, 5, .55, '#3a2034');
-  const ce = c.createRadialGradient(220, 380, 10, 220, 380, 140); ce.addColorStop(0, rgba('#ffcf6a', .85 * BR)); ce.addColorStop(.4, rgba('#ff6a1a', .35 * BR)); ce.addColorStop(1, rgba('#ff6a1a', 0)); c.fillStyle = ce; c.beginPath(); c.arc(220, 380, 140, 0, TAU); c.fill();
-  for (let i = 0; i < 4; i++) { const q = ((t * .006 + i / 4) % 1), dir = i % 2 ? 1 : -1, x = 220 + dir * q * (90 + i * 25), y = 380 - Math.sin(q * Math.PI) * (150 + i * 20) + q * 40; bomb(x, y, 4 + (i % 2) * 2, t); }
-  haze(380, 600, ZN.haze, .35);
-  mountain(220, 600, 520, 230, 9, { col: '#2a1424', warm: .5, crater: 1 });
-  { const [mx, my, mr] = ZN.sun; c.fillStyle = 'rgba(120,30,40,0.35)'; for (const [dx, dy, r] of [[-12, -8, 9], [10, 6, 12], [-4, 18, 6]]) { c.beginPath(); c.arc(mx + dx, my + dy, r, 0, TAU); c.fill(); }
-    c.fillStyle = 'rgba(40,16,40,0.55)'; c.beginPath(); c.roundRect(mx - 70, my + 4, 150, 9, 5); c.fill(); c.beginPath(); c.roundRect(mx - 40, my + 20, 110, 6, 3); c.fill(); }
-  mountain(60, 600, 260, 150, 21, { col: mix('#2a1424', ZN.haze, .3), warm: .3 });
-  // flèches d'obsidienne
-  for (const [x, h, w] of [[30, 150, 34], [70, 100, 24], [350, 170, 38], [310, 110, 26]]) rockShape([[x - w / 2, 690], [x - w * .3, 690 - h * .6], [x, 690 - h], [x + w * .2, 690 - h * .7], [x + w / 2, 690]], { col: '#1e1024', warm: .6 });
-  // nid du dragon avec œufs (secret)
-  rockShape([[236, 660], [252, 630], [300, 616], [356, 622], [384, 660]], { col: '#2a1828', warm: .7 });
-  c.strokeStyle = '#3a2418'; c.lineWidth = 3; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(262 + i * 10, 628); c.lineTo(276 + i * 9, 616 - (i % 3) * 3); c.stroke(); }
-  for (const [x, col, s2] of [[288, '#5a1a3a', 1.2], [312, '#3a2a5a', 1.35], [336, '#6a2a1a', 1.15]]) egg(x, 626, s2, t, col);
-  // bord du cratère au premier plan
-  rockShape([[0, 800], [0, 700], [70, 684], [150, 706], [220, 694], [300, 712], [390, 690], [390, 800]], { col: '#1c0c1a', warm: .8 });
-  lavaGlow(LAVA_Y, 130, .34); lavaSea(t); ash(t, 40); embers(t, 10);
-}
-
+const zone1 = zoneV, zone2 = zoneV, zone3 = zoneV;
 /* jouables + HUD */
 function platform(x, y) {
   c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x + 6, y + 8, 44, 6, 0, 0, TAU); c.fill();
