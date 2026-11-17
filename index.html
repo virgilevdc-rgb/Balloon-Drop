@@ -5616,7 +5616,8 @@ function buildCfg(mode, o) {
 }
 
 function baseR() {
-  return Math.max(cfg.minR || 8, Math.min(PW, H) * .28 * cfg.size * Math.pow(cfg.shrink, Math.min(cfg.maxShrink || 999, Math.max(0, G.round - G.sizeBoost))));
+  /* taille de départ du ballon : 21 % de la largeur (28 % avant le 17/11/2026, jugé trop gros) */
+  return Math.max(cfg.minR || 8, Math.min(PW, H) * .21 * cfg.size * Math.pow(cfg.shrink, Math.min(cfg.maxShrink || 999, Math.max(0, G.round - G.sizeBoost))));
 }
 
 function startGame(mode, o = {}) {
