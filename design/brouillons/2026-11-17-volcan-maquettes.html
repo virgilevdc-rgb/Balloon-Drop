@@ -133,6 +133,21 @@ function lavaPool(x, y, w, t) {
 }
 function bubblePool(x, y, w, t) { pool(x, y, w, t); for (let i = 0; i < 4; i++) { const q = ((t * .05 + i / 4) % 1); c.strokeStyle = `rgba(230,255,250,${(.9 * (1 - q)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x + (i - 1.5) * w * .35, y - 2, 2 + q * 4, 0, TAU); c.stroke(); }
   steam(x, y - 4, 1.2, t * 1.6, x + 7); }
+/* silhouette de volcan : rebord du cratère pile à VY (départ de l'éruption), pentes raides en haut qui s'évasent */
+function volcano(vx, vb, vy, half, rim, o) {
+  const pts = [[vx - half, vb]];
+  for (let i = 0; i <= 24; i++) { const d = 1 - i / 24, x = vx - rim - d * (half - rim); pts.push([x, vb - (vb - vy) * Math.pow(1 - d, 1.7) + Math.sin(i * 2.1) * 2 * d]); }
+  pts.push([vx - rim * .5, vy + 5], [vx, vy + 7], [vx + rim * .5, vy + 5]);
+  for (let i = 0; i <= 24; i++) { const d = i / 24, x = vx + rim + d * (half - rim); pts.push([x, vb - (vb - vy) * Math.pow(1 - d, 1.7) + Math.sin(i * 1.7) * 2 * d]); }
+  pts.push([vx + half, vb]);
+  rockShape(pts, o);
+  c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.clip();
+  c.strokeStyle = 'rgba(10,0,10,0.22)'; c.lineWidth = 7;
+  for (let i = 0; i < 8; i++) { const u = (i + .5) / 8 * 2 - 1, x0 = vx + u * rim; c.beginPath(); c.moveTo(x0, vy + 4); c.quadraticCurveTo(vx + u * half * .45 + (h1(i * 3) - .5) * 20, vy + (vb - vy) * .45, vx + u * half * 1.05, vb); c.stroke(); }
+  c.restore();
+  // lèvre du cratère éclairée (liseré froid à gauche, braise à droite)
+  c.strokeStyle = rgba(ZN.rim, .7); c.lineWidth = 2; c.beginPath(); c.moveTo(vx - rim - 10, vy + 8); c.quadraticCurveTo(vx - rim * .6, vy - 1, vx - rim * .2, vy + 1); c.stroke();
+}
 function zoneV(t) {
   const K = (Z - 1) / 2, VX = 252, VB = 580;
   sky(t);
@@ -153,7 +168,7 @@ function zoneV(t) {
   haze(330, 580, ZN.haze, .25 + K * .1);
   // le volcan (même silhouette dans les 3 zones)
   if (K > 0) mountain(40, 600, 240, 120 + K * 20, 21, { col: mix(ZN.rock, ZN.haze, .3), warm: .3 });
-  mountain(VX, VB, 440, 252, 3, { col: mix(ZN.rock, ZN.haze, .3 - K * .15), warm: .3 + K * .2, crater: 1 });
+  volcano(VX, VB, 330, 220, 24, { col: mix(ZN.rock, ZN.haze, .3 - K * .15), warm: .3 + K * .2 });
   c.fillStyle = rgba('#ffd27a', .7 + K * .3); c.beginPath(); c.ellipse(VX, 330, 20 + K * 6, 4 + K, 0, 0, TAU); c.fill();
   // coulées : 1 → 2 → 3
   lavaRiver([[VX - 4, 334], [VX - 18, 390], [VX + 10, 440], [VX - 6, 500], [VX + 4, VB - 6]], 4 + K * 3, 1);
