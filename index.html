@@ -4256,6 +4256,23 @@ const MECAS = [
 ];
 
 SKINS.push(...ARTS, ...FETES, ...MECAS);
+
+/* Ballon secret du Monde 3 : l'Œuf de lave (toucher 5 fois l'œuf du milieu dans le nid du dragon, zone Éruption) */
+const OEUF_LAVE = { id: 'oeuflave', name: 'Œuf de lave', secret: true, dust: '#ff8a3a', paint: (c, r, t = 0) => {
+    const g = c.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#6a4a8a'); g.addColorStop(.5, '#3a2a5a'); g.addColorStop(1, '#160c26');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    const br = .6 + .4 * Math.sin(t * .05);
+    const ig = c.createRadialGradient(0, r * .2, 0, 0, r * .2, r * .9); ig.addColorStop(0, `rgba(255,140,50,${(.35 * br).toFixed(3)})`); ig.addColorStop(1, 'rgba(255,90,30,0)'); c.fillStyle = ig; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const [lw, col] of [[r * .1, `rgba(255,120,40,${(.4 * br).toFixed(3)})`], [r * .045, '#ffb04a'], [r * .018, '#fff0b0']]) { c.strokeStyle = col; c.lineWidth = Math.max(.8, lw);
+      c.beginPath(); c.moveTo(-r * .7, -r * .2); c.lineTo(-r * .35, r * .05); c.lineTo(-r * .1, -r * .25); c.lineTo(r * .2, r * .1); c.lineTo(r * .45, -r * .12); c.lineTo(r * .72, r * .15);
+      c.moveTo(-r * .1, -r * .25); c.lineTo(-r * .02, -r * .6); c.moveTo(r * .2, r * .1); c.lineTo(r * .12, r * .55); c.stroke(); }
+    /* un petit œil qui regarde par la fêlure */
+    const blink = (t % 220) < 8 ? .15 : 1;
+    c.fillStyle = '#ffd27a'; c.beginPath(); c.ellipse(-r * .1, -r * .02, r * .09, r * .09 * blink, 0, 0, TAU); c.fill();
+    c.fillStyle = '#1a0a10'; c.beginPath(); c.ellipse(-r * .08, -r * .02, r * .03, r * .06 * blink, 0, 0, TAU); c.fill();
+  } };
+SKINS.push(OEUF_LAVE);
 /* ====================== Famille « Bouli » : la mascotte du jeu dans de petites saynètes ======================
    Bouli : créature rose toute ronde, lunettes d'aviateur sur le front, écharpe rouge, bras en moufles.
    Outils de dessin de Bouli, outils de saynètes (planète = ballon de rayon r, personnage au sommet), puis les ballons. */
@@ -4940,6 +4957,7 @@ for (const sk of SKINS) if (!sk.theme) sk.theme = THEME_OF[sk.id] || 'classiques
 const skinSortKey = sk => sk.price != null ? sk.price : sk.unlock && sk.unlock.type === 'level' ? sk.unlock.n * 60 : 1e5;
 
 const SECRETS = [
+  { id: 'oeuf', name: "L'œuf du Volcan", desc: "Tu as fait éclore l'œuf du nid du dragon. Ballon Œuf de lave débloqué.", hint: 'Au sommet du volcan, un œuf attend qu’on frappe à sa porte.' },
   { id: 'pop', name: 'Le ballon qui éclate', desc: "Tu as fait éclater le ballon de l'accueil.", hint: "Le ballon de l'accueil n'aime pas qu'on l'embête." },
   { id: 'but', name: 'BUT !', desc: 'Un Parfait avec le ballon de foot.', hint: 'Un certain ballon rêve de stade.' },
   { id: 'sleep', name: "Le ballon qui s'endort", desc: 'Tu as attendu 30 secondes avant de lâcher.', hint: 'Et si tu prenais vraiment ton temps ?' },
@@ -8403,6 +8421,18 @@ function drawSky(th) {
     if (!reduceMotion) CIELSCENE.fx(ctx, W, H, G.frame, z);
     return;
   }
+  if (view === 'w3' && volcanOn()) {
+    /* Monde 3 : décor mis en cache, redessiné toutes les 8 images ; bombes, braises, cendres et œufs à chaque image */
+    const z = volcanZone(), boss = !!(G.boss), m = ctx.getTransform(), key = z + ':' + boss + ':' + ctx.canvas.width + 'x' + ctx.canvas.height;
+    const VC = drawSky.vlc || (drawSky.vlc = { cv: document.createElement('canvas'), key: '', last: -99 });
+    if (VC.key !== key || G.frame - VC.last >= 8 || G.frame < VC.last) { VC.key = key; VC.last = G.frame;
+      if (VC.cv.width !== ctx.canvas.width || VC.cv.height !== ctx.canvas.height) { VC.cv.width = ctx.canvas.width; VC.cv.height = ctx.canvas.height; }
+      const o = VC.cv.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, VC.cv.width, VC.cv.height); o.setTransform(m); VOLCANSCENE.bg(o, W, H, G.frame, z, { boss }); }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(VC.cv, 0, 0); ctx.restore();
+    if (VEGG.wob > 0) VEGG.wob--;
+    VOLCANSCENE.fx(ctx, W, H, reduceMotion ? 0 : G.frame, z, { boss, hatched: S.owned.includes('oeuflave') });
+    return;
+  }
   if (view === 'w2' && orageOn()) {
     /* Monde 2 : décor mis en cache, redessiné toutes les 8 images ; éclairs décoratifs et débris à chaque image */
     const z = orageZone(), boss = !!(G.boss), m = ctx.getTransform(), key = z + ':' + boss + ':' + ctx.canvas.width + 'x' + ctx.canvas.height;
@@ -9071,6 +9101,7 @@ cv.addEventListener('pointerdown', e => {
   if (G.phase !== 'play' || !R) return;
   const gx = e.clientX - PX, gy = MIR() ? mirA() - e.clientY : e.clientY;
   if (R.bonus && Math.hypot(gx - R.bonus.x, gy - R.bonus.y) < R.bonus.r + 18) { collect(R.bonus); return; }
+  if (volcanEggTap(e.clientX, e.clientY)) return;
   if (!aimBall()) return;
   dragging = true; lastX = e.clientX;
   if (cfg && cfg.tuto && !S.tutoDone && !G.tutoDragged) { G.tutoDragged = true; showHint('Lâche quand le ballon est au‑dessus de la plateforme'); }
@@ -13060,6 +13091,264 @@ const ORAGESCENE = (() => {
   return {
     bg: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => [zone1, zone2, zone3][z - 1](t, o.boss)),
     fx: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => fxLayer(t, o)),
+  };
+})();
+
+function volcanEggTap(x, y) {
+  try { if (view !== 'w3' || !volcanOn() || volcanZone() !== 3 || S.owned.includes('oeuflave')) return false; } catch (e) { return false; }
+  const E = VOLCANSCENE.eggAt(W, H); if (Math.hypot(x - E.x, y - E.y) > E.r) return false;
+  VEGG.taps++; VEGG.wob = 20; sfx.tap && sfx.tap(1); buzz(10);
+  if (VEGG.taps >= 5) { unlockSecretSkin('oeuflave'); findSecret('oeuf'); burst(E.x - PX, E.y, 22, '#ffb04a'); confetti(E.x - PX, E.y, 24); floatText('Il éclot !', E.x - PX, E.y - 50, 28, 'gold'); VEGG.taps = 0; }
+  return true;
+}
+/* ===== Monde 3 « Le Volcan » : le même volcan, de plus en plus en ébullition (maquettes du 17/11/2026) =====
+   Deux lumières : froide du ciel en haut à gauche, chaude de la lave par en dessous. Signature : « la lave respire ».
+   Zones : Réveil (1-3), Grondements (4-6), Éruption (7-10). Le nid du dragon (zone 3) cache un secret. */
+const volcanZone = () => { try { const l = G.level; return typeof l === 'number' ? (l < 3 ? 1 : l < 6 ? 2 : 3) : 1; } catch (e) { return 1; } };
+const volcanOn = () => { try { return !INTRO.on && G.mode === 'story' && G.world === 3 && typeof G.level === 'number'; } catch (e) { return false; } };
+const VEGG = { taps: 0, wob: 0, hatch: 0 };
+const VOLCANSCENE = (() => {
+  const W = 390, H = 844; let c = null, Z = 1, ZN = null, BR = 1, TS = 0;
+  const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+  const mix = (a, b, k) => { const A = hex(a), B = hex(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+  const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+  const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
+  const LAVA_Y = 800;
+  const ZONES = {
+    1: { name: 'Le Réveil', levels: 'Niveaux 1 à 3', sky: [[0, '#2a2152'], [.42, '#6a3b72'], [.72, '#d4705c'], [1, '#f6a66c']], sun: [74, 168, 30, '#ffe6bf'], rock: '#3a2440', rim: '#b9a6e6', warm: '#ff7a3a', haze: '#e08a72' },
+    2: { name: 'Les Grondements', levels: 'Niveaux 4 à 6', sky: [[0, '#2a1838'], [.4, '#5a2440'], [.72, '#b44a32'], [1, '#e2763c']], sun: [76, 168, 32, '#ffc48a'], rock: '#33203a', rim: '#b49ad8', warm: '#ff6a2a', haze: '#b85a44' },
+    3: { name: "L'Éruption", levels: 'Niveaux 7 à 10', sky: [[0, '#120a22'], [.4, '#3e1230'], [.75, '#8e2a22'], [1, '#d4521e']], sun: [80, 170, 44, '#ff8a6a'], rock: '#231226', rim: '#9a86d0', warm: '#ff5a1e', haze: '#a03a26' },
+  };
+
+  /* roche à deux lumières : liseré froid en haut à gauche, lueur de lave par en dessous */
+  function rockShape(pts, o = {}) {
+    const ys = pts.map(p => p[1]), top = Math.min(...ys), bot = Math.max(...ys);
+    c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+    const base = o.col || ZN.rock, warmA = (o.warm == null ? .45 : o.warm) * BR, hh = Math.max(1, bot - top), wz = Math.max(.55, 1 - 46 / hh);
+    c.fillStyle = lg(top, bot, [[0, mix(base, ZN.rim, .14)], [.25, base], [wz, base], [1, mix(base, ZN.warm, Math.min(.85, warmA))]]); c.fill();
+    if (o.rim !== false) { c.save(); c.clip(); c.strokeStyle = rgba(ZN.rim, .55); c.lineWidth = 3;
+      c.beginPath(); for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1]; if (y1 < y0 + 2 && x1 > x0 - 2 && y0 < bot - 4) { c.moveTo(x0, y0); c.lineTo(x1, y1); } } c.stroke(); c.restore(); }
+  }
+  function mountain(cx, base, w, h, seed, o = {}) {
+    const pts = [[cx - w / 2, base]]; const n = 9;
+    for (let i = 1; i < n; i++) { const u = i / n, x = cx - w / 2 + u * w, peak = 1 - Math.abs(u - .5) * 2, y = base - h * Math.pow(peak, .8) + (h1(seed + i) - .5) * h * .12;
+      pts.push([x, o.crater && Math.abs(u - .5) < .08 ? y + h * .06 : y]); }
+    pts.push([cx + w / 2, base]); rockShape(pts, o);
+    c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.clip(); c.strokeStyle = 'rgba(10,0,10,0.22)'; c.lineWidth = 8;
+    for (let i = 0; i < 7; i++) { const u = .2 + i * .1, x0 = cx - w / 2 + u * w; c.beginPath(); c.moveTo(cx + (x0 - cx) * .15, base - h * .85); c.quadraticCurveTo(x0 + (h1(seed + i * 3) - .5) * 30, base - h * .4, x0 + (x0 - cx) * .3, base); c.stroke(); }
+    c.restore(); return pts;
+  }
+  function sky(t) {
+    c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H);
+    const sx = ZN.sun[0], sy = ZN.sun[1] + TS, sr = ZN.sun[2], sc = ZN.sun[3];
+    if (sr) { const g = c.createRadialGradient(sx, sy, sr * .3, sx, sy, sr * 6); g.addColorStop(0, rgba(sc, .6)); g.addColorStop(.3, rgba(sc, .15)); g.addColorStop(1, rgba(sc, 0)); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.fillStyle = sc; c.beginPath(); c.arc(sx, sy, sr, 0, TAU); c.fill(); }
+  }
+  function lavaGlow(y, h, a) { c.fillStyle = lg(y - h, y, [[0, rgba(ZN.warm, 0)], [1, rgba(ZN.warm, a * BR)]]); c.fillRect(0, y - h, W, h); }
+  function haze(y0, y1, col, a) { c.fillStyle = lg(y0, y1, [[0, rgba(col, 0)], [.6, rgba(col, a)], [1, rgba(col, 0)]]); c.fillRect(0, y0, W, y1 - y0); }
+  function smoke(x, y, s, t, seed, a = .5, col = '#4a3450') {
+    for (let i = 0; i < 9; i++) { const q = ((t * .002 + i / 9) % 1), px = x + Math.sin(i * 1.7 + t * .01) * 12 * s + q * 60 * s, py = y - q * 260 * s, r = (16 + q * 46) * s;
+      c.fillStyle = rgba(mix(col, ZN.warm, (1 - q) * .35 * BR), a * (1 - q * .7)); c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); }
+  }
+  function steam(x, y, s, t, i0) {
+    for (let i = 0; i < 6; i++) { const q = ((t * .006 + i / 6 + i0 * .37) % 1), px = x + Math.sin(q * 6 + i) * 8 * s, py = y - q * 70 * s, r = (6 + q * 14) * s;
+      c.fillStyle = `rgba(240,236,255,${(.45 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); }
+  }
+  function lantern(x, y, s, t) { y += Math.sin(t * .03 + x) * 1.5; c.save(); c.translate(x, y); c.scale(s, s);
+    const g = c.createRadialGradient(0, 0, 1, 0, 0, 22); g.addColorStop(0, 'rgba(255,190,110,0.55)'); g.addColorStop(1, 'rgba(255,190,110,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, 22, 0, TAU); c.fill();
+    c.fillStyle = '#ff8a4a'; c.beginPath(); c.ellipse(0, 0, 6, 8, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,230,180,0.7)'; c.fillRect(-1.5, -6, 2, 12); c.restore(); }
+  function hut(x, y, s, wall, roof, t) { c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = lg(-22, 0, [[0, wall], [1, mix(wall, ZN.warm, .35 * BR)]]); c.beginPath(); c.roundRect(-16, -22, 32, 22, 4); c.fill();
+    c.fillStyle = roof; c.beginPath(); c.ellipse(0, -22, 22, 13, 0, Math.PI, TAU); c.fill(); c.fillStyle = rgba(ZN.rim, .35); c.beginPath(); c.ellipse(-6, -28, 10, 4, -.3, 0, TAU); c.fill();
+    c.fillStyle = '#ffb46a'; c.beginPath(); c.roundRect(-5, -14, 10, 14, [5, 5, 0, 0]); c.fill(); c.restore(); }
+  function pool(x, y, w, t) {
+    c.fillStyle = '#2a1830'; c.beginPath(); c.ellipse(x, y + 2, w + 5, w * .3 + 3, 0, 0, TAU); c.fill();
+    const g = c.createLinearGradient(x - w, y, x + w, y); g.addColorStop(0, '#5fe0d0'); g.addColorStop(1, '#2fa8b8');
+    c.fillStyle = g; c.beginPath(); c.ellipse(x, y, w, w * .3, 0, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.4)'; c.beginPath(); c.ellipse(x - w * .35, y - w * .08, w * .3, w * .06, 0, 0, TAU); c.fill();
+    steam(x - w * .3, y - 2, .8, t, x); steam(x + w * .3, y - 2, .7, t, x + 3);
+  }
+  function cableCar(x0, y0, x1, y1, t) {
+    c.strokeStyle = 'rgba(40,20,40,0.8)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 26, x1, y1); c.stroke();
+    const u = (Math.sin(t * .006) * .5 + .5) * .8 + .1, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), cc = u * u;
+    const x = a * x0 + b * (x0 + x1) / 2 + cc * x1, y = a * y0 + b * ((y0 + y1) / 2 + 26) + cc * y1;
+    c.strokeStyle = '#2a1830'; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 8); c.stroke();
+    c.fillStyle = '#e8566a'; c.beginPath(); c.roundRect(x - 9, y + 8, 18, 12, 3); c.fill(); c.fillStyle = '#ffd2a0'; c.fillRect(x - 6, y + 11, 5, 4); c.fillRect(x + 1, y + 11, 5, 4);
+  }
+  function basalt(x, y, n, s) { for (let i = 0; i < n; i++) { const h = (30 + h1(i + x) * 50) * s, w = 12 * s, px = x + i * w; rockShape([[px, y], [px, y - h], [px + w * .5, y - h - 4 * s], [px + w, y - h], [px + w, y]], { warm: .7 }); } }
+  function lavaFall(x, y0, y1, w, t, a = 1) {
+    const g = c.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, rgba('#ff6a1a', 0)); g.addColorStop(.3, rgba('#ff8a2a', .9 * a)); g.addColorStop(.5, rgba('#ffd27a', a)); g.addColorStop(.7, rgba('#ff8a2a', .9 * a)); g.addColorStop(1, rgba('#ff6a1a', 0));
+    c.fillStyle = g; c.fillRect(x - w, y0, w * 2, y1 - y0);
+    c.strokeStyle = `rgba(255,240,190,${(.6 * a).toFixed(3)})`; c.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const yy = y0 + ((t * 2.2 + i * 60) % (y1 - y0)); c.beginPath(); c.moveTo(x - w * .3, yy); c.lineTo(x - w * .3, yy + 18); c.stroke(); }
+    const gl = c.createRadialGradient(x, y1, 4, x, y1, w * 4); gl.addColorStop(0, rgba('#ffb04a', .5 * a * BR)); gl.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = gl; c.beginPath(); c.arc(x, y1, w * 4, 0, TAU); c.fill();
+  }
+  function chain(x, y0, y1, t) { c.save(); c.translate(x + Math.sin(t * .01 + x) * 3, 0);
+    for (let y = y0; y < y1; y += 14) { c.strokeStyle = '#1a0c14'; c.lineWidth = 4; c.beginPath(); c.ellipse(0, y, (y / 14) % 2 < 1 ? 5 : 2, 7, 0, 0, TAU); c.stroke(); c.strokeStyle = rgba(ZN.rim, .35); c.lineWidth = 1.2; c.beginPath(); c.ellipse(0, y, (y / 14) % 2 < 1 ? 5 : 2, 7, 0, Math.PI, Math.PI * 1.5); c.stroke(); }
+    c.restore(); }
+  function gear(x, y, r, t, dir, col) { c.save(); c.translate(x, y); c.rotate(t * .004 * dir); c.fillStyle = col;
+    c.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU, rr = i % 2 ? r : r * 1.14; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill();
+    c.fillStyle = mix(col, '#000000', .3); c.beginPath(); c.arc(0, 0, r * .55, 0, TAU); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(0, 0, r * .2, 0, TAU); c.fill();
+    c.strokeStyle = rgba(ZN.warm, .5 * BR); c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r * 1.05, .2, Math.PI - .2); c.stroke(); c.restore(); }
+  function crystal(x, y, s, t, col) { c.save(); c.translate(x, y); c.scale(s, s);
+    const pts = [[-10, 0], [-6, -38], [0, -48], [6, -36], [10, 0]];
+    c.fillStyle = col; c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); c.fill();
+    c.strokeStyle = rgba('#ff8a3a', (.55 + .35 * Math.sin(t * .04 + x)) * BR); c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, -4); c.lineTo(-2, -20); c.lineTo(2, -30); c.lineTo(0, -42); c.stroke();
+    c.fillStyle = rgba(ZN.rim, .4); c.beginPath(); c.moveTo(-6, -38); c.lineTo(0, -48); c.lineTo(-2, -34); c.fill(); c.restore(); }
+  function anvil(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s);
+    rockShape([[-14, 0], [-10, -10], [-24, -14], [-20, -22], [26, -22], [18, -14], [10, -10], [14, 0]], { col: '#2a2030', warm: .8 }); c.restore(); }
+  function bomb(x, y, r, t) { const g = c.createRadialGradient(x - r * .3, y - r * .3, 1, x, y, r); g.addColorStop(0, '#ffd27a'); g.addColorStop(.5, '#ff6a1a'); g.addColorStop(1, '#7a1a10');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,140,60,0.35)'; c.lineWidth = r; c.beginPath(); c.moveTo(x, y); c.lineTo(x - r * 2, y + r * 3); c.stroke(); }
+  function egg(x, y, s, t, col) { c.save(); c.translate(x, y); c.scale(s, s);
+    const g = c.createRadialGradient(0, -4, 2, 0, 0, 24); g.addColorStop(0, rgba('#ffb04a', .5 * BR)); g.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = g; c.beginPath(); c.arc(0, -4, 24, 0, TAU); c.fill();
+    c.fillStyle = col; c.beginPath(); c.ellipse(0, -8, 8, 11, 0, 0, TAU); c.fill();
+    c.strokeStyle = rgba('#ffd27a', .8 * BR); c.lineWidth = 1.2; c.beginPath(); c.moveTo(-6, -10); c.lineTo(-1, -6); c.lineTo(3, -12); c.lineTo(7, -8); c.stroke();
+    c.fillStyle = rgba(ZN.rim, .4); c.beginPath(); c.ellipse(-3, -13, 2.5, 4, -.3, 0, TAU); c.fill(); c.restore(); }
+  function ash(t, n) { for (let i = 0; i < n; i++) { const x = (h1(i * 3) * W + Math.sin(t * .01 + i) * 20 + t * .2) % W, y = (h1(i * 7) * H + t * (.3 + h1(i) * .3)) % H;
+    c.fillStyle = i % 4 ? 'rgba(200,190,210,0.5)' : 'rgba(255,150,80,0.8)'; c.beginPath(); c.arc(x, y, i % 4 ? 1.6 : 1.3, 0, TAU); c.fill(); } }
+  function embers(t, n) { for (let i = 0; i < n; i++) { const q = ((t * (.002 + h1(i) * .003) + h1(i * 5)) % 1), x = h1(i * 9) * W + Math.sin(t * .02 + i) * 14, y = LAVA_Y - q * 600, r = 1 + h1(i * 2) * 1.6;
+    const g = c.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(255,210,120,${(1 - q).toFixed(3)})`); g.addColorStop(1, 'rgba(255,90,30,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 4, 0, TAU); c.fill(); } }
+  function lavaSea(t) {
+    c.fillStyle = lg(LAVA_Y - 6, H, [[0, '#ffd27a'], [.15, '#ff8a2a'], [.6, '#e0441a'], [1, '#9a1e10']]);
+    c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 6) c.lineTo(x, LAVA_Y + Math.sin(x * .04 + t * .04) * 3); c.lineTo(W, H); c.fill();
+    c.strokeStyle = 'rgba(120,20,10,0.35)'; c.lineWidth = 2; for (let i = 0; i < 5; i++) { const y = LAVA_Y + 12 + i * 8; c.beginPath(); c.moveTo(((t * .4 + i * 90) % (W + 80)) - 80, y); c.lineTo(((t * .4 + i * 90) % (W + 80)) - 20, y); c.stroke(); }
+  }
+
+  /* ===== zones : le même volcan, de plus en plus en ébullition (K = 0, .5, 1) ===== */
+  function lavaRiver(pts, w, a) { for (const [lw, col] of [[w * 2.2, rgba('#ff6a1a', .22 * a * BR)], [w, rgba('#ff7a2a', .92 * a)], [w * .35, rgba('#ffe08a', .95 * a)]]) {
+    c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length - 1; i++) c.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+    c.lineTo(...pts[pts.length - 1]); c.stroke(); } }
+  function lavaPool(x, y, w, t) {
+    c.fillStyle = '#1e0e18'; c.beginPath(); c.ellipse(x, y + 2, w + 5, w * .3 + 3, 0, 0, TAU); c.fill();
+    c.fillStyle = lg(y - w * .3, y + w * .3, [[0, '#ffd27a'], [.5, '#ff7a2a'], [1, '#c2361a']]); c.beginPath(); c.ellipse(x, y, w, w * .3, 0, 0, TAU); c.fill();
+    for (let i = 0; i < 3; i++) { const q = ((t * .02 + i / 3 + x * .01) % 1); c.strokeStyle = `rgba(255,240,190,${(.8 * (1 - q)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x + (i - 1) * w * .4, y, 2 + q * 6, Math.PI, TAU); c.stroke(); }
+    const g = c.createRadialGradient(x, y, 4, x, y, w * 1.8); g.addColorStop(0, rgba('#ff8a3a', .4 * BR)); g.addColorStop(1, rgba('#ff8a3a', 0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, w * 1.8, 0, TAU); c.fill();
+  }
+  function bubblePool(x, y, w, t) { pool(x, y, w, t); for (let i = 0; i < 4; i++) { const q = ((t * .05 + i / 4) % 1); c.strokeStyle = `rgba(230,255,250,${(.9 * (1 - q)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x + (i - 1.5) * w * .35, y - 2, 2 + q * 4, 0, TAU); c.stroke(); }
+    steam(x, y - 4, 1.2, t * 1.6, x + 7); }
+  /* silhouette de volcan : rebord du cratère pile à VY (départ de l'éruption), pentes raides en haut qui s'évasent */
+  function volcano(vx, vb, vy, half, rim, o) {
+    const pts = [[vx - half, vb]];
+    for (let i = 0; i <= 24; i++) { const d = 1 - i / 24, x = vx - rim - d * (half - rim); pts.push([x, vb - (vb - vy) * Math.pow(1 - d, 1.7) + Math.sin(i * 2.1) * 2 * d]); }
+    pts.push([vx - rim * .5, vy + 5], [vx, vy + 7], [vx + rim * .5, vy + 5]);
+    for (let i = 0; i <= 24; i++) { const d = i / 24, x = vx + rim + d * (half - rim); pts.push([x, vb - (vb - vy) * Math.pow(1 - d, 1.7) + Math.sin(i * 1.7) * 2 * d]); }
+    pts.push([vx + half, vb]);
+    rockShape(pts, o);
+    c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.clip();
+    c.strokeStyle = 'rgba(10,0,10,0.22)'; c.lineWidth = 7;
+    for (let i = 0; i < 8; i++) { const u = (i + .5) / 8 * 2 - 1, x0 = vx + u * rim; c.beginPath(); c.moveTo(x0, vy + 4); c.quadraticCurveTo(vx + u * half * .45 + (h1(i * 3) - .5) * 20, vy + (vb - vy) * .45, vx + u * half * 1.05, vb); c.stroke(); }
+    c.restore();
+    // lèvre du cratère éclairée (liseré froid à gauche, braise à droite)
+    c.strokeStyle = rgba(ZN.rim, .7); c.lineWidth = 2; c.beginPath(); c.moveTo(vx - rim - 10, vy + 8); c.quadraticCurveTo(vx - rim * .6, vy - 1, vx - rim * .2, vy + 1); c.stroke();
+  }
+  function zoneV(t, o) {
+    const K = (Z - 1) / 2, VX = 252, VB = 580;
+    sky(t);
+    if (K === 1) { const mx = ZN.sun[0], my = ZN.sun[1] + TS; c.fillStyle = 'rgba(120,30,40,0.35)'; for (const [dx, dy, r] of [[-12, -8, 9], [10, 6, 12], [-4, 18, 6]]) { c.beginPath(); c.arc(mx + dx, my + dy, r, 0, TAU); c.fill(); } }
+    // panache : vapeur blanche → fumée sombre → colonne d'éruption
+    if (K === 0) smoke(VX, 330, .7, t, 1, .5, '#d8c8e0');
+    else smoke(VX, 330, 1 + K * .7, t, 1, .5 + K * .15, K === 1 ? '#6a3038' : '#4a3450');
+    if (K === 1) { c.fillStyle = 'rgba(30,12,30,0.55)'; c.beginPath(); c.roundRect(-20, 196, W + 40, 10, 5); c.fill(); c.beginPath(); c.roundRect(40, 214, 220, 7, 4); c.fill(); }
+    const cg = c.createRadialGradient(VX, 330, 6, VX, 330, 60 + K * 120); cg.addColorStop(0, rgba('#ffcf6a', (.45 + K * .45) * BR)); cg.addColorStop(.4, rgba('#ff6a1a', (.15 + K * .3) * BR)); cg.addColorStop(1, rgba('#ff6a1a', 0));
+    c.fillStyle = cg; c.beginPath(); c.arc(VX, 330, 60 + K * 120, 0, TAU); c.fill();
+    if (K === 1) {
+      /* fontaine de lave : gerbe en éventail + cœur lumineux */
+      const fg = c.createLinearGradient(0, 180, 0, 330); fg.addColorStop(0, rgba('#ff6a1a', 0)); fg.addColorStop(.5, rgba('#ff8a2a', .55 * BR)); fg.addColorStop(1, rgba('#ffe08a', .95));
+      c.fillStyle = fg; c.beginPath(); c.moveTo(VX - 12, 330); c.quadraticCurveTo(VX - 30, 250, VX - 6 + Math.sin(t * .06) * 6, 180); c.quadraticCurveTo(VX + 30, 250, VX + 12, 330); c.fill();
+    }
+    haze(330, 580, ZN.haze, .25 + K * .1);
+    // le volcan (même silhouette dans les 3 zones)
+    if (K > 0) mountain(40, 600, 240, 120 + K * 20, 21, { col: mix(ZN.rock, ZN.haze, .3), warm: .3 });
+    volcano(VX, VB, 330, 220, 24, { col: mix(ZN.rock, ZN.haze, .3 - K * .15), warm: .3 + K * .2 });
+    c.fillStyle = rgba('#ffd27a', .7 + K * .3); c.beginPath(); c.ellipse(VX, 330, 20 + K * 6, 4 + K, 0, 0, TAU); c.fill();
+    // coulées : 1 → 2 → 3
+    lavaRiver([[VX - 4, 334], [VX - 18, 390], [VX + 10, 440], [VX - 6, 500], [VX + 4, VB - 6]], 4 + K * 3, 1);
+    if (K > 0) lavaRiver([[VX + 10, 336], [VX + 40, 400], [VX + 60, 460], [VX + 92, 520], [VX + 110, VB - 10]], 3 + K * 3, K * 2);
+    if (K === 1) lavaRiver([[VX - 12, 338], [VX - 60, 400], [VX - 70, 470], [VX - 120, 540], [VX - 150, VB - 4]], 6, 1);
+    cableCar(30, 600, 210, 380, K === 1 ? 0 : t); // à l'arrêt pendant l'éruption
+    haze(470, 640, ZN.haze, .2);
+    // pente moyenne : village (lanternes allumées → éteintes, fissures de lave)
+    rockShape([[0, 720], [0, 600], [70, 585], [150, 600], [230, 590], [320, 606], [390, 596], [390, 720]], { col: '#3a2240', warm: .4 + K * .25 });
+    for (let i = 0; i < 11; i++) { const x = 20 + i * 36 + h1(i) * 14, y = 596 + h1(i * 2) * 10, hgt = 18 + h1(i * 5) * 16; c.fillStyle = '#2a1a34';
+      c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x + 7, y); c.fill(); c.fillStyle = rgba(ZN.rim, .35); c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x - 1, y); c.fill(); }
+    hut(60, 598, .9, '#e9d8c8', '#c94a5a', t); hut(116, 600, .75, '#d8c8e8', '#6a7fd0', t); hut(330, 608, .85, '#f0d8c0', '#3fb8a8', t);
+    if (K < 1) for (const [x, y] of [[40, 570], [90, 566], [140, 576], [300, 580], [360, 576]]) lantern(x, y, .8, t);
+    if (K > 0) { c.strokeStyle = rgba('#ff8a2a', .8 * BR); c.lineWidth = 2; for (const [x0, y0] of [[180, 620], [240, 650], [40, 660]]) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + 12, y0 + 8); c.lineTo(x0 + 6, y0 + 18); c.lineTo(x0 + 20, y0 + 28); c.stroke(); } }
+    // premier plan : sources turquoise → qui bouillonnent → devenues lave
+    rockShape([[0, 800], [0, 690], [60, 676], [130, 690], [200, 680], [270, 694], [390, 680], [390, 800]], { col: '#26142a', warm: .7 });
+    if (K === 0) { pool(110, 712, 44, t); pool(300, 720, 34, t); }
+    else if (K === .5) { bubblePool(110, 712, 44, t); bubblePool(300, 720, 34, t); }
+    else { lavaPool(110, 712, 44, t); lavaPool(300, 720, 34, t); }
+    basalt(-6, 790, 5, 1.1); basalt(318, 790, 6, 1);
+    if (K === 1) { rockShape([[236, 690], [248, 664], [300, 650], [356, 656], [384, 690]], { col: '#2a1828', warm: .7 });
+      c.strokeStyle = '#3a2418'; c.lineWidth = 3; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(262 + i * 10, 662); c.lineTo(276 + i * 9, 650 - (i % 3) * 3); c.stroke(); }
+    }
+    lavaGlow(LAVA_Y, 110 + K * 30, .3 + K * .08);
+  }
+  /* jouables + HUD */
+  function platform(x, y) {
+    c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x + 6, y + 8, 44, 6, 0, 0, TAU); c.fill();
+    c.fillStyle = '#2b1d1f'; c.beginPath(); c.roundRect(x - 40, y - 8, 80, 16, 8); c.fill(); c.fillRect(x - 13, y + 4, 26, LAVA_Y - y);
+    c.fillStyle = rgba('#ff7a3a', .5 * BR); c.fillRect(x - 13, LAVA_Y - 60, 26, 60);
+    c.fillStyle = 'rgba(200,180,240,0.3)'; c.fillRect(x - 9, y + 8, 3, LAVA_Y - y - 8);
+    c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 5, 26, 5, 2.5); c.fill();
+  }
+  function balloon(x, y, r, col, t) {
+    y += Math.sin(t * .05) * 2;
+    c.strokeStyle = 'rgba(255,230,220,0.6)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x + 10, y - r - 18, x + 2, y - r - 34); c.stroke();
+    const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, mix(col, '#ffffff', .35)); g.addColorStop(.6, col); g.addColorStop(1, mix(col, '#2a0a30', .35));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+    c.strokeStyle = rgba('#ff9a4a', .6); c.lineWidth = 3; c.beginPath(); c.arc(x, y, r - 1.5, Math.PI * .2, Math.PI * .8); c.stroke(); // reflet de lave par en dessous
+    c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill();
+    c.setLineDash([3, 5]); c.strokeStyle = 'rgba(255,230,220,0.35)'; c.beginPath(); c.moveTo(x, y + r + 6); c.lineTo(x, 640); c.stroke(); c.setLineDash([]);
+  }
+  function chip(x, y, txt) { c.font = '800 13px Nunito'; const w = c.measureText(txt).width + 24; c.fillStyle = 'rgba(255,255,255,0.14)'; c.beginPath(); c.roundRect(x, y, w, 26, 13); c.fill(); c.fillStyle = '#fff3e6'; c.textBaseline = 'middle'; c.fillText(txt, x + 12, y + 13); return w; }
+  function hud() {
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(14, 14, 44, 44, 14); c.fill();
+    c.fillStyle = '#2b1d1f'; c.fillRect(30, 28, 4, 16); c.fillRect(38, 28, 4, 16);
+    c.font = '44px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#fff3e6'; c.fillText('3', W / 2, 58); c.textAlign = 'left';
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(W - 100, 16, 86, 36, 18); c.fill();
+    c.fillStyle = '#f2b705'; c.beginPath(); c.arc(W - 80, 34, 8, 0, TAU); c.fill();
+    c.font = '800 16px Nunito'; c.fillStyle = '#2b1d1f'; c.textBaseline = 'middle'; c.fillText('480', W - 66, 35);
+    let x = 80; x += chip(x, 78, Z === 1 ? 'Manche 2/7' : Z === 2 ? 'Manche 3/8' : 'Manche 4/9') + 8; chip(x, 78, '★★ à 17 pts');
+    c.font = '18px "Lilita One"'; c.fillStyle = 'rgba(255,243,230,0.95)'; c.textAlign = 'center'; c.fillText(ZN.name, W / 2, 128);
+    c.font = '800 11px Nunito'; c.fillStyle = 'rgba(255,243,230,0.6)'; c.fillText(ZN.levels.toUpperCase(), W / 2, 146); c.textAlign = 'left';
+  }
+  function coin(x, y, t) { const s = Math.abs(Math.cos(t * .05)); c.fillStyle = '#f2b705'; c.beginPath(); c.ellipse(x, y, 9 * s + 1, 9, 0, 0, TAU); c.fill(); c.fillStyle = '#ffe58a'; c.beginPath(); c.ellipse(x - 2 * s, y - 2, 4 * s, 4, 0, 0, TAU); c.fill(); }
+
+
+  /* couche animée à chaque image : bombes, fontaine, braises, cendres, œufs du nid */
+  function fxLayer(t, o) {
+    const K = (Z - 1) / 2, VX = 252;
+    if (K === 1 && !o.boss) {
+      for (let i = 0; i < 6; i++) { const q = ((t * .007 + i / 6) % 1), dir = i % 2 ? 1 : -1, x = VX + dir * q * (70 + i * 22), y = 320 - Math.sin(q * Math.PI) * (130 + i * 18) + q * 60; bomb(x, y, 3.5 + (i % 3), t); }
+      for (let i = 0; i < 34; i++) { const q = ((t * (.012 + h1(i) * .01) + h1(i * 3)) % 1), vx = (h1(i * 7) - .5) * 160, vh = 110 + h1(i * 9) * 110;
+        const x = VX + vx * q, y = 330 - vh * (4 * q * (1 - q)) * 1.1 + q * 30, r = 1.6 + h1(i * 5) * 2.2;
+        c.fillStyle = `rgba(255,${(230 - q * 110) | 0},${(140 - q * 100) | 0},${(1 - q * .5).toFixed(3)})`; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+    }
+    if (K === 1) { /* le nid : l'œuf du milieu tremble quand on le touche, et éclot au 5e coup */
+      for (const [x, col, s2, mid] of [[288, '#5a1a3a', 1.2, 0], [312, '#3a2a5a', 1.35, 1], [336, '#6a2a1a', 1.15, 0]]) {
+        if (mid && o.hatched) { hatchling(x, 660, s2, t); continue; }
+        c.save(); if (mid && VEGG.wob > 0) { c.translate(x, 660); c.rotate(Math.sin(VEGG.wob * .9) * .25 * VEGG.wob / 20); c.translate(-x, -660); }
+        egg(x, 660, s2, t, col);
+        if (mid && VEGG.taps) { c.strokeStyle = 'rgba(255,230,160,0.95)'; c.lineWidth = 1.4; c.beginPath(); const cr = [[0, -20], [-3, -16], [2, -12], [-2, -8], [3, -4]]; for (let i = 0; i <= Math.min(4, VEGG.taps); i++) { const [dx, dy] = cr[i]; i ? c.lineTo(x + dx * s2, 660 + dy * s2) : c.moveTo(x + dx * s2, 660 + dy * s2); } c.stroke(); }
+        c.restore(); }
+    }
+    if (K === 0) embers(t, 6); else if (K === .5) { ash(t, 18); embers(t, 12); } else { ash(t, 46); embers(t, 18); }
+  }
+  function hatchling(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#3a2a5a'; c.beginPath(); c.moveTo(-9, -6); c.lineTo(-8, -1); c.quadraticCurveTo(0, 4, 8, -1); c.lineTo(9, -6); c.lineTo(5, -3); c.lineTo(2, -7); c.lineTo(-2, -3); c.lineTo(-5, -7); c.closePath(); c.fill();
+    const b = Math.sin(t * .08) * 1.5; c.fillStyle = '#ff6a3a'; c.beginPath(); c.ellipse(0, -10 + b, 7, 7, 0, 0, TAU); c.fill();
+    c.fillStyle = '#ffd27a'; c.beginPath(); c.moveTo(-5, -15 + b); c.lineTo(-3, -21 + b); c.lineTo(-1, -15 + b); c.moveTo(1, -15 + b); c.lineTo(3, -21 + b); c.lineTo(5, -15 + b); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(-2.5, -11 + b, 2, 0, TAU); c.arc(2.5, -11 + b, 2, 0, TAU); c.fill(); c.fillStyle = '#1a0a10'; c.beginPath(); c.arc(-2.2, -11 + b, 1, 0, TAU); c.arc(2.8, -11 + b, 1, 0, TAU); c.fill();
+    c.restore(); }
+  const frame = (ctx, w, h, z, fn) => { c = ctx; Z = z; ZN = ZONES[z]; const k = Math.max(w / W, h / H); TS = Math.max(0, (H * k - h) / k) * .9; ctx.save(); ctx.translate((w - W * k) / 2, h - H * k); ctx.scale(k, k); fn(); ctx.restore(); };
+  return {
+    bg: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => { BR = 1 + Math.sin(t * .025) * .15; zoneV(t, o); }),
+    fx: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => { BR = 1 + Math.sin(t * .025) * .15; fxLayer(t, o); }),
+    /* position écran de l'œuf du milieu (pour le toucher) */
+    eggAt: (w, h) => { const k = Math.max(w / W, h / H); return { x: (w - W * k) / 2 + 312 * k, y: h - H * k + 646 * k, r: 26 * k }; },
   };
 })();
 
