@@ -7686,7 +7686,7 @@ function bossDamage(dmg, b) {
   const ph = bossPhaseOf(B), up = B.hp > 0 && ph > B.phase;
   if (up) B.phase = ph;
   FX.shots.push({ x: b.x, y: b.y - b.r, t: 0, dmg, phase: up ? ph : 0, kill: B.hp === 0 });
-  if (B.hp === 0) { G.ending = true; schedule(B.type === 'crow' ? 200 : B.type === 'storm' ? 190 : 150, () => endRun(true)); }
+  if (B.hp === 0) { G.ending = true; schedule(B.type === 'crow' ? 200 : B.type === 'storm' ? 190 : B.type === 'dragon' ? 175 : 150, () => endRun(true)); }
 }
 function updateShots() {
   const B = G.boss;
@@ -7815,9 +7815,10 @@ function drawStorm(c, x, y, s, t, hurt, charge, alpha = 1, rage = 0, eyes = 1) {
   c.lineWidth = 4; c.beginPath(); c.moveTo(-16, 28); c.lineTo(-8, 22); c.lineTo(0, 28); c.lineTo(8, 22); c.lineTo(16, 28); c.stroke();
   c.restore();
 }
-function drawDragon(c, x, y, s, t, side, mouth, hurt, alpha = 1) {
+function drawDragon(c, x, y, s, t, side, mouth, hurt, alpha = 1, o = {}) {
   c.save(); c.translate(x, y); c.scale(s * -side, s); c.globalAlpha = alpha;
-  const body = hurt ? '#ffffff' : '#b8230f', belly = hurt ? '#ffffff' : '#ff9a3c';
+  const st = o.stone || 0, cr = o.crust || 0;
+  const body = hurt ? '#ffffff' : st ? dragonMix('#b8230f', '#221828', st) : cr ? '#6a2416' : '#b8230f', belly = hurt ? '#ffffff' : st ? dragonMix('#ff9a3c', '#3a2c48', st) : cr ? '#c8642c' : '#ff9a3c';
   c.strokeStyle = body; c.lineWidth = 36; c.lineCap = 'round';
   c.beginPath(); c.moveTo(-8, 190); c.quadraticCurveTo(-34 + Math.sin(t * .03) * 6, 80, -4, 8); c.stroke();
   c.strokeStyle = belly; c.lineWidth = 12;
@@ -7837,6 +7838,7 @@ function drawDragon(c, x, y, s, t, side, mouth, hurt, alpha = 1) {
   c.fillStyle = '#1a0a06'; c.beginPath(); c.ellipse(19, -16, 2.2, 5, 0, 0, TAU); c.fill();
   c.strokeStyle = '#3a1a12'; c.lineWidth = 3.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(8, -27); c.lineTo(28, -21); c.stroke();
   c.fillStyle = '#6e1408'; c.beginPath(); c.arc(58, -8, 2.6, 0, TAU); c.fill();
+  if (!hurt && (cr || st)) dragonSkin(c, t, cr, o.glow || 0, st, o.cracks || 0);
   c.restore();
 }
 function drawBossIcon(cnv, type) {
@@ -7892,8 +7894,8 @@ function drawBoss(th) {
     const dy = B.dead ? Math.min(260, B.deadT * 2.6) : 0;
     drawKraken(ctx, B.x, B.y + dy, .9, B.t, B.side, B.charge, B.hurt % 4 > 1);
   } else {
-    const dy = B.dead ? Math.min(240, B.deadT * 2.4) : 0;
-    drawDragon(ctx, B.x, B.y + dy, 1.1, B.t, B.side, B.mouth, B.hurt % 4 > 1);
+    if (B.dead) drawDragonDefeat(B);
+    else { drawDragon(ctx, B.x, B.y, 1.1, B.t, B.side, B.mouth, B.hurt % 4 > 1, 1, { crust: B.crust || 0, glow: B.phase >= 3 && B.crust ? 1 : 0 }); if (B.dive > 0) drawDragonDive(B); }
   }
 }
 function drawHazards(th) {
@@ -13480,6 +13482,57 @@ const _newRoundT = newRound;
 newRound = function () { _newRoundT.apply(this, arguments); try { R.th = R && R.p && R.p.thunder && !G.boss ? makeThunderClap() : null; } catch (e) {} };
 const _updateBossC = updateBoss;
 updateBoss = function () { _updateBossC(); const B = G.boss; if (B && B.type === 'crow') updateCrowFx(B); };
+
+/* ===== Dragon de lave : plongée entre les phases (il ressort couvert de croûte, qui craque en phase 3)
+   et défaite « statue d'obsidienne » qui se fige, se fendille puis éclate ===== */
+function dragonMix(a, b, k) { const A = parseInt(a.slice(1), 16), B2 = parseInt(b.slice(1), 16), m = (x, y) => Math.round(x + (y - x) * k);
+  return `rgb(${m(A >> 16, B2 >> 16)},${m(A >> 8 & 255, B2 >> 8 & 255)},${m(A & 255, B2 & 255)})`; }
+function dragonSkin(c, t, cr, glow, st, cracks) {
+  /* plaques de croûte le long du cou */
+  if (cr && !st) { c.fillStyle = '#2a1410'; for (let i = 0; i < 6; i++) { const yy = 20 + i * 28, xx = -20 + Math.sin(t * .03) * 3 - i * 1.5; c.beginPath(); c.moveTo(xx - 8, yy); c.lineTo(xx + 10, yy - 6); c.lineTo(xx + 14, yy + 8); c.lineTo(xx - 4, yy + 12); c.closePath(); c.fill(); }
+    c.beginPath(); c.moveTo(-6, -36); c.lineTo(30, -38); c.lineTo(40, -26); c.lineTo(4, -24); c.closePath(); c.fill(); }
+  /* fissures de feu (phase 3) ou de pierre (défaite) */
+  const k = st ? cracks : glow;
+  if (k > 0) { c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+    const col = st ? `rgba(255,${(200 - cracks * 60) | 0},140,${(.4 + cracks * .6).toFixed(3)})` : `rgba(255,170,60,${(.6 + .4 * Math.sin(t * .2)).toFixed(3)})`;
+    c.strokeStyle = col; c.lineWidth = st ? 1.6 : 2.4; if (!st) { c.shadowColor = '#ff8a2a'; c.shadowBlur = 10; }
+    const lines = [[[-14, 170], [-22, 130], [-12, 110], [-20, 80], [-10, 50]], [[-24, 60], [-14, 30], [-4, 10]], [[10, -30], [24, -22], [40, -26], [52, -16]], [[-10, 0], [6, 8], [26, 6]]];
+    for (const L of lines) { const n = Math.max(2, Math.round(L.length * Math.min(1, k * 1.2))); c.beginPath(); L.slice(0, n).forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }
+    c.restore(); }
+}
+function updateDragonFx(B) {
+  if (B.lastP == null) { B.lastP = B.phase; B.dive = 0; B.crust = 0; }
+  if (B.dead) {
+    if (B.deadT === 1) { B.fz = B.t; B.mouth = 0; sfx.gust && sfx.gust(); }
+    if (B.deadT === 40) { sfx.tick && sfx.tick(true); }
+    if (B.deadT === 82) { const n = reduceMotion ? 10 : 34; for (let i = 0; i < n; i++) { const a = Math.random() * TAU, v = 2 + Math.random() * 7; FX.particles.push({ x: B.x + (Math.random() - .5) * 40, y: B.y + Math.random() * 160 - 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3, g: .3, drag: .98, life: 50 + Math.random() * 30, size: 5 + Math.random() * 7, color: i % 4 ? '#241a2c' : '#ff8a3a', rot: Math.random() * 3, vr: (Math.random() - .5) * .4, shape: 'rect' }); }
+      burst(B.x, B.y + 40, 20, '#ffb04a'); sfx.hit(); sfx.pop(); buzz([40, 30, 80]); shake = reduceMotion ? 0 : 14; }
+    return;
+  }
+  if (B.phase !== B.lastP) { B.lastP = B.phase; B.dive = 64; B.diveSide = B.side; B.diveX = B.x; B.diveY = B.y; sfx.gust && sfx.gust(); }
+  if (B.dive > 0) {
+    B.dive--; const k = 1 - B.dive / 64;
+    B.emerge = 0; B.fireT = Math.max(B.fireT, 40); B.mouth = 0;
+    B.x = B.diveX; B.y = B.diveY + Math.pow(k, 1.6) * 230;
+    if (!reduceMotion && B.dive % 3 === 0) FX.particles.push({ x: B.diveX + (Math.random() - .5) * 70, y: lavaY() - 2, vx: (Math.random() - .5) * 2, vy: -2 - Math.random() * 3, g: .18, drag: .98, life: 30, size: 4 + Math.random() * 4, color: Math.random() < .5 ? '#ffd27a' : '#ff7a2a', rot: 0, vr: 0, shape: 'dot' });
+    if (B.dive === 40) { burst(B.diveX, lavaY(), 22, '#ff8a2a'); sfx.fire && sfx.fire(); }
+    if (B.dive === 0) { B.crust = 1; const ox = B.side > 0 ? PW - 46 : 46; burst(ox, lavaY(), 26, '#ffb04a'); shake = reduceMotion ? 0 : 8; buzz([20, 30]); if (B.phase >= 3) floatText('La croûte craque !', ox, lavaY() - 160, 24, 'gold'); }
+  }
+}
+const _updateBossD = updateBoss;
+updateBoss = function () { _updateBossD(); const B = G.boss; if (B && B.type === 'dragon') updateDragonFx(B); };
+function drawDragonDive(B) { /* la lave bouillonne là où il a plongé */
+  const k = 1 - B.dive / 64, y = lavaY();
+  ctx.save(); for (let i = 0; i < 5; i++) { const q = ((k * 3 + i / 5) % 1), x = B.diveX + (i - 2) * 16; ctx.strokeStyle = `rgba(255,230,160,${(.9 * (1 - q)).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 4 + q * 12, Math.PI, TAU); ctx.stroke(); }
+  const g = ctx.createRadialGradient(B.diveX, y, 4, B.diveX, y, 90); g.addColorStop(0, `rgba(255,200,90,${(.55 * Math.sin(k * Math.PI)).toFixed(3)})`); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(B.diveX, y, 90, 0, TAU); ctx.fill();
+  ctx.restore(); }
+function drawDragonDefeat(B) {
+  const d = B.deadT; if (d >= 82) return;
+  const st = Math.min(1, d / 40), cracks = Math.max(0, (d - 40) / 40), sh = d > 40 ? (Math.random() - .5) * cracks * 4 : 0;
+  drawDragon(ctx, B.x + sh, B.y, 1.1, B.fz || B.t, B.side, 0, false, 1, { stone: st, cracks });
+  if (d < 40) { /* la lave refroidit sous lui */ const g = ctx.createRadialGradient(B.x, lavaY(), 6, B.x, lavaY(), 110); g.addColorStop(0, `rgba(30,20,40,${(.6 * st).toFixed(3)})`); g.addColorStop(1, 'rgba(30,20,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(B.x, lavaY(), 110, 0, TAU); ctx.fill(); }
+  if (d > 70) { ctx.fillStyle = `rgba(255,220,170,${((d - 70) / 12 * .8).toFixed(3)})`; ctx.beginPath(); ctx.arc(B.x, B.y + 60, 30 + (d - 70) * 8, 0, TAU); ctx.fill(); }
+}
 
 /* ===== Nuage d'orage : transitions de phase (il aspire la pluie, gonfle, éclate en tonnerre)
    et défaite « l'orage se dissipe » (dernières gouttes, lambeaux, lune et arc-en-ciel) ===== */
