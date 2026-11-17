@@ -13404,7 +13404,7 @@ const VOLCANSCENE = (() => {
     bg: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => { BR = 1 + Math.sin(t * .025) * .15; zoneV(t, o); }),
     fx: (ctx, w, h, t, z, o = {}) => frame(ctx, w, h, z, () => { BR = 1 + Math.sin(t * .025) * .15; fxLayer(t, o); }),
     /* position écran de l'œuf du milieu (pour le toucher) */
-    eggAt: (w, h) => { const k = Math.max(w / W, h / H); return { x: (w - W * k) / 2 + 312 * k, y: h - H * k + 646 * k, r: 26 * k }; },
+    eggAt: (w, h) => { const k = Math.max(w / W, h / H); return { x: (w - W * k) / 2 + 312 * k, y: h - H * k + 646 * k, r: 36 * k }; }, /* zone à toucher : 36 px (doigt tolérant) */
   };
 })();
 
