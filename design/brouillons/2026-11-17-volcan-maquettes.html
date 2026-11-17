@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquettes Volcan</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#12060c}canvas{display:block;width:390px;height:844px}</style></head>
+<body><canvas id="cv"></canvas>
+<script>
+/* Maquettes du Monde 3 « Le Volcan ». Deux lumières : froide du ciel en haut à gauche, chaude de la lave par en dessous.
+   Signature : « la lave respire » — toute la lumière chaude du décor pulse lentement avec la lave.
+   Turquoise = eau / fraîcheur (complémentaire), doré réservé aux gains. */
+const Q = new URLSearchParams(location.search), Z = +(Q.get('z') || 1), FIX = Q.get('t');
+const W = 390, H = 844, TAU = Math.PI * 2, DPR = 2;
+const cv = document.getElementById('cv'); cv.width = W * DPR; cv.height = H * DPR;
+const c = cv.getContext('2d');
+const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+const mix = (a, b, k) => { const A = hex(a), B = hex(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
+const LAVA_Y = 800;
+let BR = 1; /* respiration de la lave (0.85 → 1.15) */
+
+const ZONES = {
+  1: { name: 'Les Pentes fumantes', levels: 'Niveaux 1 à 3', sky: [[0, '#2a2152'], [.42, '#6a3b72'], [.72, '#d4705c'], [1, '#f6a66c']], sun: [74, 168, 30, '#ffe6bf'], rock: '#3a2440', rim: '#b9a6e6', warm: '#ff7a3a', haze: '#e08a72' },
+  2: { name: 'La Forge', levels: 'Niveaux 4 à 6', sky: [[0, '#1c0d1c'], [.5, '#3b1420'], [1, '#6a1e1a']], sun: [70, 120, 0, '#ffd2a0'], rock: '#2b1622', rim: '#c4a0d8', warm: '#ff6a2a', haze: '#7a2a2a' },
+  3: { name: 'Le Cratère', levels: 'Niveaux 7 à 10', sky: [[0, '#120a22'], [.4, '#3e1230'], [.75, '#8e2a22'], [1, '#d4521e']], sun: [80, 170, 44, '#ff8a6a'], rock: '#231226', rim: '#9a86d0', warm: '#ff5a1e', haze: '#a03a26' },
+};
+const ZN = ZONES[Z];
+
+/* roche à deux lumières : liseré froid en haut à gauche, lueur de lave par en dessous */
+function rockShape(pts, o = {}) {
+  const ys = pts.map(p => p[1]), top = Math.min(...ys), bot = Math.max(...ys);
+  c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+  const base = o.col || ZN.rock, warmA = (o.warm == null ? .45 : o.warm) * BR, hh = Math.max(1, bot - top), wz = Math.max(.55, 1 - 46 / hh);
+  c.fillStyle = lg(top, bot, [[0, mix(base, ZN.rim, .14)], [.25, base], [wz, base], [1, mix(base, ZN.warm, Math.min(.85, warmA))]]); c.fill();
+  if (o.rim !== false) { c.save(); c.clip(); c.strokeStyle = rgba(ZN.rim, .55); c.lineWidth = 3;
+    c.beginPath(); for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1]; if (y1 < y0 + 2 && x1 > x0 - 2 && y0 < bot - 4) { c.moveTo(x0, y0); c.lineTo(x1, y1); } } c.stroke(); c.restore(); }
+}
+function mountain(cx, base, w, h, seed, o = {}) {
+  const pts = [[cx - w / 2, base]]; const n = 9;
+  for (let i = 1; i < n; i++) { const u = i / n, x = cx - w / 2 + u * w, peak = 1 - Math.abs(u - .5) * 2, y = base - h * Math.pow(peak, .8) + (h1(seed + i) - .5) * h * .12;
+    pts.push([x, o.crater && Math.abs(u - .5) < .08 ? y + h * .06 : y]); }
+  pts.push([cx + w / 2, base]); rockShape(pts, o);
+  c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath(); c.clip(); c.strokeStyle = 'rgba(10,0,10,0.22)'; c.lineWidth = 8;
+  for (let i = 0; i < 7; i++) { const u = .2 + i * .1, x0 = cx - w / 2 + u * w; c.beginPath(); c.moveTo(cx + (x0 - cx) * .15, base - h * .85); c.quadraticCurveTo(x0 + (h1(seed + i * 3) - .5) * 30, base - h * .4, x0 + (x0 - cx) * .3, base); c.stroke(); }
+  c.restore(); return pts;
+}
+function sky(t) {
+  c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H);
+  const [sx, sy, sr, sc] = ZN.sun;
+  if (sr) { const g = c.createRadialGradient(sx, sy, sr * .3, sx, sy, sr * 6); g.addColorStop(0, rgba(sc, .6)); g.addColorStop(.3, rgba(sc, .15)); g.addColorStop(1, rgba(sc, 0)); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.fillStyle = sc; c.beginPath(); c.arc(sx, sy, sr, 0, TAU); c.fill(); }
+}
+function lavaGlow(y, h, a) { c.fillStyle = lg(y - h, y, [[0, rgba(ZN.warm, 0)], [1, rgba(ZN.warm, a * BR)]]); c.fillRect(0, y - h, W, h); }
+function haze(y0, y1, col, a) { c.fillStyle = lg(y0, y1, [[0, rgba(col, 0)], [.6, rgba(col, a)], [1, rgba(col, 0)]]); c.fillRect(0, y0, W, y1 - y0); }
+function smoke(x, y, s, t, seed, a = .5, col = '#4a3450') {
+  for (let i = 0; i < 9; i++) { const q = ((t * .002 + i / 9) % 1), px = x + Math.sin(i * 1.7 + t * .01) * 12 * s + q * 60 * s, py = y - q * 260 * s, r = (16 + q * 46) * s;
+    c.fillStyle = rgba(mix(col, ZN.warm, (1 - q) * .35 * BR), a * (1 - q * .7)); c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); }
+}
+function steam(x, y, s, t, i0) {
+  for (let i = 0; i < 6; i++) { const q = ((t * .006 + i / 6 + i0 * .37) % 1), px = x + Math.sin(q * 6 + i) * 8 * s, py = y - q * 70 * s, r = (6 + q * 14) * s;
+    c.fillStyle = `rgba(240,236,255,${(.45 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(px, py, r, 0, TAU); c.fill(); }
+}
+function lantern(x, y, s, t) { y += Math.sin(t * .03 + x) * 1.5; c.save(); c.translate(x, y); c.scale(s, s);
+  const g = c.createRadialGradient(0, 0, 1, 0, 0, 22); g.addColorStop(0, 'rgba(255,190,110,0.55)'); g.addColorStop(1, 'rgba(255,190,110,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, 22, 0, TAU); c.fill();
+  c.fillStyle = '#ff8a4a'; c.beginPath(); c.ellipse(0, 0, 6, 8, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,230,180,0.7)'; c.fillRect(-1.5, -6, 2, 12); c.restore(); }
+function hut(x, y, s, wall, roof, t) { c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = lg(-22, 0, [[0, wall], [1, mix(wall, ZN.warm, .35 * BR)]]); c.beginPath(); c.roundRect(-16, -22, 32, 22, 4); c.fill();
+  c.fillStyle = roof; c.beginPath(); c.ellipse(0, -22, 22, 13, 0, Math.PI, TAU); c.fill(); c.fillStyle = rgba(ZN.rim, .35); c.beginPath(); c.ellipse(-6, -28, 10, 4, -.3, 0, TAU); c.fill();
+  c.fillStyle = '#ffb46a'; c.beginPath(); c.roundRect(-5, -14, 10, 14, [5, 5, 0, 0]); c.fill(); c.restore(); }
+function pool(x, y, w, t) {
+  c.fillStyle = '#2a1830'; c.beginPath(); c.ellipse(x, y + 2, w + 5, w * .3 + 3, 0, 0, TAU); c.fill();
+  const g = c.createLinearGradient(x - w, y, x + w, y); g.addColorStop(0, '#5fe0d0'); g.addColorStop(1, '#2fa8b8');
+  c.fillStyle = g; c.beginPath(); c.ellipse(x, y, w, w * .3, 0, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.4)'; c.beginPath(); c.ellipse(x - w * .35, y - w * .08, w * .3, w * .06, 0, 0, TAU); c.fill();
+  steam(x - w * .3, y - 2, .8, t, x); steam(x + w * .3, y - 2, .7, t, x + 3);
+}
+function cableCar(x0, y0, x1, y1, t) {
+  c.strokeStyle = 'rgba(40,20,40,0.8)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 26, x1, y1); c.stroke();
+  const u = (Math.sin(t * .006) * .5 + .5) * .8 + .1, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), cc = u * u;
+  const x = a * x0 + b * (x0 + x1) / 2 + cc * x1, y = a * y0 + b * ((y0 + y1) / 2 + 26) + cc * y1;
+  c.strokeStyle = '#2a1830'; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 8); c.stroke();
+  c.fillStyle = '#e8566a'; c.beginPath(); c.roundRect(x - 9, y + 8, 18, 12, 3); c.fill(); c.fillStyle = '#ffd2a0'; c.fillRect(x - 6, y + 11, 5, 4); c.fillRect(x + 1, y + 11, 5, 4);
+}
+function basalt(x, y, n, s) { for (let i = 0; i < n; i++) { const h = (30 + h1(i + x) * 50) * s, w = 12 * s, px = x + i * w; rockShape([[px, y], [px, y - h], [px + w * .5, y - h - 4 * s], [px + w, y - h], [px + w, y]], { warm: .7 }); } }
+function lavaFall(x, y0, y1, w, t, a = 1) {
+  const g = c.createLinearGradient(x - w, 0, x + w, 0); g.addColorStop(0, rgba('#ff6a1a', 0)); g.addColorStop(.3, rgba('#ff8a2a', .9 * a)); g.addColorStop(.5, rgba('#ffd27a', a)); g.addColorStop(.7, rgba('#ff8a2a', .9 * a)); g.addColorStop(1, rgba('#ff6a1a', 0));
+  c.fillStyle = g; c.fillRect(x - w, y0, w * 2, y1 - y0);
+  c.strokeStyle = `rgba(255,240,190,${(.6 * a).toFixed(3)})`; c.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const yy = y0 + ((t * 2.2 + i * 60) % (y1 - y0)); c.beginPath(); c.moveTo(x - w * .3, yy); c.lineTo(x - w * .3, yy + 18); c.stroke(); }
+  const gl = c.createRadialGradient(x, y1, 4, x, y1, w * 4); gl.addColorStop(0, rgba('#ffb04a', .5 * a * BR)); gl.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = gl; c.beginPath(); c.arc(x, y1, w * 4, 0, TAU); c.fill();
+}
+function chain(x, y0, y1, t) { c.save(); c.translate(x + Math.sin(t * .01 + x) * 3, 0);
+  for (let y = y0; y < y1; y += 14) { c.strokeStyle = '#1a0c14'; c.lineWidth = 4; c.beginPath(); c.ellipse(0, y, (y / 14) % 2 < 1 ? 5 : 2, 7, 0, 0, TAU); c.stroke(); c.strokeStyle = rgba(ZN.rim, .35); c.lineWidth = 1.2; c.beginPath(); c.ellipse(0, y, (y / 14) % 2 < 1 ? 5 : 2, 7, 0, Math.PI, Math.PI * 1.5); c.stroke(); }
+  c.restore(); }
+function gear(x, y, r, t, dir, col) { c.save(); c.translate(x, y); c.rotate(t * .004 * dir); c.fillStyle = col;
+  c.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU, rr = i % 2 ? r : r * 1.14; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill();
+  c.fillStyle = mix(col, '#000000', .3); c.beginPath(); c.arc(0, 0, r * .55, 0, TAU); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(0, 0, r * .2, 0, TAU); c.fill();
+  c.strokeStyle = rgba(ZN.warm, .5 * BR); c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r * 1.05, .2, Math.PI - .2); c.stroke(); c.restore(); }
+function crystal(x, y, s, t, col) { c.save(); c.translate(x, y); c.scale(s, s);
+  const pts = [[-10, 0], [-6, -38], [0, -48], [6, -36], [10, 0]];
+  c.fillStyle = col; c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); c.fill();
+  c.strokeStyle = rgba('#ff8a3a', (.55 + .35 * Math.sin(t * .04 + x)) * BR); c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, -4); c.lineTo(-2, -20); c.lineTo(2, -30); c.lineTo(0, -42); c.stroke();
+  c.fillStyle = rgba(ZN.rim, .4); c.beginPath(); c.moveTo(-6, -38); c.lineTo(0, -48); c.lineTo(-2, -34); c.fill(); c.restore(); }
+function anvil(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s);
+  rockShape([[-14, 0], [-10, -10], [-24, -14], [-20, -22], [26, -22], [18, -14], [10, -10], [14, 0]], { col: '#2a2030', warm: .8 }); c.restore(); }
+function bomb(x, y, r, t) { const g = c.createRadialGradient(x - r * .3, y - r * .3, 1, x, y, r); g.addColorStop(0, '#ffd27a'); g.addColorStop(.5, '#ff6a1a'); g.addColorStop(1, '#7a1a10');
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,140,60,0.35)'; c.lineWidth = r; c.beginPath(); c.moveTo(x, y); c.lineTo(x - r * 2, y + r * 3); c.stroke(); }
+function egg(x, y, s, t, col) { c.save(); c.translate(x, y); c.scale(s, s);
+  const g = c.createRadialGradient(0, -4, 2, 0, 0, 24); g.addColorStop(0, rgba('#ffb04a', .5 * BR)); g.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = g; c.beginPath(); c.arc(0, -4, 24, 0, TAU); c.fill();
+  c.fillStyle = col; c.beginPath(); c.ellipse(0, -8, 8, 11, 0, 0, TAU); c.fill();
+  c.strokeStyle = rgba('#ffd27a', .8 * BR); c.lineWidth = 1.2; c.beginPath(); c.moveTo(-6, -10); c.lineTo(-1, -6); c.lineTo(3, -12); c.lineTo(7, -8); c.stroke();
+  c.fillStyle = rgba(ZN.rim, .4); c.beginPath(); c.ellipse(-3, -13, 2.5, 4, -.3, 0, TAU); c.fill(); c.restore(); }
+function ash(t, n) { for (let i = 0; i < n; i++) { const x = (h1(i * 3) * W + Math.sin(t * .01 + i) * 20 + t * .2) % W, y = (h1(i * 7) * H + t * (.3 + h1(i) * .3)) % H;
+  c.fillStyle = i % 4 ? 'rgba(200,190,210,0.5)' : 'rgba(255,150,80,0.8)'; c.beginPath(); c.arc(x, y, i % 4 ? 1.6 : 1.3, 0, TAU); c.fill(); } }
+function embers(t, n) { for (let i = 0; i < n; i++) { const q = ((t * (.002 + h1(i) * .003) + h1(i * 5)) % 1), x = h1(i * 9) * W + Math.sin(t * .02 + i) * 14, y = LAVA_Y - q * 600, r = 1 + h1(i * 2) * 1.6;
+  const g = c.createRadialGradient(x, y, 0, x, y, r * 4); g.addColorStop(0, `rgba(255,210,120,${(1 - q).toFixed(3)})`); g.addColorStop(1, 'rgba(255,90,30,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 4, 0, TAU); c.fill(); } }
+function lavaSea(t) {
+  c.fillStyle = lg(LAVA_Y - 6, H, [[0, '#ffd27a'], [.15, '#ff8a2a'], [.6, '#e0441a'], [1, '#9a1e10']]);
+  c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 6) c.lineTo(x, LAVA_Y + Math.sin(x * .04 + t * .04) * 3); c.lineTo(W, H); c.fill();
+  c.strokeStyle = 'rgba(120,20,10,0.35)'; c.lineWidth = 2; for (let i = 0; i < 5; i++) { const y = LAVA_Y + 12 + i * 8; c.beginPath(); c.moveTo(((t * .4 + i * 90) % (W + 80)) - 80, y); c.lineTo(((t * .4 + i * 90) % (W + 80)) - 20, y); c.stroke(); }
+}
+
+/* ===== zones ===== */
+function zone1(t) {
+  sky(t);
+  // volcan lointain + panache
+  haze(300, 560, ZN.haze, .35);
+  smoke(262, 300, 1, t, 1, .45, '#5a3a60');
+  const g = c.createRadialGradient(262, 312, 4, 262, 312, 70); g.addColorStop(0, rgba('#ffb04a', .7 * BR)); g.addColorStop(1, rgba('#ffb04a', 0)); c.fillStyle = g; c.beginPath(); c.arc(262, 312, 70, 0, TAU); c.fill();
+  mountain(262, 560, 420, 250, 3, { col: mix(ZN.rock, ZN.haze, .35), warm: .35, crater: 1 });
+  for (const [lw, col] of [[14, rgba('#ff6a1a', .25 * BR)], [7, rgba('#ff7a2a', .9)], [2.5, rgba('#ffe08a', .95)]]) { c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.beginPath(); c.moveTo(262, 322); c.quadraticCurveTo(246, 380, 270, 430); c.quadraticCurveTo(292, 480, 262, 552); c.stroke(); }
+  c.fillStyle = rgba('#ffd27a', .9); c.beginPath(); c.ellipse(262, 318, 22, 5, 0, 0, TAU); c.fill();
+  for (let i = 0; i < 11; i++) { const x = 20 + i * 36 + h1(i) * 14, y = 596 + h1(i * 2) * 10, hgt = 18 + h1(i * 5) * 16; c.fillStyle = '#2a1a34';
+    c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x + 7, y); c.fill(); c.fillStyle = rgba(ZN.rim, .35); c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x - 1, y); c.fill(); }
+  cableCar(30, 600, 230, 340, t);
+  haze(470, 640, ZN.haze, .2);
+  // pente moyenne avec village thermal
+  rockShape([[0, 720], [0, 600], [70, 585], [150, 600], [230, 590], [320, 606], [390, 596], [390, 720]], { col: '#3a2240', warm: .4 });
+  hut(60, 598, .9, '#e9d8c8', '#c94a5a', t); hut(116, 600, .75, '#d8c8e8', '#6a7fd0', t); hut(330, 608, .85, '#f0d8c0', '#3fb8a8', t);
+  for (const [x, y] of [[40, 570], [90, 566], [140, 576], [300, 580], [360, 576]]) lantern(x, y, .8, t);
+  c.strokeStyle = 'rgba(40,20,40,0.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(40, 570); c.quadraticCurveTo(90, 580, 140, 576); c.stroke(); c.beginPath(); c.moveTo(300, 580); c.quadraticCurveTo(330, 588, 360, 576); c.stroke();
+  // premier plan : sources chaudes turquoise + orgues basaltiques
+  rockShape([[0, 800], [0, 690], [60, 676], [130, 690], [200, 680], [270, 694], [390, 680], [390, 800]], { col: '#26142a', warm: .7 });
+  pool(110, 712, 44, t); pool(300, 720, 34, t);
+  basalt(-6, 790, 5, 1.1); basalt(318, 790, 6, 1);
+  lavaGlow(LAVA_Y, 110, .3); lavaSea(t); embers(t, 14);
+}
+function zone2(t) {
+  sky(t);
+  // ouverture de la grotte en haut à gauche (la lumière froide vient de là)
+  const og = c.createRadialGradient(70, 120, 10, 70, 120, 230); og.addColorStop(0, 'rgba(200,180,255,0.45)'); og.addColorStop(1, 'rgba(200,180,255,0)'); c.fillStyle = og; c.fillRect(0, 0, W, H);
+  c.fillStyle = lg(40, 180, [[0, '#2a2a5a'], [1, '#8a6ab0']]); c.beginPath(); [[20, 150], [10, 96], [40, 60], [86, 52], [120, 80], [134, 128], [108, 166], [60, 172]].forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.fill();
+  for (let i = 0; i < 12; i++) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.arc(30 + h1(i) * 90, 70 + h1(i * 3) * 80, .9, 0, TAU); c.fill(); }
+  c.fillStyle = 'rgba(210,190,255,0.09)'; c.beginPath(); c.moveTo(30, 150); c.lineTo(150, 600); c.lineTo(290, 600); c.lineTo(126, 120); c.fill(); // rai de lumière
+  // cascades de lave au fond
+  lavaFall(40, 200, 640, 10, t, .8); lavaFall(345, 160, 640, 14, t);
+  // engrenages et chaînes
+  gear(318, 330, 56, t, 1, '#3a2030'); gear(262, 404, 30, t, -1.9, '#4a2638');
+  // parois de la grotte qui cadrent la scène
+  rockShape([[0, 0], [150, 0], [150, 30], [110, 40], [60, 60], [10, 180], [26, 300], [0, 380]], { col: '#1a0c16', warm: .2 });
+  rockShape([[390, 0], [210, 0], [240, 24], [330, 40], [376, 120], [362, 230], [390, 300]], { col: '#1a0c16', warm: .2 });
+  rockShape([[0, 380], [26, 330], [14, 470], [30, 600], [0, 640]], { col: '#1e0e18', warm: .7 });
+  rockShape([[390, 300], [372, 360], [384, 480], [366, 610], [390, 640]], { col: '#1e0e18', warm: .7 });
+  for (const x of [150, 250, 370]) chain(x, 0, 220 + (x % 3) * 40, t);
+  haze(380, 620, ZN.haze, .45);
+  // sol de la forge
+  rockShape([[0, 680], [0, 610], [80, 596], [170, 612], [260, 600], [390, 616], [390, 680]], { warm: .6 });
+  crystal(90, 610, 1.1, t, '#2a1a3a'); crystal(115, 612, .7, t, '#34204a'); crystal(310, 612, 1.3, t, '#2a1a3a'); crystal(340, 616, .8, t, '#34204a');
+  anvil(210, 608, 1.2);
+  // premier plan
+  rockShape([[0, 800], [0, 700], [50, 690], [110, 712], [170, 700], [240, 716], [320, 694], [390, 706], [390, 800]], { col: '#1e0e18', warm: .75 });
+  lavaGlow(LAVA_Y, 120, .32); lavaSea(t);
+  // étincelles
+  for (let i = 0; i < 14; i++) { const q = ((t * .02 + i / 14) % 1), x = 210 + Math.cos(i * 2.3) * q * 90, y = 590 - Math.sin(i * 1.7 + 1) * q * 80 + q * q * 60;
+    c.fillStyle = `rgba(255,${(220 - q * 120) | 0},120,${(1 - q).toFixed(3)})`; c.beginPath(); c.arc(x, y, 1.6, 0, TAU); c.fill(); }
+}
+function zone3(t) {
+  sky(t);
+  // colonne d'éruption + bombes de lave
+  smoke(220, 360, 1.6, t, 5, .55, '#3a2034');
+  const ce = c.createRadialGradient(220, 380, 10, 220, 380, 140); ce.addColorStop(0, rgba('#ffcf6a', .85 * BR)); ce.addColorStop(.4, rgba('#ff6a1a', .35 * BR)); ce.addColorStop(1, rgba('#ff6a1a', 0)); c.fillStyle = ce; c.beginPath(); c.arc(220, 380, 140, 0, TAU); c.fill();
+  for (let i = 0; i < 4; i++) { const q = ((t * .006 + i / 4) % 1), dir = i % 2 ? 1 : -1, x = 220 + dir * q * (90 + i * 25), y = 380 - Math.sin(q * Math.PI) * (150 + i * 20) + q * 40; bomb(x, y, 4 + (i % 2) * 2, t); }
+  haze(380, 600, ZN.haze, .35);
+  mountain(220, 600, 520, 230, 9, { col: '#2a1424', warm: .5, crater: 1 });
+  { const [mx, my, mr] = ZN.sun; c.fillStyle = 'rgba(120,30,40,0.35)'; for (const [dx, dy, r] of [[-12, -8, 9], [10, 6, 12], [-4, 18, 6]]) { c.beginPath(); c.arc(mx + dx, my + dy, r, 0, TAU); c.fill(); }
+    c.fillStyle = 'rgba(40,16,40,0.55)'; c.beginPath(); c.roundRect(mx - 70, my + 4, 150, 9, 5); c.fill(); c.beginPath(); c.roundRect(mx - 40, my + 20, 110, 6, 3); c.fill(); }
+  mountain(60, 600, 260, 150, 21, { col: mix('#2a1424', ZN.haze, .3), warm: .3 });
+  // flèches d'obsidienne
+  for (const [x, h, w] of [[30, 150, 34], [70, 100, 24], [350, 170, 38], [310, 110, 26]]) rockShape([[x - w / 2, 690], [x - w * .3, 690 - h * .6], [x, 690 - h], [x + w * .2, 690 - h * .7], [x + w / 2, 690]], { col: '#1e1024', warm: .6 });
+  // nid du dragon avec œufs (secret)
+  rockShape([[236, 660], [252, 630], [300, 616], [356, 622], [384, 660]], { col: '#2a1828', warm: .7 });
+  c.strokeStyle = '#3a2418'; c.lineWidth = 3; for (let i = 0; i < 9; i++) { c.beginPath(); c.moveTo(262 + i * 10, 628); c.lineTo(276 + i * 9, 616 - (i % 3) * 3); c.stroke(); }
+  for (const [x, col, s2] of [[288, '#5a1a3a', 1.2], [312, '#3a2a5a', 1.35], [336, '#6a2a1a', 1.15]]) egg(x, 626, s2, t, col);
+  // bord du cratère au premier plan
+  rockShape([[0, 800], [0, 700], [70, 684], [150, 706], [220, 694], [300, 712], [390, 690], [390, 800]], { col: '#1c0c1a', warm: .8 });
+  lavaGlow(LAVA_Y, 130, .34); lavaSea(t); ash(t, 40); embers(t, 10);
+}
+
+/* jouables + HUD */
+function platform(x, y) {
+  c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x + 6, y + 8, 44, 6, 0, 0, TAU); c.fill();
+  c.fillStyle = '#2b1d1f'; c.beginPath(); c.roundRect(x - 40, y - 8, 80, 16, 8); c.fill(); c.fillRect(x - 13, y + 4, 26, LAVA_Y - y);
+  c.fillStyle = rgba('#ff7a3a', .5 * BR); c.fillRect(x - 13, LAVA_Y - 60, 26, 60);
+  c.fillStyle = 'rgba(200,180,240,0.3)'; c.fillRect(x - 9, y + 8, 3, LAVA_Y - y - 8);
+  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 5, 26, 5, 2.5); c.fill();
+}
+function balloon(x, y, r, col, t) {
+  y += Math.sin(t * .05) * 2;
+  c.strokeStyle = 'rgba(255,230,220,0.6)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x + 10, y - r - 18, x + 2, y - r - 34); c.stroke();
+  const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, mix(col, '#ffffff', .35)); g.addColorStop(.6, col); g.addColorStop(1, mix(col, '#2a0a30', .35));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  c.strokeStyle = rgba('#ff9a4a', .6); c.lineWidth = 3; c.beginPath(); c.arc(x, y, r - 1.5, Math.PI * .2, Math.PI * .8); c.stroke(); // reflet de lave par en dessous
+  c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill();
+  c.setLineDash([3, 5]); c.strokeStyle = 'rgba(255,230,220,0.35)'; c.beginPath(); c.moveTo(x, y + r + 6); c.lineTo(x, 640); c.stroke(); c.setLineDash([]);
+}
+function chip(x, y, txt) { c.font = '800 13px Nunito'; const w = c.measureText(txt).width + 24; c.fillStyle = 'rgba(255,255,255,0.14)'; c.beginPath(); c.roundRect(x, y, w, 26, 13); c.fill(); c.fillStyle = '#fff3e6'; c.textBaseline = 'middle'; c.fillText(txt, x + 12, y + 13); return w; }
+function hud() {
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(14, 14, 44, 44, 14); c.fill();
+  c.fillStyle = '#2b1d1f'; c.fillRect(30, 28, 4, 16); c.fillRect(38, 28, 4, 16);
+  c.font = '44px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#fff3e6'; c.fillText('3', W / 2, 58); c.textAlign = 'left';
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(W - 100, 16, 86, 36, 18); c.fill();
+  c.fillStyle = '#f2b705'; c.beginPath(); c.arc(W - 80, 34, 8, 0, TAU); c.fill();
+  c.font = '800 16px Nunito'; c.fillStyle = '#2b1d1f'; c.textBaseline = 'middle'; c.fillText('480', W - 66, 35);
+  let x = 80; x += chip(x, 78, Z === 1 ? 'Manche 2/7' : Z === 2 ? 'Manche 3/8' : 'Manche 4/9') + 8; chip(x, 78, '★★ à 17 pts');
+  c.font = '18px "Lilita One"'; c.fillStyle = 'rgba(255,243,230,0.95)'; c.textAlign = 'center'; c.fillText(ZN.name, W / 2, 128);
+  c.font = '800 11px Nunito'; c.fillStyle = 'rgba(255,243,230,0.6)'; c.fillText(ZN.levels.toUpperCase(), W / 2, 146); c.textAlign = 'left';
+}
+function coin(x, y, t) { const s = Math.abs(Math.cos(t * .05)); c.fillStyle = '#f2b705'; c.beginPath(); c.ellipse(x, y, 9 * s + 1, 9, 0, 0, TAU); c.fill(); c.fillStyle = '#ffe58a'; c.beginPath(); c.ellipse(x - 2 * s, y - 2, 4 * s, 4, 0, 0, TAU); c.fill(); }
+function frame(t) {
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  BR = 1 + Math.sin(t * .025) * .15;
+  [zone1, zone2, zone3][Z - 1](t);
+  platform(160 + Math.sin(t * .012) * 40 * (Z > 1), 640);
+  coin(300, 520, t);
+  balloon(200, 300, 52, '#e23a6e', t);
+  hud();
+}
+Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
+  if (FIX != null) { frame(+FIX); window.__READY = 1; return; }
+  let t = 0; (function loop() { frame(t++); requestAnimationFrame(loop); })();
+});
+</script></body></html>
