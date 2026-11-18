@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Île au trésor</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#1a0e10}canvas{display:block;width:390px;height:844px}</style></head>
+<body><canvas id="cv"></canvas>
+<script>
+/* Niveau secret du Monde 4 : « L'Île au trésor ». Coucher de soleil doré, plage, épave, perroquet.
+   La marée monte à chaque manche et engloutit les coffres un à un : il faut tous les toucher. */
+const Q = new URLSearchParams(location.search), FIX = Q.get('t'), SC = Q.get('s') || 'play';
+const W = 390, H = 844, TAU = Math.PI * 2, DPR = 2;
+const cv = document.getElementById('cv'); cv.width = W * DPR; cv.height = H * DPR; const c = cv.getContext('2d');
+const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
+const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+const HZ = 470;
+/* plage en pente : hauteur du sable à x (plus haute à droite) */
+const sandY = x => 760 - (x / W) * 150 - Math.sin(x * .02) * 8;
+/* coffres : x, et l'ordre dans lequel la marée les noie */
+const CHESTS = [[60, 0], [150, 1], [245, 2], [335, 3]];
+function sky(t) { c.fillStyle = lg(0, HZ, [[0, '#3a2a6a'], [.4, '#c8506a'], [.75, '#ff9a5a'], [1, '#ffd08a']]); c.fillRect(0, 0, W, HZ + 2);
+  const sx = 110, sy = HZ - 30; const g = c.createRadialGradient(sx, sy, 10, sx, sy, 220); g.addColorStop(0, 'rgba(255,230,160,0.8)'); g.addColorStop(1, 'rgba(255,160,90,0)'); c.fillStyle = g; c.fillRect(0, 0, W, HZ);
+  c.fillStyle = '#fff0b8'; c.beginPath(); c.arc(sx, sy, 38, Math.PI, TAU); c.fill();
+  c.fillStyle = 'rgba(120,50,90,0.5)'; for (const [x, y, w] of [[260, 160, 120], [40, 220, 90], [300, 300, 70]]) { c.beginPath(); c.roundRect(x - w / 2, y, w, 8, 4); c.fill(); }
+  c.strokeStyle = 'rgba(60,20,40,0.6)'; c.lineWidth = 1.6; for (let i = 0; i < 3; i++) { const x = (h1(i) * W + t * .3) % (W + 40) - 20, y = 200 + i * 30, f = Math.sin(t * .2 + i) * 3; c.beginPath(); c.moveTo(x - 7, y - f); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); c.stroke(); } }
+function sea(t, tide) { /* la mer + la marée qui monte sur la plage */
+  c.fillStyle = lg(HZ, H, [[0, '#ff9a6a'], [.15, '#3a8ab0'], [1, '#14466a']]); c.fillRect(0, HZ, W, H - HZ);
+  for (let i = 0; i < 30; i++) { const y = HZ + 4 + i * i * .3; c.fillStyle = `rgba(255,220,160,${(.6 - i * .02).toFixed(3)})`; c.fillRect(110 - 6 - i * 2 + Math.sin(t * .1 + i) * 3, y, 12 + i * 4, 1.5); } }
+function beach(t, tide) { /* sable */
+  c.fillStyle = lg(560, H, [[0, '#ffe2a8'], [1, '#e8b870']]); c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 6) c.lineTo(x, sandY(x)); c.lineTo(W, H); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); for (let x = 0; x <= W; x += 6) c.lineTo(x, sandY(x) + 2); c.lineTo(W, sandY(W) + 6); c.lineTo(0, sandY(0) + 6); c.fill(); }
+function water(t, tide) { /* niveau de la marée : remonte la pente */
+  const y = 780 - tide * 150; c.save();
+  c.fillStyle = 'rgba(50,140,180,0.82)'; c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 6) c.lineTo(x, y + Math.sin(x * .05 + t * .06) * 3); c.lineTo(W, H); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 2.5; c.beginPath(); for (let x = 0; x <= W; x += 6) { const v = y + Math.sin(x * .05 + t * .06) * 3; x ? c.lineTo(x, v) : c.moveTo(x, v); } c.stroke();
+  c.restore(); return y; }
+function palm(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = '#6a4a2a'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-14, -60, 6, -120); c.stroke();
+  c.fillStyle = '#2a7a3a'; for (let i = 0; i < 6; i++) { c.save(); c.translate(6, -120); c.rotate(-Math.PI * .1 - i * .6 + Math.sin(t * .03) * .06); c.beginPath(); c.ellipse(26, 0, 28, 6, .25, 0, TAU); c.fill(); c.restore(); } c.restore(); }
+function wreck(x, y) { c.save(); c.translate(x, y); c.fillStyle = '#5a3a2a'; c.beginPath(); c.moveTo(-60, 0); c.lineTo(-50, -30); c.lineTo(40, -40); c.lineTo(60, 0); c.fill();
+  c.strokeStyle = '#3a2418'; c.lineWidth = 2; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(-50 + i * 20, -30 - i * 2); c.lineTo(-56 + i * 22, 0); c.stroke(); }
+  c.fillStyle = '#4a2e1e'; c.fillRect(-6, -140, 6, 110); c.save(); c.translate(-3, -120); c.rotate(.15); c.fillRect(-30, -2, 60, 4); c.restore();
+  c.fillStyle = '#f3ead8'; c.beginPath(); c.moveTo(0, -116); c.lineTo(34, -96); c.lineTo(0, -60); c.fill(); c.fillStyle = '#1a1a2a'; c.beginPath(); c.moveTo(-3, -140); c.lineTo(-30, -132); c.lineTo(-3, -124); c.fill();
+  /* perroquet sur le mât */
+  c.translate(-3, -146); c.fillStyle = '#2fae4a'; c.beginPath(); c.ellipse(0, -8, 7, 10, 0, 0, TAU); c.fill(); c.fillStyle = '#e8336d'; c.beginPath(); c.ellipse(0, 4, 4, 9, .2, 0, TAU); c.fill();
+  c.fillStyle = '#ffb02e'; c.beginPath(); c.moveTo(5, -12); c.lineTo(11, -8); c.lineTo(5, -6); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(3, -12, 2, 0, TAU); c.fill(); c.fillStyle = '#000'; c.beginPath(); c.arc(3.5, -12, 1, 0, TAU); c.fill();
+  c.restore(); }
+function chest(x, y, s, st) { /* st: 'closed' | 'open' | 'gone' */
+  c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = 'rgba(80,40,10,0.3)'; c.beginPath(); c.ellipse(4, 2, 24, 4, 0, 0, TAU); c.fill();
+  c.fillStyle = '#8a4a1e'; c.fillRect(-20, -18, 40, 18); c.fillStyle = 'rgba(255,220,160,0.25)'; c.fillRect(-20, -18, 12, 18);
+  c.fillStyle = '#c8962a'; c.fillRect(-20, -18, 40, 3); c.fillRect(-20, -3, 40, 3); c.fillRect(-14, -18, 4, 18); c.fillRect(10, -18, 4, 18);
+  if (st === 'open') { c.fillStyle = '#ffd23a'; c.beginPath(); c.ellipse(0, -18, 17, 6, 0, Math.PI, TAU); c.fill(); for (let i = 0; i < 4; i++) { c.fillStyle = '#fff6b0'; c.beginPath(); c.arc(-10 + i * 7, -21, 2, 0, TAU); c.fill(); }
+    c.fillStyle = '#7a3e16'; c.save(); c.translate(0, -18); c.rotate(-.9); c.beginPath(); c.roundRect(-20, -14, 40, 14, [8, 8, 0, 0]); c.fill(); c.restore(); }
+  else { c.fillStyle = '#7a3e16'; c.beginPath(); c.roundRect(-21, -32, 42, 15, [10, 10, 0, 0]); c.fill(); c.fillStyle = '#c8962a'; c.fillRect(-21, -20, 42, 3); c.fillRect(-3, -24, 6, 8); }
+  c.restore(); }
+function balloon(x, y, r, col, t) { y += Math.sin(t * .05) * 2;
+  const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, col); g.addColorStop(1, '#6a1030'); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill();
+  c.setLineDash([3, 5]); c.strokeStyle = 'rgba(60,20,40,0.4)'; c.beginPath(); c.moveTo(x, y + r + 6); c.lineTo(x, sandY(x) - 30); c.stroke(); c.setLineDash([]); }
+function chip(x, y, txt) { c.font = '800 13px Nunito'; const w = c.measureText(txt).width + 24; c.fillStyle = 'rgba(255,255,255,0.72)'; c.beginPath(); c.roundRect(x, y, w, 26, 13); c.fill(); c.fillStyle = '#3a1a2a'; c.textBaseline = 'middle'; c.fillText(txt, x + 12, y + 13); return w; }
+function hud(done) { c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(14, 14, 44, 44, 14); c.fill(); c.fillStyle = '#3a1a2a'; c.fillRect(30, 28, 4, 16); c.fillRect(38, 28, 4, 16);
+  c.font = '44px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#fff6e8'; c.fillText(String(done * 3), W / 2, 58); c.textAlign = 'left';
+  let x = 74; x += chip(x, 78, 'Coffres ' + done + '/4') + 8; chip(x, 78, 'La marée monte ↑');
+  c.font = '18px "Lilita One"'; c.fillStyle = '#fff6e8'; c.textAlign = 'center'; c.fillText("L'Île au trésor", W / 2, 128); c.font = '800 11px Nunito'; c.globalAlpha = .75; c.fillText('NIVEAU SECRET', W / 2, 146); c.globalAlpha = 1; c.textAlign = 'left'; }
+function ftxt(txt, x, y, k, col, size = 26) { if (k <= 0 || k >= 1) return; c.save(); c.globalAlpha = k < .15 ? k / .15 : 1 - Math.max(0, (k - .6) / .4); c.translate(x, y - k * 40); c.font = size + 'px "Lilita One"'; c.textAlign = 'center'; c.lineWidth = 5; c.strokeStyle = 'rgba(40,10,20,0.8)'; c.strokeText(txt, 0, 0); c.fillStyle = col; c.fillText(txt, 0, 0); c.restore(); }
+function frame(t) {
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  /* séquence de démo : 4 manches, la marée monte d'un cran à chaque coffre touché */
+  const T = t % 760, step = Math.min(4, Math.floor(T / 170)), within = T - step * 170, tide = Math.min(1, (step + Math.min(1, within / 60) * (step < 4 ? 0 : 0)) * .24 + ease(Math.min(1, within / 70)) * .24 * (step < 4 ? 1 : 0) - (step < 4 ? .24 : 0) + .02);
+  const tideLvl = Math.max(0, step * .24 + (step < 4 ? ease(Math.min(1, within / 80)) * .1 : 0));
+  sky(t); sea(t);
+  c.save(); c.translate(250, HZ + 30); c.scale(.55, .55); wreck(0, 0); c.restore();
+  palm(352, sandY(352) + 4, 1, t); palm(318, sandY(318) + 6, .7, t + 40);
+  beach(t);
+
+  const wy = 780 - tideLvl * 150;
+  /* coffres : ouverts (touchés), fermés, ou noyés */
+  CHESTS.forEach(([x, k]) => { const y = sandY(x) - 2, opened = k < step, drowned = !opened && y + 10 > wy;
+    if (!drowned) chest(x, y, 1, opened ? 'open' : 'closed'); });
+  water(t, tideLvl);
+  CHESTS.forEach(([x, k]) => { const y = sandY(x) - 2; if (k < step) return; if (y + 10 > wy) { c.fillStyle = 'rgba(255,255,255,0.7)'; for (let i = 0; i < 3; i++) { const q = ((t * .02 + i / 3) % 1); c.beginPath(); c.arc(x + (i - 1) * 6, wy - q * 16, 2, 0, TAU); c.fill(); } } });
+  /* le ballon de la manche en cours : visé au-dessus du prochain coffre, puis lâché */
+  if (step < 4) { const [x] = CHESTS.find(([, k]) => k === step), y0 = 300, yt = sandY(x) - 2 - 34 - 26; let y = y0;
+    if (within > 90 && within < 130) { const q = (within - 90) / 40; y = y0 + (yt - y0) * q * q; } else if (within >= 130) y = yt;
+    if (within < 160) balloon(x, y, 26, '#e23a6e', t);
+    ftxt('+3', x + 30, yt - 30, (within - 132) / 40, '#ffd23f', 30); ftxt('Coffre !', x, yt - 46, (within - 132) / 45, '#fff6e8', 22); }
+  else { ftxt('Le grand trésor !', W / 2, 420, within / 120, '#ffd23f', 34); }
+  hud(Math.min(4, step));
+}
+Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
+  if (FIX != null) { frame(+FIX); window.__READY = 1; return; }
+  let t = 0; (function loop() { frame(t++); requestAnimationFrame(loop); })();
+});
+</script></body></html>
