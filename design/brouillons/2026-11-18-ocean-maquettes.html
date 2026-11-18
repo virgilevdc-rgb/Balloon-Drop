@@ -398,7 +398,7 @@ function krakenW(x, y, s, t, o = {}) { if (KV) { o.v = KV; y += 40 * s; }
   /* collerette d'écume à la ligne d'eau */
   for (let i = 0; i < 7; i++) { const a0 = t * .03 + i * .9; c.strokeStyle = `rgba(190,245,255,${(.35 + .3 * Math.sin(t * .05 + i)).toFixed(3)})`; c.lineWidth = 2; c.beginPath(); c.ellipse(x, SEA + 2, (60 + (i % 3) * 8) * s, (6 + (i % 2) * 2) * s, 0, a0, a0 + .7); c.stroke(); } }
 function inkCloud(x, y, k, scale = 1) { if (k <= 0 || k >= 1) return; const a = k < .2 ? k / .2 : 1 - (k - .2) / .8;
-  for (let i = 0; i < 9; i++) { const an = i * .7, d = ease(k) * 50 * scale * (.6 + (i % 3) * .25); c.fillStyle = `rgba(30,16,52,${(a * .9).toFixed(3)})`; c.beginPath(); c.arc(x + Math.cos(an) * d, y + Math.sin(an) * d * .7, (14 + (i % 3) * 8) * scale * (.5 + ease(k) * .7), 0, TAU); c.fill(); } }
+  for (let i = 0; i < 9; i++) { const an = i * .7, d = ease(k) * 50 * scale * (.6 + (i % 3) * .25); const rr = (14 + (i % 3) * 8) * scale * (.5 + ease(k) * .7), cx2 = x + Math.cos(an) * d, cy2 = y + Math.sin(an) * d * .7; c.fillStyle = `rgba(52,30,92,${(a * .92).toFixed(3)})`; c.beginPath(); c.arc(cx2, cy2, rr, 0, TAU); c.fill(); c.strokeStyle = `rgba(170,140,240,${(a * .45).toFixed(3)})`; c.lineWidth = 1.5; c.beginPath(); c.arc(cx2, cy2, rr, Math.PI * 1.1, Math.PI * 1.6); c.stroke(); } }
 /* ===== Pieuvre géante v3 : 3 personnalités (A reine, B ancienne, C abysses) ===== */
 const KPAL = {
   A: { body: '#b8327a', dark: '#5e1046', light: '#f27ab6', under: '#ffd0e4', suck: '#ffe6f0', spot: '#7a1a5a', glow: '110,250,255', iris: ['#ffe46a', '#e8901a'] },
@@ -408,7 +408,8 @@ const KPAL = {
 function kmix(a, b, k) { return mix(a, b, k); }
 function kPal(o) { const P = Object.assign({}, KPAL[o.v || 'A']);
   if (o.rage) { for (const k of ['body', 'dark', 'light', 'spot']) P[k] = kmix(P[k], { body: '#d0243a', dark: '#5a0a18', light: '#ff7a7a', spot: '#7a0a1a' }[k], .62 * o.rage); P.glow = '255,90,90'; P.iris = ['#ff8a8a', '#d0102a']; }
-  if (o.sad) { P.body = '#e07ab0'; P.dark = '#a04a80'; P.light = '#ffc0dc'; P.spot = '#c0609a'; P.iris = ['#8a7ab8', '#5a4a8a']; }
+  if (o.sad) { const S = { A: ['#e07ab0', '#a04a80', '#ffc0dc', '#c0609a'], B: ['#7cc8b6', '#3a7f76', '#c8f2e2', '#5aa898'], C: ['#8a7ad8', '#4a3a98', '#c8bcff', '#6a5ab8'] }[o.v || 'A'];
+    [P.body, P.dark, P.light, P.spot] = S; P.under = '#f4fff8'; P.iris = ['#8a7ab8', '#5a4a8a']; }
   return P; }
 /* un bras : centre le long d'une courbe de Bézier + enroulement au bout ; ventouses sur le dessous */
 function kArmPts(p, curl, n = 22) { const pts = [];
@@ -457,7 +458,7 @@ function kraken3(x, y, s, t, o = {}) {
   const P = kPal(o), v = o.v || 'A', rage = o.rage || 0, sad = o.sad || 0, ch = o.charge || 0, sw = Math.sin(t * .04);
   c.save(); c.translate(x, y); c.scale(s * (o.flip ? -1 : 1), s);
   /* bras arrière (sous l'eau et sur les côtés) */
-  const up = rage ? 1.35 : 1, A = (a, b, cc, d, w, side, curl) => kArm(kArmPts([a, b, cc, d], curl), w, P, side, v === 'C', t);
+  const up = sad ? .3 : rage ? 1.35 : 1, A = (a, b, cc, d, w, side, curl) => kArm(kArmPts([a, b, cc, d], curl), w, P, side, v === 'C', t);
   A([-30, 4], [-50, 50], [-20, 80], [-48, 112 + sw * 6], 20, 1, 1);
   A([30, 4], [56, 46], [26, 84], [56, 114 - sw * 6], 20, -1, -1);
   A([0, 6], [-6, 60], [18, 90], [4, 124], 18, -1, -1);
@@ -479,8 +480,7 @@ function kraken3(x, y, s, t, o = {}) {
   if (v === 'C') { c.save(); c.strokeStyle = `rgba(${P.glow},${(.45 + .35 * Math.sin(t * .05)).toFixed(3)})`; c.lineWidth = 2; c.shadowColor = `rgb(${P.glow})`; c.shadowBlur = 8;
     for (const L of [[[-40, -100], [-20, -130], [10, -150], [40, -146]], [[-30, -84], [0, -110], [36, -118], [66, -104]], [[60, -128], [76, -100], [74, -70]]]) { c.beginPath(); L.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); c.stroke(); } c.restore(); }
   /* B : bernacles + voile déchirée */
-  if (v === 'B') { c.fillStyle = 'rgba(232,226,206,0.92)'; c.beginPath(); c.moveTo(20, -170); c.quadraticCurveTo(70, -150, 90, -104); c.lineTo(82, -96); c.lineTo(86, -86); c.lineTo(74, -90); c.lineTo(76, -78); c.lineTo(64, -86); c.quadraticCurveTo(54, -132, 14, -158); c.closePath(); c.fill();
-    c.strokeStyle = 'rgba(120,90,60,0.8)'; c.lineWidth = 2; c.beginPath(); c.moveTo(20, -168); c.quadraticCurveTo(-10, -150, -30, -150); c.stroke();
+  if (v === 'B') {
     for (const [dx, dy, r] of [[-30, -128, 6], [-20, -134, 4.5], [-38, -118, 4], [44, -76, 5], [52, -70, 3.5], [-58, -60, 4.5]]) { c.fillStyle = '#c8c2b0'; c.beginPath(); c.arc(dx, dy, r, 0, TAU); c.fill(); c.fillStyle = '#5a5448'; c.beginPath(); c.arc(dx, dy, r * .4, 0, TAU); c.fill(); }
     c.strokeStyle = 'rgba(230,240,230,0.7)'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(18, -74); c.lineTo(44, -20); c.stroke(); c.lineWidth = 1.4; for (let i = 0; i < 4; i++) { const u = .15 + i * .23; c.beginPath(); c.moveTo(18 + 26 * u - 5, -74 + 54 * u - 2); c.lineTo(18 + 26 * u + 5, -74 + 54 * u + 2); c.stroke(); } }
   /* reflet mouillé (comme nos ballons) + liseré de lune */
@@ -523,10 +523,20 @@ function bossScene(t) {
       c.save(); c.translate(K.x, SEA - 2); c.scale(1, .25); for (let i = 0; i < 6; i++) { c.strokeStyle = `rgba(110,240,255,${(.7 - i * .1).toFixed(3)})`; c.lineWidth = 4; const a0 = -t * .12 + i; c.beginPath(); c.arc(0, 0, 20 + i * 16, a0, a0 + 2.2); c.stroke(); } c.restore(); }
     else { const u = (q - .45) / .55, e = ease(Math.min(1, u * 2.2)); krakenW(90, K.y + (1 - e) * 220, 1, t, { flip: true, charge: u < .5 ? u * 2 : 0 });
       inkCloud(140, K.y - 40, (u - .45) / .55, 1.6); ftxt('Splotch !', 200, K.y - 120, (u - .5) / .5, '#d8b0ff', 26); } }
-  if (BS === 5) { const T = t % 300, q = T / 300;
-    if (q < .3) { const k = q / .3; krakenW(K.x + Math.sin(T * .9) * 3 * k, K.y + k * 10, 1 - k * .6, t, { sad: k > .5 ? 1 : 0, rage: k < .5 ? 1 - k * 2 : 0 }); }
-    else { const u = (q - .3) / .7, x = K.x - u * 360, y = K.y + 10 + Math.sin(u * 20) * 8; krakenW(x, y, .4, t * 3, { sad: 1, flip: true }); inkCloud(K.x - u * 60 + 30, K.y - 10, Math.min(.99, u * 1.4), .9); ftxt('Pfff…', K.x - 30, K.y - 80, u * 1.5, '#d8b0ff', 26); }
-    ftxt('Boss vaincu !', W / 2, 400, (T - 60) / 160, '#ffd23f', 36); }
+  if (BS === 5) { const T = t % 320;
+    const star5 = (x, y, r, a) => { c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, an = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } c.closePath(); c.fill(); c.restore(); };
+    if (T < 120) { /* coup final, puis il rapetisse, sonné */
+      const q0 = Math.min(1, Math.max(0, (T - 30) / 70)), k = q0 * q0 * (3 - 2 * q0), s2 = 1 - k * .58, shake = T < 30 ? (30 - T) * .6 : 0, sx = K.x + (Math.random() - .5) * shake;
+      krakenW(sx, K.y + k * 12, s2, T < 24 ? t : t * .3, { rage: k < .6 ? 1 - k / .6 : 0, sad: k >= .6 ? 1 : 0 });
+      if (T < 14) { c.fillStyle = `rgba(255,255,255,${((14 - T) / 14 * .7).toFixed(3)})`; c.fillRect(0, 0, W, H); }
+      if (T > 40) { const hy = K.y + k * 12 + 40 * s2 - 175 * s2; c.fillStyle = '#ffe46a'; for (let i = 0; i < 4; i++) { const a = T * .12 + i * Math.PI / 2; star5(sx + Math.cos(a) * 34 * s2 + 10 * s2, hy + Math.sin(a) * 9, 6, a); } }
+      ftxt('Aïeuh !', K.x, K.y - 150, (T - 10) / 70, '#ffffff', 28);
+    } else { /* il s'enfuit à petits bonds en lâchant de l'encre */
+      const u = (T - 120) / 200, x = K.x - u * 430, hop = Math.abs(Math.sin(u * 22)), y = K.y + 12 - hop * 26;
+      for (let i = 1; i <= 4; i++) { const back = u - i * .07; if (back <= 0) continue; inkCloud(K.x - back * 430 + 30, K.y + 4, Math.min(.99, .15 + i * .2), .55); }
+      krakenW(x, y, .42, t * 2, { sad: 1, flip: true });
+      ftxt('Pfff…', K.x - 40, K.y - 80, u * 1.6, '#d8f0e8', 28); }
+    ftxt('Boss vaincu !', W / 2, 400, (T - 120) / 190, '#ffd23f', 36); }
 }
 function frame(t) {
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
