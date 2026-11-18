@@ -509,7 +509,7 @@ function kraken3(x, y, s, t, o = {}) {
 function bossScene(t) {
   if (BS === 9) { const T = t; krakenW(215, SEA - 40, .95, T, { charge: Math.max(0, Math.sin(T * .03)) * .5 }); return; }
   if (BS === 8) { krakenW(215, SEA - 40, .95, t, { rage: 1, charge: .3 }); return; }
-  const K = { x: 300, y: SEA - 40 };
+  const K = { x: 262, y: SEA - 40 };
   if (BS === 1) { krakenW(K.x, K.y + Math.sin(t * .035) * 5, 1, t, { charge: Math.max(0, Math.sin(t * .03)) }); }
   if (BS === 2) { const T = t % 200, warn = T < 70, slam = T >= 70 && T < 120;
     krakenW(K.x, K.y + Math.sin(t * .035) * 5, 1, t);
@@ -521,8 +521,8 @@ function bossScene(t) {
     /* plonge dans un tourbillon (à droite), ressort à gauche en crachant de l'encre */
     if (q < .45) { const d = ease(q / .45); krakenW(K.x, K.y + d * 220, 1, t, { rage: .4 });
       c.save(); c.translate(K.x, SEA - 2); c.scale(1, .25); for (let i = 0; i < 6; i++) { c.strokeStyle = `rgba(110,240,255,${(.7 - i * .1).toFixed(3)})`; c.lineWidth = 4; const a0 = -t * .12 + i; c.beginPath(); c.arc(0, 0, 20 + i * 16, a0, a0 + 2.2); c.stroke(); } c.restore(); }
-    else { const u = (q - .45) / .55, e = ease(Math.min(1, u * 2.2)); krakenW(90, K.y + (1 - e) * 220, 1, t, { flip: true, charge: u < .5 ? u * 2 : 0 });
-      inkCloud(140, K.y - 40, (u - .45) / .55, 1.6); ftxt('Splotch !', 200, K.y - 120, (u - .5) / .5, '#d8b0ff', 26); } }
+    else { const u = (q - .45) / .55, e = ease(Math.min(1, u * 2.2)); krakenW(120, K.y + (1 - e) * 220, 1, t, { flip: true, charge: u < .5 ? u * 2 : 0 });
+      inkCloud(170, K.y - 40, (u - .45) / .55, 1.6); ftxt('Splotch !', 200, K.y - 120, (u - .5) / .5, '#d8b0ff', 26); } }
   if (BS === 5) { const T = t % 320;
     const star5 = (x, y, r, a) => { c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, an = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } c.closePath(); c.fill(); c.restore(); };
     if (T < 120) { /* coup final, puis il rapetisse, sonné */
