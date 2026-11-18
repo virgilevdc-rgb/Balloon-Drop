@@ -275,15 +275,15 @@ function mech2(t) { /* cycle 480 : chargé et posé, puis dévié dans l'eau */
 
 /* ===== démo : le siphon (?m=3) ===== */
 if (M === 3) { ZN.name = 'Le Siphon'; ZN.levels = 'Dans la spirale : ×2… avant qu’il avale tout'; }
-const SX = 250, SY = 770, R0 = 150, SWALLOW = 300, RW = 175, YS = .24;
+const SX = 240, SY = 680, R0 = 150, SWALLOW = 300, RW = 165, YS = .26, HOLE = 18;
 const funnelD = r => Math.pow(Math.max(0, 1 - r / RW), 2.2) * 58;  /* profondeur de l'entonnoir */
 function sipState(T) { /* position de la bouée sur la paroi de l'entonnoir */
   if (T >= SWALLOW + 26) return null;
-  const q = Math.min(1, T / SWALLOW), R = Math.max(0, R0 * (1 - Math.pow(q, 1.35))), th = Math.PI + q * q * 10.5;
+  const q = Math.min(1, T / SWALLOW), qa = Math.min(1, q / .86), R = R0 * Math.pow(1 - qa, 1.5), th = Math.PI + qa * qa * 9 + Math.max(0, q - .86) * 30;
   const gulp = T > SWALLOW ? (T - SWALLOW) / 26 : 0;
-  const wy = SY + R * Math.sin(th) * YS + funnelD(R);           /* ligne d'eau locale */
+  const wy = SY + R * Math.sin(th) * YS * Math.min(1, R / 40 + .2) + funnelD(R); /* ligne d'eau locale (orbite qui se resserre au centre) */
   const lean = Math.atan2(SX - (SX + R * Math.cos(th)), 120) * (1 - R / R0) * 1.1; /* penche vers le centre */
-  return { x: SX + R * Math.cos(th), wy, R, th, lean, sink: Math.pow(q, 4) * 18 + gulp * 80, spin: gulp, q }; }
+  return { x: SX + R * Math.cos(th), wy, R, th, lean: R < 6 ? Math.sin(th * 3) * .12 : lean, sink: Math.max(0, q - .86) * 60 + gulp * 90, spin: gulp, q }; }
 function whirl(t, k) { if (k <= 0) return;
   c.save();
   /* parois : anneaux qui descendent vers le centre (de l'extérieur vers l'intérieur) */
@@ -298,14 +298,20 @@ function whirl(t, k) { if (k <= 0) return;
       c.beginPath(); c.ellipse(SX, SY + d, r, r * YS, 0, a0 + off, a0 + off + len); c.stroke(); } }
   /* lèvre éclairée de l'entonnoir (côté lune) */
   c.strokeStyle = `rgba(180,230,255,${(.5 * k).toFixed(3)})`; c.lineWidth = 2; c.beginPath(); c.ellipse(SX, SY, RW, RW * YS, 0, Math.PI * .95, Math.PI * 1.6); c.stroke();
+  /* le trou au fond */
+  const hy = SY + funnelD(0); const hg = c.createRadialGradient(SX, hy, 2, SX, hy, HOLE); hg.addColorStop(0, `rgba(0,0,8,${k.toFixed(3)})`); hg.addColorStop(1, `rgba(2,8,24,${(.85 * k).toFixed(3)})`);
+  c.fillStyle = hg; c.beginPath(); c.ellipse(SX, hy, HOLE, HOLE * YS, 0, 0, TAU); c.fill();
   c.restore(); }
+function holeLip(k) { /* lèvre avant du trou : passe DEVANT la bouée qui s'enfonce */
+  const hy = SY + funnelD(0); c.save(); c.strokeStyle = `rgba(110,240,255,${(.8 * k).toFixed(3)})`; c.lineWidth = 3; c.beginPath(); c.ellipse(SX, hy, HOLE, HOLE * YS, 0, 0, Math.PI); c.stroke();
+  c.fillStyle = `rgba(10,40,80,${(.9 * k).toFixed(3)})`; c.beginPath(); c.ellipse(SX, hy + 1, HOLE + 2, HOLE * YS + 2, 0, 0, Math.PI); c.lineTo(SX - HOLE - 2, hy + 1); c.fill(); c.restore(); }
 function sipBuoy(st, t) {
   const sc = 1 - st.spin * .35;
   /* sillage d'écume derrière la bouée, le long de la spirale */
   if (st.R > 4 && st.spin === 0) for (let i = 1; i <= 6; i++) { const th = st.th - i * .16, R = Math.min(R0, st.R + i * 4), x = SX + R * Math.cos(th), y = SY + R * Math.sin(th) * YS + funnelD(R);
     c.fillStyle = `rgba(230,250,255,${(.5 * (1 - i / 7)).toFixed(3)})`; c.beginPath(); c.ellipse(x, y, 5 - i * .5, 1.8, 0, 0, TAU); c.fill(); }
   /* la bouée, coupée à SA ligne d'eau */
-  c.save(); c.beginPath(); c.rect(0, 0, W, st.wy + 1); c.clip();
+  c.save(); c.beginPath(); if (st.R < 8 && st.q > .8) { c.rect(0, 0, W, SY + funnelD(0)); } else c.rect(0, 0, W, st.wy + 1); c.clip();
   c.translate(st.x, st.wy - 64 + st.sink); c.rotate(st.lean + st.spin * 2.2); c.scale(sc, sc);
   c.fillStyle = '#0d3550'; c.beginPath(); c.roundRect(-30, -8, 60, 12, 6); c.fill(); c.fillStyle = '#f2b705'; c.fillRect(-10, -6, 20, 4);
   for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#ffffff' : '#e8566a'; c.fillRect(-12, 4 + i * 14, 24, 14); }
@@ -319,10 +325,10 @@ function mech3(t) { /* cycle 440 */
   const T = t % 440, r = 28, k = Math.min(1, T / 30) * (T > 360 ? Math.max(0, 1 - (T - 360) / 60) : 1);
   whirl(t, k);
   const st = sipState(T);
-  if (st) sipBuoy(st, t);
+  if (st) { sipBuoy(st, t); if (st.R < 8) holeLip(k); }
   else if (T > 340) { const q = Math.min(1, (T - 340) / 40), x = 70; sipBuoy({ x, wy: SEA - 4, R: R0, th: 0, lean: Math.sin(t * .1) * (1 - q) * .3, sink: (1 - ease(q)) * 70, spin: 0, q: 0 }, t); splash(x, (T - 340) / 30); }
-  if (T >= SWALLOW + 20 && T < 350) { for (let i = 0; i < 9; i++) { const q = ((T - SWALLOW - 20) / 40 + i / 9) % 1; c.fillStyle = `rgba(200,250,255,${(.9 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(SX + Math.sin(i * 2) * 12, SY + funnelD(0) - q * 70, 2 + q * 3, 0, TAU); c.fill(); } }
-  ftxt('Glouglou !', SX, 700, (T - SWALLOW) / 60, '#a8f0ff', 26); ftxt('Elle ressort…', 90, 690, (T - 345) / 60, '#ffffff', 20);
+  if (T >= SWALLOW + 14 && T < 350) { for (let i = 0; i < 9; i++) { const q = ((T - SWALLOW - 20) / 40 + i / 9) % 1; c.fillStyle = `rgba(200,250,255,${(.9 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(SX + Math.sin(i * 2) * 8, SY + funnelD(0) - q * 60, 2 + q * 3, 0, TAU); c.fill(); } }
+  ftxt('Glouglou !', SX, 600, (T - SWALLOW) / 60, '#a8f0ff', 26); ftxt('Elle ressort…', 90, 690, (T - 345) / 60, '#ffffff', 20);
   /* deux lâchers : tôt (×1) puis dans la spirale (×2) */
   for (const [D, fall, mult, lbl] of [[60, 34, 1, '+2'], [200, 30, 2, '+4']]) {
     const land = sipState(D + fall); if (!land) continue; const topY = land.wy - 64 + land.sink - 8 - r;
