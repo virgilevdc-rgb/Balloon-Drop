@@ -299,8 +299,6 @@ function whirl(t, k) { if (k <= 0) return;
   /* lèvre éclairée de l'entonnoir (côté lune) */
   c.strokeStyle = `rgba(180,230,255,${(.5 * k).toFixed(3)})`; c.lineWidth = 2; c.beginPath(); c.ellipse(SX, SY, RW, RW * YS, 0, Math.PI * .95, Math.PI * 1.6); c.stroke();
   /* le trou au fond */
-  const hy = SY + funnelD(0); const hg = c.createRadialGradient(SX, hy, 2, SX, hy, HOLE); hg.addColorStop(0, `rgba(0,0,8,${k.toFixed(3)})`); hg.addColorStop(1, `rgba(2,8,24,${(.85 * k).toFixed(3)})`);
-  c.fillStyle = hg; c.beginPath(); c.ellipse(SX, hy, HOLE, HOLE * YS, 0, 0, TAU); c.fill();
   c.restore(); }
 function holeLip(k) { /* lèvre avant du trou : passe DEVANT la bouée qui s'enfonce */
   const hy = SY + funnelD(0); c.save(); c.strokeStyle = `rgba(110,240,255,${(.8 * k).toFixed(3)})`; c.lineWidth = 3; c.beginPath(); c.ellipse(SX, hy, HOLE, HOLE * YS, 0, 0, Math.PI); c.stroke();
@@ -311,7 +309,7 @@ function sipBuoy(st, t) {
   if (st.R > 4 && st.spin === 0) for (let i = 1; i <= 6; i++) { const th = st.th - i * .16, R = Math.min(R0, st.R + i * 4), x = SX + R * Math.cos(th), y = SY + R * Math.sin(th) * YS + funnelD(R);
     c.fillStyle = `rgba(230,250,255,${(.5 * (1 - i / 7)).toFixed(3)})`; c.beginPath(); c.ellipse(x, y, 5 - i * .5, 1.8, 0, 0, TAU); c.fill(); }
   /* la bouée, coupée à SA ligne d'eau */
-  c.save(); c.beginPath(); if (st.R < 8 && st.q > .8) { c.rect(0, 0, W, SY + funnelD(0)); } else c.rect(0, 0, W, st.wy + 1); c.clip();
+  c.save(); c.beginPath(); c.rect(0, 0, W, st.wy + 1); c.clip();
   c.translate(st.x, st.wy - 64 + st.sink); c.rotate(st.lean + st.spin * 2.2); c.scale(sc, sc);
   c.fillStyle = '#0d3550'; c.beginPath(); c.roundRect(-30, -8, 60, 12, 6); c.fill(); c.fillStyle = '#f2b705'; c.fillRect(-10, -6, 20, 4);
   for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#ffffff' : '#e8566a'; c.fillRect(-12, 4 + i * 14, 24, 14); }
@@ -319,13 +317,12 @@ function sipBuoy(st, t) {
   { const g = c.createLinearGradient(0, 44, 0, 74); g.addColorStop(0, 'rgba(6,30,70,0)'); g.addColorStop(1, 'rgba(6,30,70,0.55)'); c.fillStyle = g; c.fillRect(-12, 44, 24, 30); } /* partie qui trempe */
   c.restore();
   /* anneau d'écume au contact de l'eau */
-  if (st.spin < .8) { c.strokeStyle = `rgba(235,252,255,${(.85 * (1 - st.spin)).toFixed(3)})`; c.lineWidth = 2.2; c.beginPath(); c.ellipse(st.x, st.wy, 16 + Math.sin(t * .2) * 2, 3.5, 0, 0, TAU); c.stroke(); }
   if (st.R < 80 && st.spin === 0) { const a = Math.min(1, (80 - st.R) / 15); c.save(); c.globalAlpha = a; c.translate(st.x, st.wy - 104 + st.sink); c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(-20, -12, 40, 24, 12); c.fill(); c.font = '16px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#0d3550'; c.fillText('×2', 0, 1); c.restore(); } }
 function mech3(t) { /* cycle 440 */
   const T = t % 440, r = 28, k = Math.min(1, T / 30) * (T > 360 ? Math.max(0, 1 - (T - 360) / 60) : 1);
   whirl(t, k);
   const st = sipState(T);
-  if (st) { sipBuoy(st, t); if (st.R < 8) holeLip(k); }
+  if (st) sipBuoy(st, t);
   else if (T > 340) { const q = Math.min(1, (T - 340) / 40), x = 70; sipBuoy({ x, wy: SEA - 4, R: R0, th: 0, lean: Math.sin(t * .1) * (1 - q) * .3, sink: (1 - ease(q)) * 70, spin: 0, q: 0 }, t); splash(x, (T - 340) / 30); }
   if (T >= SWALLOW + 14 && T < 350) { for (let i = 0; i < 9; i++) { const q = ((T - SWALLOW - 20) / 40 + i / 9) % 1; c.fillStyle = `rgba(200,250,255,${(.9 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(SX + Math.sin(i * 2) * 8, SY + funnelD(0) - q * 60, 2 + q * 3, 0, TAU); c.fill(); } }
   ftxt('Glouglou !', SX, 600, (T - SWALLOW) / 60, '#a8f0ff', 26); ftxt('Elle ressort…', 90, 690, (T - 345) / 60, '#ffffff', 20);
