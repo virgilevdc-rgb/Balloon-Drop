@@ -172,7 +172,7 @@ function zone3(t) {
     // plancton lumineux
     for (let i = 0; i < 50; i++) { const x = h1(i * 3) * W, y = HZ + 10 + h1(i * 7) * (H - HZ - 10); c.fillStyle = `rgba(110,240,255,${(.2 + .6 * Math.abs(Math.sin(t * .04 + i))).toFixed(3)})`; c.beginPath(); c.arc(x, y, 1.2, 0, TAU); c.fill(); }
     // deux grands yeux dans les profondeurs
-    const ea = .6 + .25 * Math.sin(t * .02); for (const dx of [-20, 20]) { const g = c.createRadialGradient(290 + dx, 640, 1, 290 + dx, 640, 18); g.addColorStop(0, `rgba(255,220,120,${ea.toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,100,0)'); c.fillStyle = g; c.beginPath(); c.arc(290 + dx, 640, 18, 0, TAU); c.fill(); c.fillStyle = `rgba(255,236,170,${(ea * .9).toFixed(3)})`; c.beginPath(); c.ellipse(290 + dx, 640, 5, 2.5, dx > 0 ? -.2 : .2, 0, TAU); c.fill(); } });
+    const ea = BS ? 0 : .6 + .25 * Math.sin(t * .02); if (ea) for (const dx of [-20, 20]) { const g = c.createRadialGradient(290 + dx, 640, 1, 290 + dx, 640, 18); g.addColorStop(0, `rgba(255,220,120,${ea.toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,100,0)'); c.fillStyle = g; c.beginPath(); c.arc(290 + dx, 640, 18, 0, TAU); c.fill(); c.fillStyle = `rgba(255,236,170,${(ea * .9).toFixed(3)})`; c.beginPath(); c.ellipse(290 + dx, 640, 5, 2.5, dx > 0 ? -.2 : .2, 0, TAU); c.fill(); } });
 }
 
 /* jouables + HUD */
@@ -202,7 +202,7 @@ function hud() {
 }
 
 /* ===== démos des mécaniques (?m=1 dauphin, ?m=2 méduse) ===== */
-const M = +(Q.get('m') || 0);
+const M = +(Q.get('m') || 0), BS = +(Q.get('b') || 0);
 if (M === 1) { ZN.name = 'Le Dauphin'; ZN.levels = 'Touche son nez : rebond ×2'; }
 if (M === 2) { ZN.name = 'La Méduse électrique'; ZN.levels = 'Chargé ×2… mais ça secoue'; }
 const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
@@ -349,12 +349,81 @@ function mech3(t) { /* cycle 440 */
     ftxt(lbl, x + 40, y - 20, (T - D - fall) / 50, '#ffd23f', 34); if (mult > 1) ftxt('Siphon ×2', x, y - 46, (T - D - fall) / 55, '#a8f0ff', 22);
   }
 }
+
+/* ===== maquette du boss : la Pieuvre géante (?b=1..5) ===== */
+if (BS) { ZN.name = ['', 'Phase 1', 'Phase 2 : les tentacules', 'Phase 3 : la colère', 'Transition : tourbillon + encre', 'Défaite : le petit poulpe'][BS]; ZN.levels = 'La Pieuvre géante'; }
+/* la pieuvre : manteau en cloche, gros yeux expressifs, taches bioluminescentes (signature de la Fosse) */
+function kraken2(x, y, s, t, o = {}) {
+  const rage = o.rage || 0, sad = o.sad || 0, ch = o.charge || 0;
+  c.save(); c.translate(x, y); c.scale(s * (o.flip ? -1 : 1), s);
+  const body = sad ? '#c86aa8' : rage ? '#8a1f4a' : '#7a2a8a', mid = sad ? '#e08ac0' : rage ? '#c8305a' : '#a84ab8', light = sad ? '#ffc0e0' : rage ? '#ff7a8a' : '#d88ae8';
+  /* bras devant (sortent de l'eau) */
+  c.lineCap = 'round';
+  for (let i = 0; i < 4; i++) { const bx = -46 + i * 30, sw = Math.sin(t * .05 + i * 1.4) * (1 + rage * .6);
+    c.strokeStyle = body; c.lineWidth = 18 - i * 2; c.beginPath(); c.moveTo(bx, 40); c.quadraticCurveTo(bx + sw * 22, 78, bx - 10 + sw * 30, 112); c.quadraticCurveTo(bx + 14 + sw * 20, 128, bx + 4 + sw * 8, 118); c.stroke();
+    c.fillStyle = light; for (let k = 0; k < 4; k++) { const u = .25 + k * .2; c.beginPath(); c.arc(bx + (sw * 22) * u * 1.4 - 4, 40 + u * 70, 2.6 - k * .4, 0, TAU); c.fill(); } }
+  /* manteau en cloche */
+  const pulse = 1 + Math.sin(t * .05) * .03 + ch * .08;
+  c.save(); c.scale(pulse, 1 / pulse);
+  const g = c.createRadialGradient(-22, -60, 8, 0, -20, 110); g.addColorStop(0, light); g.addColorStop(.45, mid); g.addColorStop(1, body);
+  c.fillStyle = g; c.beginPath(); c.moveTo(-64, 46); c.bezierCurveTo(-78, -40, -40, -112, 4, -112); c.bezierCurveTo(52, -112, 82, -50, 66, 46); c.quadraticCurveTo(0, 62, -64, 46); c.fill();
+  /* liseré de lune en haut à gauche */
+  c.strokeStyle = 'rgba(200,220,255,0.6)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-62, 0); c.bezierCurveTo(-64, -60, -30, -106, 4, -108); c.stroke();
+  /* taches bioluminescentes (cyan, rouges en colère) */
+  for (const [dx, dy, r] of [[-30, -66, 7], [20, -82, 5.5], [42, -40, 6.5], [-46, -20, 5], [8, -50, 4], [30, -8, 4.5]]) { const a = .55 + .45 * Math.sin(t * .06 + dx);
+    const gg = c.createRadialGradient(dx, dy, 0, dx, dy, r * 2.4); gg.addColorStop(0, rage ? `rgba(255,120,120,${a.toFixed(3)})` : `rgba(120,250,255,${a.toFixed(3)})`); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.beginPath(); c.arc(dx, dy, r * 2.4, 0, TAU); c.fill();
+    c.fillStyle = rage ? '#ffd0d0' : '#dffcff'; c.beginPath(); c.arc(dx, dy, r * .5, 0, TAU); c.fill(); }
+  c.restore();
+  /* yeux */
+  const blink = (t % 210) < 7 ? .12 : 1;
+  for (const sd of [-1, 1]) { const ex = sd * 26, ey = 6;
+    c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(ex, ey, 17, 19 * blink, 0, 0, TAU); c.fill();
+    c.fillStyle = rage ? '#ff2a4a' : sad ? '#3a2a5a' : '#ffcf3a'; c.beginPath(); c.ellipse(ex + sd * -2 + (sad ? 0 : 2), ey + (sad ? 4 : 2), 9, 10 * blink, 0, 0, TAU); c.fill();
+    c.fillStyle = '#120818'; c.beginPath(); c.ellipse(ex + (sad ? 0 : 2), ey + (sad ? 5 : 2), rage ? 2.6 : 4.2, (rage ? 8 : 6) * blink, 0, 0, TAU); c.fill();
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex - 4, ey - 6, 3, 0, TAU); c.fill();
+    /* paupière / sourcil */
+    c.fillStyle = body; c.beginPath(); if (sad) { c.moveTo(ex - 19, ey - 14 - sd * 6); c.lineTo(ex + 19, ey - 14 + sd * 6); c.lineTo(ex + 19, ey - 24); c.lineTo(ex - 19, ey - 24); }
+    else { c.moveTo(ex - 19, ey - 10 + (rage ? sd * 9 : sd * 5)); c.lineTo(ex + 19, ey - 10 - (rage ? sd * 9 : sd * 5)); c.lineTo(ex + 19, ey - 26); c.lineTo(ex - 19, ey - 26); } c.fill(); }
+  /* bouche : siphon qui se gonfle avant de cracher l'encre */
+  c.fillStyle = '#3a0a2a'; c.beginPath(); c.ellipse(0, 34, 8 + ch * 7, 5 + ch * 7, 0, 0, TAU); c.fill();
+  if (sad) { c.fillStyle = 'rgba(150,210,255,0.9)'; c.beginPath(); c.moveTo(48, -40); c.quadraticCurveTo(54, -28, 48, -24); c.quadraticCurveTo(42, -28, 48, -40); c.fill(); }
+  c.restore(); }
+/* la pieuvre sort de la mer : au-dessus de l'eau net, en dessous voilé par l'eau */
+function krakenW(x, y, s, t, o = {}) {
+  c.save(); c.beginPath(); c.rect(0, SEA, W, H - SEA); c.clip(); c.globalAlpha = .38; kraken2(x, y, s, t, o); c.globalAlpha = 1;
+  c.fillStyle = 'rgba(12,36,72,0.35)'; c.fillRect(0, SEA, W, H - SEA); c.restore();
+  c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); kraken2(x, y, s, t, o); c.restore();
+  /* collerette d'écume à la ligne d'eau */
+  c.strokeStyle = 'rgba(160,240,255,0.75)'; c.lineWidth = 2.5; c.beginPath(); c.ellipse(x, SEA, 62 * s, 7 * s, 0, 0, TAU); c.stroke(); }
+function inkCloud(x, y, k, scale = 1) { if (k <= 0 || k >= 1) return; const a = k < .2 ? k / .2 : 1 - (k - .2) / .8;
+  for (let i = 0; i < 9; i++) { const an = i * .7, d = ease(k) * 50 * scale * (.6 + (i % 3) * .25); c.fillStyle = `rgba(30,16,52,${(a * .9).toFixed(3)})`; c.beginPath(); c.arc(x + Math.cos(an) * d, y + Math.sin(an) * d * .7, (14 + (i % 3) * 8) * scale * (.5 + ease(k) * .7), 0, TAU); c.fill(); } }
+function bossScene(t) {
+  const K = { x: 300, y: SEA - 40 };
+  if (BS === 1) { krakenW(K.x, K.y + Math.sin(t * .035) * 5, 1, t, { charge: Math.max(0, Math.sin(t * .03)) }); }
+  if (BS === 2) { const T = t % 200, warn = T < 70, slam = T >= 70 && T < 120;
+    krakenW(K.x, K.y + Math.sin(t * .035) * 5, 1, t);
+    const tx = 140; if (warn) { c.fillStyle = `rgba(255,255,255,${(.3 + .3 * (Math.floor(T / 6) % 2)).toFixed(3)})`; c.beginPath(); c.ellipse(tx, SEA - 2, 30, 7, 0, 0, TAU); c.fill(); for (let i = 0; i < 4; i++) { const q = ((T * .05 + i / 4) % 1); c.fillStyle = 'rgba(200,250,255,0.8)'; c.beginPath(); c.arc(tx + (i - 1.5) * 10, SEA - q * 20, 2 + q * 3, 0, TAU); c.fill(); } }
+    if (slam) { const q = T < 84 ? (T - 70) / 14 : T > 106 ? (120 - T) / 14 : 1; c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); tentacle(tx, SEA + 10, 1.9 * q, t); c.restore(); } }
+  if (BS === 3) { krakenW(K.x, K.y + Math.sin(t * .06) * 7, 1.05, t, { rage: 1, charge: Math.max(0, Math.sin(t * .05)) });
+    c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); tentacle(60, SEA + 10, 1.3, t); tentacle(170, SEA + 10, 1.1, t + 70); c.restore(); }
+  if (BS === 4) { const T = t % 240, q = T / 240;
+    /* plonge dans un tourbillon (à droite), ressort à gauche en crachant de l'encre */
+    if (q < .45) { const d = ease(q / .45); krakenW(K.x, K.y + d * 220, 1, t, { rage: .4 });
+      c.save(); c.translate(K.x, SEA - 2); c.scale(1, .25); for (let i = 0; i < 6; i++) { c.strokeStyle = `rgba(110,240,255,${(.7 - i * .1).toFixed(3)})`; c.lineWidth = 4; const a0 = -t * .12 + i; c.beginPath(); c.arc(0, 0, 20 + i * 16, a0, a0 + 2.2); c.stroke(); } c.restore(); }
+    else { const u = (q - .45) / .55, e = ease(Math.min(1, u * 2.2)); krakenW(90, K.y + (1 - e) * 220, 1, t, { flip: true, charge: u < .5 ? u * 2 : 0 });
+      inkCloud(140, K.y - 40, (u - .45) / .55, 1.6); ftxt('Splotch !', 200, K.y - 120, (u - .5) / .5, '#d8b0ff', 26); } }
+  if (BS === 5) { const T = t % 300, q = T / 300;
+    if (q < .3) { const k = q / .3; krakenW(K.x + Math.sin(T * .9) * 3 * k, K.y + k * 10, 1 - k * .6, t, { sad: k > .5 ? 1 : 0, rage: k < .5 ? 1 - k * 2 : 0 }); }
+    else { const u = (q - .3) / .7, x = K.x - u * 360, y = K.y + 10 + Math.sin(u * 20) * 8; krakenW(x, y, .4, t * 3, { sad: 1, flip: true }); inkCloud(K.x - u * 60 + 30, K.y - 10, Math.min(.99, u * 1.4), .9); ftxt('Pfff…', K.x - 30, K.y - 80, u * 1.5, '#d8b0ff', 26); }
+    ftxt('Boss vaincu !', W / 2, 400, (T - 60) / 160, '#ffd23f', 36); }
+}
 function frame(t) {
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   [zone1, zone2, zone3][Z - 1](t);
   t0 = t;
-  if (M === 1) mech1(t); else if (M === 2) mech2(t); else if (M === 3) mech3(t);
-  else if (!M) { buoy(150 + Math.sin(t * .01) * 40, 720, t); balloon(200, 320, 40, '#e23a6e', t); }
+  if (BS) bossScene(t);
+  else if (M === 1) mech1(t); else if (M === 2) mech2(t); else if (M === 3) mech3(t);
+  else if (!M && !BS) { buoy(150 + Math.sin(t * .01) * 40, 720, t); balloon(200, 320, 40, '#e23a6e', t); }
   hud();
 }
 Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {

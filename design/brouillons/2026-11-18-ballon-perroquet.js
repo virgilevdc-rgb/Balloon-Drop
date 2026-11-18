@@ -37,13 +37,13 @@ const P = { id: 'perroquet', name: 'Perroquet', paint: (c, r, t = 0) => {
   /* bout de mât d'épave (le perchoir) */
   c.fillStyle = '#4a2e1e'; c.fillRect(r * .3, -r * .02, r * .07, r * 1.1); c.save(); c.translate(r * .33, -r * .01); c.rotate(.06); c.fillRect(-r * .28, -r * .025, r * .5, r * .05); c.restore();
   c.restore();
-  /* 2. le perroquet : perché, puis s'envole et fait un tour en criant BOULI */
+  /* 2. le perroquet : perché, puis s'envole et fait un tour du ballon */
   const k = t % 300, blink = (t % 170) < 6 ? .15 : 1;
   if (k < 200) { const bob = Math.sin(t * .08) * r * .015; c.save(); c.translate(r * .2, -r * .3 + bob); ara(c, r, .95, 0, 0, blink, false); c.restore(); }
   else { const q = (k - 200) / 100, a = -Math.PI / 2 + q * TAU, x = Math.cos(a) * r * .38 + r * .05 * Math.sin(q * TAU), y = -r * .1 + Math.sin(a) * r * .3, flap = Math.abs(Math.sin(t * .5));
     const take = Math.min(1, q * 6), land = Math.min(1, (1 - q) * 6), px = r * .2 + (x - r * .2) * Math.min(take, land), py = -r * .3 + (y + r * .3) * Math.min(take, land);
-    c.save(); c.translate(px, py); if (Math.sin(a + Math.PI / 2) < 0) c.scale(-1, 1); ara(c, r, 1, flap, q > .15 && q < .6 ? Math.abs(Math.sin(t * .4)) : 0, 1, true); c.restore();
-    if (q > .12 && q < .7 && r >= 18) bubble(c, r, r * .55, -r * 1.18, (q - .12) / .58); }
+    c.save(); c.translate(px, py); if (Math.sin(a + Math.PI / 2) < 0) c.scale(-1, 1); ara(c, r, 1, flap, 0, 1, true); c.restore();
+  }
 } };
 window.PERROQUET_VARIANTS = [P];
 })();
