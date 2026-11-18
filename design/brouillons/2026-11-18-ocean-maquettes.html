@@ -284,15 +284,26 @@ function sipState(T) { /* position de la bouée sur la paroi de l'entonnoir */
   const wy = SY + R * Math.sin(th) * YS * Math.min(1, R / 40 + .2) + funnelD(R); /* ligne d'eau locale (orbite qui se resserre au centre) */
   const lean = Math.atan2(SX - (SX + R * Math.cos(th)), 120) * (1 - R / R0) * 1.1; /* penche vers le centre */
   return { x: SX + R * Math.cos(th), wy, R, th, lean: R < 6 ? Math.sin(th * 3) * .12 : lean, sink: Math.max(0, q - .86) * 60 + gulp * 90, spin: gulp, q }; }
-function whirl(t, k) { if (k <= 0) return;
+/* ligne de la paroi avant de l'entonnoir devant un point (x) : tout ce qui est plus bas est caché */
+function wallOcc(x, R) { const dx = x - SX; let ymin = Infinity;
+  for (let r = Math.max(Math.abs(dx), R) + 1; r <= RW; r += 2) { const y = SY + funnelD(r) + Math.sqrt(Math.max(0, r * r - dx * dx)) * YS; if (y < ymin) ymin = y; }
+  return ymin; }
+const CREST = 100; /* rayon de la crête de la paroi avant (là où elle commence à cacher le fond) */
+function nearWall(t, k) { /* redessine la paroi avant par-dessus la bouée */
+  if (k <= 0) return; c.save(); c.beginPath();
+  for (let a = 0; a <= Math.PI + .001; a += Math.PI / 40) c.lineTo(SX + (RW + 6) * Math.cos(a), SY + (RW + 6) * Math.sin(a) * YS);
+  for (let a = Math.PI; a >= -.001; a -= Math.PI / 40) { const x = SX + CREST * Math.cos(a); c.lineTo(x, wallOcc(x, 0)); }
+  c.closePath(); c.clip(); c.fillStyle = ZN.sea[1]; c.fillRect(SX - RW - 10, SY - 10, RW * 2 + 20, RW); whirlDraw(t, k, CREST); c.restore(); }
+function whirl(t, k) { if (k <= 0) return; whirlDraw(t, k); }
+function whirlDraw(t, k, minR = 0) {
   c.save();
   /* parois : anneaux qui descendent vers le centre (de l'extérieur vers l'intérieur) */
   for (let i = 0; i <= 16; i++) { const r = RW * (1 - i / 16) + 6, d = funnelD(r), u = i / 16;
     const col = `rgba(${(12 - u * 10) | 0},${(44 - u * 38) | 0},${(86 - u * 70) | 0},${(k * (.35 + u * .6)).toFixed(3)})`;
-    c.fillStyle = col; c.beginPath(); c.ellipse(SX, SY + d, r, r * YS, 0, 0, TAU); c.fill(); }
+    if (r < minR) continue; c.fillStyle = col; c.beginPath(); c.ellipse(SX, SY + d, r, r * YS, 0, 0, TAU); c.fill(); }
   /* stries d'écume qui tournent, plus vite près du centre */
   c.lineCap = 'round';
-  for (let i = 0; i < 9; i++) { const r = 24 + i * 18, d = funnelD(r), sp = .16 - i * .013, a0 = -t * sp + i * 1.7;
+  for (let i = 0; i < 9; i++) { const r = 24 + i * 18, d = funnelD(r), sp = .16 - i * .013, a0 = -t * sp + i * 1.7; if (r < minR) continue;
     for (const [len, off, w, a] of [[1.9, 0, 3 + i * .5, .9 - i * .07], [.8, 2.6, 1.8, .7 - i * .06]]) {
       c.strokeStyle = `rgba(${off ? '235,252,255' : '110,240,255'},${(Math.max(0, a) * k).toFixed(3)})`; c.lineWidth = w;
       c.beginPath(); c.ellipse(SX, SY + d, r, r * YS, 0, a0 + off, a0 + off + len); c.stroke(); } }
@@ -309,7 +320,7 @@ function sipBuoy(st, t) {
   if (st.R > 4 && st.spin === 0) for (let i = 1; i <= 6; i++) { const th = st.th - i * .16, R = Math.min(R0, st.R + i * 4), x = SX + R * Math.cos(th), y = SY + R * Math.sin(th) * YS + funnelD(R);
     c.fillStyle = `rgba(230,250,255,${(.5 * (1 - i / 7)).toFixed(3)})`; c.beginPath(); c.ellipse(x, y, 5 - i * .5, 1.8, 0, 0, TAU); c.fill(); }
   /* la bouée, coupée à SA ligne d'eau */
-  c.save(); c.beginPath(); c.rect(0, 0, W, st.wy + 1); c.clip();
+  c.save(); c.beginPath(); c.rect(0, 0, W, Math.min(st.wy + 1, wallOcc(st.x, st.R))); c.clip();
   c.translate(st.x, st.wy - 64 + st.sink); c.rotate(st.lean + st.spin * 2.2); c.scale(sc, sc);
   c.fillStyle = '#0d3550'; c.beginPath(); c.roundRect(-30, -8, 60, 12, 6); c.fill(); c.fillStyle = '#f2b705'; c.fillRect(-10, -6, 20, 4);
   for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#ffffff' : '#e8566a'; c.fillRect(-12, 4 + i * 14, 24, 14); }
@@ -322,7 +333,7 @@ function mech3(t) { /* cycle 440 */
   const T = t % 440, r = 28, k = Math.min(1, T / 30) * (T > 360 ? Math.max(0, 1 - (T - 360) / 60) : 1);
   whirl(t, k);
   const st = sipState(T);
-  if (st) sipBuoy(st, t);
+  if (st) { sipBuoy(st, t); nearWall(t, k); }
   else if (T > 340) { const q = Math.min(1, (T - 340) / 40), x = 70; sipBuoy({ x, wy: SEA - 4, R: R0, th: 0, lean: Math.sin(t * .1) * (1 - q) * .3, sink: (1 - ease(q)) * 70, spin: 0, q: 0 }, t); splash(x, (T - 340) / 30); }
   if (T >= SWALLOW + 14 && T < 350) { for (let i = 0; i < 9; i++) { const q = ((T - SWALLOW - 20) / 40 + i / 9) % 1; c.fillStyle = `rgba(200,250,255,${(.9 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(SX + Math.sin(i * 2) * 8, SY + funnelD(0) - q * 60, 2 + q * 3, 0, TAU); c.fill(); } }
   ftxt('Glouglou !', SX, 600, (T - SWALLOW) / 60, '#a8f0ff', 26); ftxt('Elle ressort…', 90, 690, (T - 345) / 60, '#ffffff', 20);
