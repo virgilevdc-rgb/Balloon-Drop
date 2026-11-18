@@ -5004,6 +5004,7 @@ for (const sk of SKINS) if (!sk.theme) sk.theme = THEME_OF[sk.id] || 'classiques
 const skinSortKey = sk => sk.price != null ? sk.price : sk.unlock && sk.unlock.type === 'level' ? sk.unlock.n * 60 : 1e5;
 
 const SECRETS = [
+  { id: 'bouteille', name: 'La bouteille à la mer', desc: "Un ballon a repêché la bouteille du Lagon : une île secrète est apparue sur la carte de l'Océan.", hint: 'Dans le Lagon, quelque chose flotte parfois au fil de l’eau.' },
   { id: 'oeuf', name: "L'œuf du Volcan", desc: "Tu as fait éclore l'œuf du nid du dragon. Ballon Œuf de lave débloqué.", hint: 'Au sommet du volcan, un œuf attend qu’on frappe à sa porte.' },
   { id: 'pop', name: 'Le ballon qui éclate', desc: "Tu as fait éclater le ballon de l'accueil.", hint: "Le ballon de l'accueil n'aime pas qu'on l'embête." },
   { id: 'but', name: 'BUT !', desc: 'Un Parfait avec le ballon de foot.', hint: 'Un certain ballon rêve de stade.' },
@@ -5349,9 +5350,9 @@ const UNIQUE_LEVEL = { name: 'Nuage de foudre', unique: true, boss: 'storm', enr
 const HC_LEVEL = { name: 'Hors-Carte', hc: true, goal: 15, shrink: .94, plat: 1.05, coins: 0, bonus: 0, intro: 'Trois épreuves dans un seul niveau : Crayon, Encre, Couleur. Trois vies.', stars: [26, 40] };
 const STAR_SCALE = [1.5, 2];
 for (const lvx of WORLDS.flatMap(w => w.levels).concat([SECRET_LEVEL, UNIQUE_LEVEL, HC_LEVEL])) lvx.stars = lvx.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
-const getLevel = (w, i) => i === 'g' ? GRENIER_LEVEL : i === 's' ? SECRET_LEVEL : i === 'u' ? UNIQUE_LEVEL : i === 'h' ? HC_LEVEL : WORLDS[w - 1].levels[i];
-const levelLabel = (w, i) => i === 'g' ? 'Bouliland, niveau secret' : i === 's' ? 'Niveau secret' : i === 'u' ? 'Scénario unique' : i === 'h' ? 'Hors-Carte' : WORLDS[w - 1].name + ', niveau ' + (i + 1);
-const levelKey = (w, i) => w + '-' + (i === 's' || i === 'u' || i === 'h' || i === 'g' ? i : i + 1);
+const getLevel = (w, i) => i === 't' ? TREASURE_LEVEL : i === 'g' ? GRENIER_LEVEL : i === 's' ? SECRET_LEVEL : i === 'u' ? UNIQUE_LEVEL : i === 'h' ? HC_LEVEL : WORLDS[w - 1].levels[i];
+const levelLabel = (w, i) => i === 't' ? "L'Océan, niveau secret" : i === 'g' ? 'Bouliland, niveau secret' : i === 's' ? 'Niveau secret' : i === 'u' ? 'Scénario unique' : i === 'h' ? 'Hors-Carte' : WORLDS[w - 1].name + ', niveau ' + (i + 1);
+const levelKey = (w, i) => w + '-' + (i === 's' || i === 'u' || i === 'h' || i === 'g' || i === 't' ? i : i + 1);
 const starsOf = (w, i) => S.story[levelKey(w, i)] || 0;
 const worldStars = w => WORLDS[w - 1].levels.reduce((n, _, i) => n + starsOf(w, i), 0);
 const totalStars = () => WORLDS.reduce((n, w) => n + worldStars(w.id), 0);
@@ -5943,6 +5944,7 @@ function land(b, perfect, surfaceY, sf) {
   if (mult > 1) floatText('x' + mult, b.x + b.r * .9, b.y - b.r - 4, 24, 'gold');
   if (b.onGold && b === R.balls[0]) { confetti(b.x, b.y - b.r, 24); sfx.goal(); missionEvent('gold'); }
   if (R.sip && sf && sf.kind === 'plat' && b === R.balls[0]) { if (R.sip.st === 'spin' && R.sip.r < 80) floatText('Siphon ×2 !', b.x, b.y - b.r - (perfect ? 92 : 56), 24, 'gold'); R.sip.st = 'hold'; }
+  if (sf && sf.chest) openChest(sf.chest, b);
   if (b.isled && R.isle) { floatText('Îlot ×2 !', b.x, b.y - b.r - (perfect ? 92 : 56), 24, 'gold'); R.isle.used = 1; R.isle.st = 'hold'; R.isle.t = 34; stat('isleLands'); }
   if (b.tramped) { floatText('Trampoline !', b.x, b.y - b.r - (perfect ? 92 : 56), 24, 'gold'); stat('trampLands'); }
   if (G.boss && !G.boss.dead && G.boss.hp > 0) bossDamage((perfect ? 2 : 1) + (b.mult === 3 ? 1 : 0), b);
@@ -8206,6 +8208,8 @@ function updateGame() {
   if (FX.skite) updateStarKite();
   if (R.th) updateThunderClap();
   if (R.sip) updateSiphon();
+  if (G.tr) updateTreasure();
+  if (R.bottle) updateBottle();
   if (R.isle) updateIsle();
   const falling = R.balls.find(b => b.state === 'fall' || b.state === 'bounce');
   if (R.p.birdEvery && !falling && --R.birdT <= 0) { spawnBird(); R.birdT = Math.round(R.p.birdEvery * (.7 + R.rng() * .6)); }
@@ -9302,7 +9306,7 @@ function showLevelIntro(w, i) {
     <h2>${lv.name}</h2>
     <p class="sub">${lv.intro}</p>
     <div class="targets">
-      <div><span class="st">★</span><b>${lv.boss ? 'Bats le boss, ' + lv.hp + ' PV' : 'Réussis ' + lv.goal + ' manches'}</b></div>
+      <div><span class="st">★</span><b>${lv.boss ? 'Bats le boss, ' + lv.hp + ' PV' : (lv.treasure ? 'Ouvre les coffres avant la marée' : 'Réussis ' + lv.goal + ' manches')}</b></div>
       <div><span class="st">★★</span><b>${lv.stars[0]} points</b></div>
       <div><span class="st">★★★</span><b>${lv.stars[1]} points</b></div>
       <div><span>Ton meilleur</span>${best ? '<b class="st">' + starRow(best) + '</b>' : '<b>pas encore joué</b>'}</div>
@@ -11425,7 +11429,7 @@ function showResults(res) {
     if (res.win && i === 's') setTimeout(() => { if (G.phase === 'over' && !$('modal').hidden) uniqueTrigger(); }, reduceMotion ? 600 : 1900);
     if (res.win) {
       const lastOfWorld = i === world.levels.length - 1;
-      const next = i === 's' ? null : lastOfWorld ? (cfg.world < WORLDS.length ? { w: cfg.world + 1, i: 0 } : null) : { w: cfg.world, i: i + 1 };
+      const next = i === 's' || i === 'g' || i === 't' ? null : lastOfWorld ? (cfg.world < WORLDS.length ? { w: cfg.world + 1, i: 0 } : null) : { w: cfg.world, i: i + 1 };
       let extra = lv.boss ? `<div class="reward">${esc(lv.name)} est vaincu, +${BOSSES[lv.boss].reward} pièces</div>` : '';
       if (lastOfWorld && res.firstClear) extra += cfg.world < WORLDS.length ? `<div class="reward">${WORLDS[cfg.world].name} est débloqué</div>` : `<div class="reward">Tu as terminé l'Aventure</div>`;
       openModal(`
@@ -14719,6 +14723,173 @@ SKINS.push(RAPIECE_SKIN);
 const _endRunG = endRun;
 endRun = function (win) { const r = _endRunG(win); try { if (win && cfg && cfg.world === 14 && G.level === 'g' && unlockSecretSkin('rapiece')) { toast('Ballon secret : le Ballon rapiécé'); } } catch (e) {} return r; };
 { const k = TROPHIES.findIndex(t => t.id === 'baron'); TROPHIES.splice(k + 1, 0, { id: 'grenier', cat: 'Aventure', name: 'Souvenirs de Bouli', desc: 'Termine le Grenier de Bouli', prog: () => [starsOf(14, 'g') > 0 ? 1 : 0, 1], reward: 250 }); }
+
+/* =========================================================
+   Monde 4, secret : la bouteille à la mer (Lagon) et le niveau caché « L'Île au trésor »
+   Bouteille : elle dérive parfois dans le Lagon ; un ballon qui tombe dessus la repêche (il n'est pas perdu)
+   et une île apparaît sur la carte de l'Océan.
+   Île : 4 coffres sur une plage en pente ; la marée monte et noie les coffres du bas vers le haut.
+   Ouvre-les avant qu'ils soient noyés (1 seul coffre perdu autorisé). Récompense : le ballon Perroquet.
+   ========================================================= */
+const TREASURE_LEVEL = { name: "L'Île au trésor", goal: 4, treasure: 1, coins: .9, bonus: 0, intro: "La carte de la bouteille menait ici. La marée monte et noie les coffres un à un, du bas vers le haut : ouvre-les avant qu'elle les emporte. Un seul coffre perdu est permis.", stars: [7, 11] };
+TREASURE_LEVEL.stars = TREASURE_LEVEL.stars.map((v, i) => Math.round(v * STAR_SCALE[i]));
+SKIES.w4t = Object.assign({}, SKIES.w4, { ink: '#fff6e8', soft: 'rgba(255,246,232,0.88)', chip: 'rgba(70,24,50,0.32)', gold: '#ffd166', shadow: 'rgba(40,10,30,0.45)', stroke: 'rgba(40,10,30,0.6)', bird: '#3a1a2a', line: 'rgba(255,255,255,0.5)', ambient: 'treasure', floor: 'water' });
+SONGS.w4t = SONGS.w4; OST_FILES.w4t = OST_FILES.w4;
+const TR_X = [.14, .38, .62, .86], TR_RISE = .1;
+const trSand = x => lavaY() - 18 - Math.max(0, Math.min(1, x / PW)) * 150 - Math.sin(x * .02) * 4;
+function makeTreasure() { return { chests: TR_X.map(f => { const x = PW * f; return { x, base: trSand(x) + 4, w: 44, open: 0, drown: 0 }; }), rise: 0, opened: 0, lost: 0 }; }
+const trOn = () => { try { return cfg && cfg.mode === 'story' && cfg.world === 4 && G.level === 't' && G.tr; } catch (e) { return false; } };
+function updateTreasure() {
+  const T = G.tr; if (G.phase !== 'play' || G.ending) return;
+  T.rise += TR_RISE; const wy = lavaY() - T.rise;
+  for (const ch of T.chests) if (!ch.drown && wy < ch.base - 10) { ch.drown = 1;
+    if (!ch.open) { T.lost++; floatText('Coffre perdu…', ch.x, ch.base - 60, 24, 'ink'); sfx.blub && sfx.blub(); buzz(30);
+      if (T.lost >= 2) { G.ending = true; floatText('La marée a tout emporté', PW / 2, H * .4, 28, 'ink'); schedule(70, () => endRun(false)); }
+      else { cfg.goal = 4 - T.lost; if (G.round >= cfg.goal) { G.ending = true; schedule(44, () => endRun(true)); } } } }
+}
+function drawTreasureChest(ch, t) {
+  const x = ch.x, y = ch.base, s = 1.15;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(80,40,10,0.3)'; ctx.beginPath(); ctx.ellipse(4, 2, 24, 4, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#8a4a1e'; ctx.fillRect(-20, -18, 40, 18); ctx.fillStyle = 'rgba(255,220,160,0.25)'; ctx.fillRect(-20, -18, 12, 18);
+  ctx.fillStyle = '#c8962a'; ctx.fillRect(-20, -18, 40, 3); ctx.fillRect(-20, -3, 40, 3); ctx.fillRect(-14, -18, 4, 18); ctx.fillRect(10, -18, 4, 18);
+  if (ch.open) { ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.ellipse(0, -18, 17, 6, 0, Math.PI, TAU); ctx.fill(); for (let i = 0; i < 4; i++) { ctx.fillStyle = '#fff6b0'; ctx.beginPath(); ctx.arc(-10 + i * 7, -21, 2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#7a3e16'; ctx.save(); ctx.translate(0, -18); ctx.rotate(-.9); ctx.beginPath(); ctx.roundRect(-20, -14, 40, 14, [8, 8, 0, 0]); ctx.fill(); ctx.restore(); }
+  else { ctx.fillStyle = '#7a3e16'; ctx.beginPath(); ctx.roundRect(-21, -32, 42, 15, [10, 10, 0, 0]); ctx.fill(); ctx.fillStyle = 'rgba(255,220,160,0.22)'; ctx.fillRect(-19, -30, 12, 4);
+    ctx.fillStyle = '#c8962a'; ctx.fillRect(-21, -20, 42, 3); ctx.fillRect(-3, -24, 6, 8);
+    if (!ch.drown) { const a = .35 + .3 * Math.sin(t * .08 + x); const g = ctx.createRadialGradient(0, -20, 2, 0, -20, 34); g.addColorStop(0, `rgba(255,214,90,${a.toFixed(3)})`); g.addColorStop(1, 'rgba(255,214,90,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -20, 34, 0, TAU); ctx.fill(); } }
+  ctx.restore(); }
+function drawTreasure() {
+  const T = G.tr, t = G.frame, x0 = -PX, x1 = W - PX, wl = lavaY();
+  /* plage en pente */
+  const g = ctx.createLinearGradient(0, wl - 180, 0, wl); g.addColorStop(0, '#ffe2a8'); g.addColorStop(1, '#e8b870');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0, H); for (let x = x0; x <= x1 + 6; x += 6) ctx.lineTo(x, trSand(x)); ctx.lineTo(x1, H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = x0; x <= x1 + 6; x += 6) { const y = trSand(x) + 2; x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  for (const ch of T.chests) drawTreasureChest(ch, t);
+  /* la marée */
+  const wy = wl - T.rise;
+  ctx.fillStyle = 'rgba(50,140,180,0.84)'; ctx.beginPath(); ctx.moveTo(x0, H); for (let x = x0; x <= x1 + 6; x += 6) ctx.lineTo(x, Math.min(wy + Math.sin(x * .05 + t * .06) * 3, H)); ctx.lineTo(x1, H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2.5; ctx.beginPath(); for (let x = x0; x <= x1 + 6; x += 6) { const y = wy + Math.sin(x * .05 + t * .06) * 3; x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  for (const ch of T.chests) if (ch.drown && !ch.open) for (let i = 0; i < 3; i++) { const q = ((t * .02 + i / 3) % 1); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(ch.x + (i - 1) * 6, wy - q * 16, 2, 0, TAU); ctx.fill(); }
+  /* repère : le prochain coffre que la marée va noyer */
+  const next = T.chests.find(ch => !ch.open && !ch.drown); if (next && !G.ending) { const k = Math.max(0, 1 - (next.base - 10 - wy) / 40); if (k > 0 && G.frame % 20 < 12) { ctx.fillStyle = `rgba(255,90,90,${(.9 * k).toFixed(3)})`; ctx.font = '18px "Lilita One"'; ctx.textAlign = 'center'; ctx.fillText('!', next.x, next.base - 50); } }
+}
+/* ciel, mer, épave et palmiers du coucher de soleil (dessinés dans le repère 390 × 844, comme les autres décors) */
+const TREASURE_SKY = (() => { const W0 = 390, H0 = 844, HZ = 470; let c = null;
+  const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
+  function palm(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = '#6a4a2a'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-14, -60, 6, -120); c.stroke();
+    c.fillStyle = '#2a7a3a'; for (let i = 0; i < 6; i++) { c.save(); c.translate(6, -120); c.rotate(-Math.PI * .1 - i * .6 + Math.sin(t * .03) * .06); c.beginPath(); c.ellipse(26, 0, 28, 6, .25, 0, TAU); c.fill(); c.restore(); } c.restore(); }
+  function wreck(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = '#5a3a2a'; c.beginPath(); c.moveTo(-60, 0); c.lineTo(-50, -30); c.lineTo(40, -40); c.lineTo(60, 0); c.fill();
+    c.fillStyle = '#4a2e1e'; c.fillRect(-6, -140, 6, 110); c.save(); c.translate(-3, -120); c.rotate(.15); c.fillRect(-30, -2, 60, 4); c.restore();
+    c.fillStyle = '#f3ead8'; c.beginPath(); c.moveTo(0, -116); c.lineTo(34, -96); c.lineTo(0, -60); c.fill(); c.fillStyle = '#1a1a2a'; c.beginPath(); c.moveTo(-3, -140); c.lineTo(-30, -132); c.lineTo(-3, -124); c.fill();
+    c.translate(-3, -146); c.fillStyle = '#e0302a'; c.beginPath(); c.ellipse(0, -8, 7, 10, 0, 0, TAU); c.fill(); c.fillStyle = '#2a7aff'; c.beginPath(); c.ellipse(-2, 4, 4, 9, .2, 0, TAU); c.fill();
+    c.fillStyle = '#f3ead8'; c.beginPath(); c.moveTo(5, -12); c.lineTo(11, -8); c.lineTo(5, -6); c.fill(); c.fillStyle = '#1a1a2a'; c.beginPath(); c.moveTo(-8, -18); c.quadraticCurveTo(0, -24, 8, -18); c.lineTo(0, -16); c.fill(); c.restore(); }
+  function draw(t, TS) {
+    c.fillStyle = lg(0, HZ, [[0, '#3a2a6a'], [.4, '#c8506a'], [.75, '#ff9a5a'], [1, '#ffd08a']]); c.fillRect(0, 0, W0, HZ + 2);
+    const sx = 110, sy = HZ - 30; const g = c.createRadialGradient(sx, sy, 10, sx, sy, 220); g.addColorStop(0, 'rgba(255,230,160,0.8)'); g.addColorStop(1, 'rgba(255,160,90,0)'); c.fillStyle = g; c.fillRect(0, 0, W0, HZ);
+    c.fillStyle = '#fff0b8'; c.beginPath(); c.arc(sx, sy, 38, Math.PI, TAU); c.fill();
+    c.fillStyle = 'rgba(120,50,90,0.5)'; for (const [x, y, w] of [[260, 160 + TS, 120], [40, 220 + TS, 90], [300, 300, 70]]) { c.beginPath(); c.roundRect(x - w / 2, y, w, 8, 4); c.fill(); }
+    c.fillStyle = lg(HZ, H0, [[0, '#ff9a6a'], [.15, '#3a8ab0'], [1, '#14466a']]); c.fillRect(0, HZ, W0, H0 - HZ);
+    for (let i = 0; i < 30; i++) { const y = HZ + 4 + i * i * .3; c.fillStyle = `rgba(255,220,160,${(.6 - i * .02).toFixed(3)})`; c.fillRect(110 - 6 - i * 2 + Math.sin(t * .1 + i) * 3, y, 12 + i * 4, 1.5); }
+    c.save(); c.translate(250, HZ + 30); c.scale(.55, .55); wreck(0, 0, 1); c.restore();
+    palm(352, 660, 1, t); palm(318, 676, .7, t + 40);
+    c.strokeStyle = 'rgba(60,20,40,0.6)'; c.lineWidth = 1.6; for (let i = 0; i < 3; i++) { const x = (h1(i) * W0 + t * .3) % (W0 + 40) - 20, y = 200 + TS + i * 30, f = Math.sin(t * .2 + i) * 3; c.beginPath(); c.moveTo(x - 7, y - f); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); c.stroke(); } }
+  return (ctx, w, h, t) => { c = ctx; const k = Math.max(w / W0, h / H0), TS = Math.max(0, (H0 * k - h) / k) * .9; ctx.save(); ctx.translate((w - W0 * k) / 2, h - H0 * k); ctx.scale(k, k); draw(t, TS); ctx.restore(); };
+})();
+const _drawSkyTR = drawSky;
+drawSky = function (th) { if (th.ambient === 'treasure') return TREASURE_SKY(ctx, W, H, reduceMotion ? 0 : G.frame); return _drawSkyTR(th); };
+/* atterrissage sur les coffres (la plateforme habituelle est rangée hors écran) */
+const _surfaceForTR = surfaceFor;
+surfaceFor = function (b) {
+  if (!trOn() || b !== R.balls[0]) return _surfaceForTR(b);
+  const T = G.tr, ch = T.chests.find(c2 => !c2.open && !c2.drown && Math.abs(b.x - c2.x) < c2.w / 2 + b.r * .12);
+  if (ch) return { kind: 'plat', P: R.plat, y: ch.base - 37, cx: ch.x, half: ch.w / 2 + b.r * .12, perf: ch.w * .17, gold: false, chest: ch };
+  return { kind: 'plat', P: R.plat, y: Math.min(trSand(b.x), lavaY() - T.rise) - 4, cx: -9999, half: -1, perf: -1, gold: false };
+};
+function openChest(ch, b) { ch.open = 1; G.tr.opened++; gainCoins(15, ch.x, ch.base - 40); confetti(ch.x, ch.base - 40, 18); burst(ch.x, ch.base - 30, 16, '#ffd23f'); sfx.goal && sfx.goal(); floatText('Coffre !', ch.x, ch.base - 90, 26, 'gold'); }
+/* la bouteille du Lagon */
+function makeBottle() { const dir = Math.random() < .5 ? 1 : -1; return { x: dir > 0 ? -30 : PW + 30, dir, ph: Math.random() * TAU }; }
+function updateBottle() {
+  const Bt = R.bottle; Bt.x += Bt.dir * .45; if (Bt.x < -60 || Bt.x > PW + 60) { R.bottle = null; return; }
+  const y = lavaY() - 4;
+  for (const b of R.balls) if ((b.state === 'fall' || b.state === 'lost') && b.y + b.r >= y - 8 && Math.abs(b.x - Bt.x) < b.r * .8 + 16) {
+    R.bottle = null; splash(Bt.x, lavaY(), 1); sfx.secret && sfx.secret(); buzz([20, 40, 20]);
+    floatText('Une bouteille !', Bt.x, y - 90, 28, 'gold');
+    Object.assign(b, { x: PW / 2, y: b.top, vy: 0, vx: 0, state: 'aim', r: b.base, inf: 0, mult: 1, enter: 0, rot: 0 });
+    if (findSecret('bouteille')) setTimeout(() => toast("Un message dans la bouteille : une île secrète est apparue sur la carte de l'Océan"), 2600);
+    save(); updateHud(); return; }
+}
+function drawBottle() { const Bt = R.bottle, t = G.frame, x = Bt.x, y = lavaY() - 2 + Math.sin(t * .06 + Bt.ph) * 2.5;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-.5 + Math.sin(t * .05 + Bt.ph) * .15);
+  const g = ctx.createLinearGradient(0, -8, 0, 8); g.addColorStop(0, 'rgba(160,230,200,0.95)'); g.addColorStop(1, 'rgba(40,140,110,0.95)'); ctx.fillStyle = g;
+  ctx.beginPath(); ctx.roundRect(-16, -8, 26, 16, 7); ctx.fill(); ctx.beginPath(); ctx.roundRect(8, -4, 12, 8, 3); ctx.fill();
+  ctx.fillStyle = '#8a5a2a'; ctx.fillRect(19, -3.5, 5, 7);
+  ctx.fillStyle = '#f3ead8'; ctx.beginPath(); ctx.roundRect(-11, -4, 16, 8, 2); ctx.fill(); ctx.strokeStyle = '#c84a3a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-3, -4); ctx.lineTo(-3, 4); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(-13, -6, 14, 2.5);
+  ctx.restore();
+  const k = (t % 90) / 90; ctx.strokeStyle = `rgba(255,255,255,${(.7 * (1 - k)).toFixed(3)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, lavaY() + 2, 12 + k * 22, (12 + k * 22) * .25, 0, 0, TAU); ctx.stroke();
+}
+const _newRoundTR = newRound;
+newRound = function () { _newRoundTR.apply(this, arguments); try {
+  if (trOn()) { if (view !== 'w4t') setView('w4t'); const P = R.plat; P.x = -9999; P.speed = 0; P.drift = null; R.waves = 0; R.goldRound = false; R.plat2 = null; R.bonus = null; R.coins = []; }
+  R.bottle = cfg.mode === 'story' && cfg.world === 4 && typeof G.level === 'number' && G.level < 3 && !S.secrets.bouteille && !G.boss && Math.random() < .22 ? makeBottle() : null;
+} catch (e) {} };
+const _startGameTR = startGame;
+startGame = function (mode, o = {}) { const r = _startGameTR(mode, o); try { G.tr = mode === 'story' && o.world === 4 && o.level === 't' ? makeTreasure() : null;
+  if (G.tr) { cfg.label = () => 'Coffres ' + G.tr.opened + '/4'; if (R) { R.plat.x = -9999; } setView('w4t'); updateHud(); } } catch (e) {} return r; };
+const _drawHazardsTR = drawHazards;
+drawHazards = function (th) { _drawHazardsTR(th); try { if (trOn()) drawTreasure(); if (R && R.bottle) drawBottle(); } catch (e) {} };
+/* sur la carte de l'Océan : l'île secrète apparaît quand la bouteille a été repêchée */
+const _renderStoryTR = renderStory;
+renderStory = function (focus, reveal) {
+  _renderStoryTR(focus, reveal);
+  try { if (storyWorld !== 4 || !S.secrets.bouteille) return; const path = $('path'); if (!path) return;
+    const old = path.querySelector('.ile-tresor'); if (old) old.remove();
+    const b = document.createElement('button'); b.className = 'node secret ile-tresor'; b.setAttribute('aria-label', "Niveau secret, L'Île au trésor");
+    b.style.cssText = 'position:absolute;right:14px;top:18px;width:64px;height:64px;border-radius:50%;border:4px solid #c8962a;background:linear-gradient(#ff9a5a,#3a8ab0);overflow:hidden;padding:0;cursor:pointer;z-index:3';
+    b.innerHTML = '<canvas width="128" height="128" style="width:56px;height:56px"></canvas>'; path.appendChild(b);
+    const cx = b.querySelector('canvas').getContext('2d'); cx.scale(2, 2);
+    cx.fillStyle = '#ffe2a8'; cx.beginPath(); cx.ellipse(28, 40, 20, 6, 0, Math.PI, TAU); cx.fill(); cx.strokeStyle = '#6a4a2a'; cx.lineWidth = 2.5; cx.beginPath(); cx.moveTo(30, 38); cx.quadraticCurveTo(26, 26, 32, 16); cx.stroke();
+    cx.fillStyle = '#2a7a3a'; for (let i = 0; i < 5; i++) { cx.save(); cx.translate(32, 16); cx.rotate(-.3 - i * .7); cx.beginPath(); cx.ellipse(8, 0, 9, 2.5, .2, 0, TAU); cx.fill(); cx.restore(); }
+    cx.strokeStyle = '#d02a2a'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(16, 30); cx.lineTo(24, 38); cx.moveTo(24, 30); cx.lineTo(16, 38); cx.stroke();
+    b.addEventListener('click', () => { sfx.tap && sfx.tap(1); showLevelIntro(4, 't'); }); } catch (e) {}
+};
+/* ballon secret : le Perroquet (coucher de soleil de l'Île au trésor, ara au tricorne perché puis en vol) */
+const PERROQUET_SKIN = { id: 'perroquet', name: 'Le Perroquet', secret: true, dust: '#ff7a5a', paint: (c, r, t = 0) => {
+  function ara(s, flap, blink, fly) { c.save(); c.scale(s, s);
+    c.fillStyle = '#2a7aff'; c.beginPath(); c.moveTo(-r * .1, r * .08); c.lineTo(-r * .5, r * (fly ? .2 : .55)); c.lineTo(-r * .38, r * (fly ? .26 : .58)); c.lineTo(-r * .02, r * .16); c.fill();
+    c.fillStyle = '#e0302a'; c.beginPath(); c.moveTo(-r * .08, r * .06); c.lineTo(-r * .44, r * (fly ? .12 : .5)); c.lineTo(-r * .32, r * (fly ? .18 : .52)); c.lineTo(0, r * .14); c.fill();
+    c.fillStyle = '#e0302a'; c.beginPath(); c.ellipse(0, 0, r * .2, r * .25, fly ? -1.1 : -.25, 0, TAU); c.fill();
+    c.save(); c.translate(-r * .02, -r * .02); c.rotate(fly ? -.6 - flap * 1.1 : .5); c.fillStyle = '#ffd23a'; c.beginPath(); c.ellipse(-r * .1, 0, r * .2, r * .09, 0, 0, TAU); c.fill(); c.fillStyle = '#2a7aff'; c.beginPath(); c.ellipse(-r * .2, r * .02, r * .14, r * .06, 0, 0, TAU); c.fill(); c.restore();
+    const hx = fly ? r * .16 : r * .06, hy = fly ? -r * .08 : -r * .24;
+    c.fillStyle = '#e0302a'; c.beginPath(); c.arc(hx, hy, r * .14, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(hx + r * .05, hy, r * .07, r * .08, 0, 0, TAU); c.fill();
+    c.fillStyle = '#1a1a2a'; c.beginPath(); c.ellipse(hx + r * .065, hy - r * .005, r * .03, r * .035 * blink, 0, 0, TAU); c.fill();
+    c.fillStyle = '#2a2a3a'; c.beginPath(); c.moveTo(hx + r * .1, hy + r * .04); c.quadraticCurveTo(hx + r * .2, hy + r * .06, hx + r * .15, hy + r * .12); c.lineTo(hx + r * .1, hy + r * .07); c.fill();
+    c.fillStyle = '#f3ead8'; c.beginPath(); c.moveTo(hx + r * .08, hy - r * .02); c.quadraticCurveTo(hx + r * .24, hy - r * .02, hx + r * .23, hy + r * .1); c.quadraticCurveTo(hx + r * .2, hy + r * .06, hx + r * .1, hy + r * .05); c.fill();
+    c.save(); c.translate(hx - r * .01, hy - r * .1); c.rotate(-.15); c.fillStyle = '#1a1a2a'; c.beginPath(); c.moveTo(-r * .2, r * .02); c.quadraticCurveTo(0, -r * .06, r * .2, r * .02); c.quadraticCurveTo(r * .1, -r * .16, 0, -r * .13); c.quadraticCurveTo(-r * .1, -r * .16, -r * .2, r * .02); c.fill();
+    c.strokeStyle = '#f2b705'; c.lineWidth = Math.max(.6, r * .015); c.beginPath(); c.moveTo(-r * .18, r * .01); c.quadraticCurveTo(0, -r * .06, r * .18, r * .01); c.stroke(); c.restore();
+    if (!fly) { c.strokeStyle = '#3a3a4a'; c.lineWidth = Math.max(.8, r * .025); c.beginPath(); c.moveTo(-r * .03, r * .22); c.lineTo(-r * .04, r * .3); c.moveTo(r * .05, r * .22); c.lineTo(r * .05, r * .3); c.stroke(); }
+    c.restore(); }
+  c.save(); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.clip();
+  const sky = c.createLinearGradient(0, -r, 0, r * .25); sky.addColorStop(0, '#3a2a6a'); sky.addColorStop(.45, '#c8506a'); sky.addColorStop(.8, '#ff9a5a'); sky.addColorStop(1, '#ffd08a'); c.fillStyle = sky; c.fillRect(-r, -r, r * 2, r * 1.25);
+  const sx = -r * .3, hz = r * .25, g = c.createRadialGradient(sx, hz, 2, sx, hz, r * .9); g.addColorStop(0, 'rgba(255,230,160,0.8)'); g.addColorStop(1, 'rgba(255,160,90,0)'); c.fillStyle = g; c.fillRect(-r, -r, r * 2, r * 2);
+  c.fillStyle = '#fff0b8'; c.beginPath(); c.arc(sx, hz, r * .26, Math.PI, TAU); c.fill();
+  c.fillStyle = 'rgba(120,50,90,0.45)'; c.beginPath(); c.roundRect(r * .05, -r * .5, r * .55, r * .05, r * .03); c.fill(); c.beginPath(); c.roundRect(-r * .7, -r * .3, r * .4, r * .04, r * .02); c.fill();
+  const sea = c.createLinearGradient(0, hz, 0, r); sea.addColorStop(0, '#ff9a6a'); sea.addColorStop(.2, '#3a8ab0'); sea.addColorStop(1, '#14466a'); c.fillStyle = sea; c.fillRect(-r, hz, r * 2, r);
+  for (let i = 0; i < 8; i++) { const y = hz + r * .04 + i * r * .08, w = r * (.08 + i * .05); c.fillStyle = `rgba(255,220,160,${(.75 - i * .08).toFixed(3)})`; c.fillRect(sx - w / 2 + Math.sin(t * .1 + i) * r * .02, y, w, Math.max(.8, r * .025)); }
+  c.fillStyle = '#4a2e1e'; c.fillRect(r * .3, -r * .02, r * .07, r * 1.1); c.save(); c.translate(r * .33, -r * .01); c.rotate(.06); c.fillRect(-r * .28, -r * .025, r * .5, r * .05); c.restore();
+  c.restore();
+  const k = t % 300, blink = (t % 170) < 6 ? .15 : 1;
+  if (k < 200) { c.save(); c.translate(r * .2, -r * .3 + Math.sin(t * .08) * r * .015); ara(.95, 0, blink, false); c.restore(); }
+  else { const q = (k - 200) / 100, a = -Math.PI / 2 + q * TAU, x = Math.cos(a) * r * .38 + r * .05 * Math.sin(q * TAU), y = -r * .1 + Math.sin(a) * r * .3, flap = Math.abs(Math.sin(t * .5));
+    const m = Math.min(Math.min(1, q * 6), Math.min(1, (1 - q) * 6)), px = r * .2 + (x - r * .2) * m, py = -r * .3 + (y + r * .3) * m;
+    c.save(); c.translate(px, py); if (Math.sin(a + Math.PI / 2) < 0) c.scale(-1, 1); ara(1, flap, 1, true); c.restore(); }
+} };
+SKINS.push(PERROQUET_SKIN);
+if (window.__BOT) window.__NAV = { story: w => { showScreen('story'); storyWorld = w; renderStory(null, false); }, intro: (w, i) => showLevelIntro(w, i) };
+const _endRunTR = endRun;
+endRun = function (win) { const r = _endRunTR(win); try { if (win && cfg && cfg.world === 4 && G.level === 't' && unlockSecretSkin('perroquet')) toast('Ballon secret : le Perroquet'); } catch (e) {} return r; };
 /* typographie française : espace insécable avant « : ! ? ; » et après « (évite « : » ou « ? » seul en début de ligne) */
 (() => {
   const fix = n => { if (n.nodeType === 3) { const t = n.nodeValue, u = t.replace(/ ([:!?;»])/g, '\u00a0$1').replace(/« /g, '«\u00a0'); if (u !== t) n.nodeValue = u; }
