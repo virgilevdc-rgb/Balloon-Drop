@@ -167,7 +167,7 @@ function zone2(t) {
 function zone3(t) {
   sky(t); cumulus(300, 260, 1.1, 21, { a: .9 }); cumulus(80, 330, .8, 27, { a: .8 });
   sea(t);
-  wreck(90, HZ + 6, .8); tentacle(330, HZ + 4, .7, t); tentacle(272, HZ + 3, .4, t + 90);
+  wreck(90, HZ + 6, .8); c.save(); c.beginPath(); c.rect(0, 0, W, HZ + 2); c.clip(); kTent(330, HZ + 6, .75, t, { far: .55 }); kTent(272, HZ + 4, .45, t + 90, { far: .65, curl: -1 }); c.restore();
   under(() => { for (const [x, y, s, col] of [[70, 650, 1, '#6af0ff'], [200, 720, 1.3, '#c08aff'], [330, 680, .9, '#6af0ff'], [150, 610, .6, '#ff8ad8']]) jelly(x, y, s, t, col);
     // plancton lumineux
     for (let i = 0; i < 50; i++) { const x = h1(i * 3) * W, y = HZ + 10 + h1(i * 7) * (H - HZ - 10); c.fillStyle = `rgba(110,240,255,${(.2 + .6 * Math.abs(Math.sin(t * .04 + i))).toFixed(3)})`; c.beginPath(); c.arc(x, y, 1.2, 0, TAU); c.fill(); }
@@ -506,6 +506,12 @@ function kraken3(x, y, s, t, o = {}) {
   c.save(); c.translate(70, -28); c.rotate(.5); const sp = 1 + ch * .7; c.fillStyle = kmix(P.body, P.dark, .3); c.beginPath(); c.roundRect(-6 * sp, -5 * sp, 18 * sp, 10 * sp, 5 * sp); c.fill(); c.fillStyle = '#1a0818'; c.beginPath(); c.ellipse(12 * sp, 0, 2.5 * sp, 4 * sp, 0, 0, TAU); c.fill(); c.restore();
   c.restore(); }
 
+/* tentacule qui sort de l'eau, aux couleurs du boss (o.far = au loin, voilé par la nuit) */
+function kTent(x, y, s, t, o = {}) { const P = kPal(Object.assign({ v: KV || 'B' }, o));
+  if (o.far) for (const k2 of ['body', 'dark', 'light', 'under', 'suck', 'spot']) P[k2] = mix(P[k2], '#141c44', o.far);
+  const sw = Math.sin(t * .03 + x);
+  c.save(); c.translate(x, y); c.scale(s, s); kArm(kArmPts([[0, 10], [-12 + sw * 8, -50], [20 + sw * 10, -100], [-2 + sw * 6, -140]], o.curl || 1), 26, P, 1, false, t); c.restore(); }
+
 function bossScene(t) {
   if (BS === 9) { const T = t; krakenW(215, SEA - 40, .95, T, { charge: Math.max(0, Math.sin(T * .03)) * .5 }); return; }
   if (BS === 8) { krakenW(215, SEA - 40, .95, t, { rage: 1, charge: .3 }); return; }
@@ -514,9 +520,9 @@ function bossScene(t) {
   if (BS === 2) { const T = t % 200, warn = T < 70, slam = T >= 70 && T < 120;
     krakenW(K.x, K.y + Math.sin(t * .035) * 5, 1, t);
     const tx = 140; if (warn) { c.fillStyle = `rgba(255,255,255,${(.3 + .3 * (Math.floor(T / 6) % 2)).toFixed(3)})`; c.beginPath(); c.ellipse(tx, SEA - 2, 30, 7, 0, 0, TAU); c.fill(); for (let i = 0; i < 4; i++) { const q = ((T * .05 + i / 4) % 1); c.fillStyle = 'rgba(200,250,255,0.8)'; c.beginPath(); c.arc(tx + (i - 1.5) * 10, SEA - q * 20, 2 + q * 3, 0, TAU); c.fill(); } }
-    if (slam) { const q = T < 84 ? (T - 70) / 14 : T > 106 ? (120 - T) / 14 : 1; c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); tentacle(tx, SEA + 10, 1.9 * q, t); c.restore(); } }
+    if (slam) { const q = T < 84 ? (T - 70) / 14 : T > 106 ? (120 - T) / 14 : 1; c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); kTent(tx, SEA + 10, 1.9 * q, t); c.restore(); } }
   if (BS === 3) { krakenW(K.x, K.y + Math.sin(t * .06) * 7, 1.05, t, { rage: 1, charge: Math.max(0, Math.sin(t * .05)) });
-    c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); tentacle(60, SEA + 10, 1.3, t); tentacle(170, SEA + 10, 1.1, t + 70); c.restore(); }
+    c.save(); c.beginPath(); c.rect(0, 0, W, SEA); c.clip(); kTent(60, SEA + 10, 1.3, t, { rage: 1 }); kTent(170, SEA + 10, 1.1, t + 70, { rage: 1, curl: -1 }); c.restore(); }
   if (BS === 4) { const T = t % 240, q = T / 240;
     /* plonge dans un tourbillon (à droite), ressort à gauche en crachant de l'encre */
     if (q < .45) { const d = ease(q / .45); krakenW(K.x, K.y + d * 220, 1, t, { rage: .4 });
@@ -534,7 +540,7 @@ function bossScene(t) {
     } else { /* il s'enfuit à petits bonds en lâchant de l'encre */
       const u = (T - 120) / 200, x = K.x - u * 430, hop = Math.abs(Math.sin(u * 22)), y = K.y + 12 - hop * 26;
       for (let i = 1; i <= 4; i++) { const back = u - i * .07; if (back <= 0) continue; inkCloud(K.x - back * 430 + 30, K.y + 4, Math.min(.99, .15 + i * .2), .55); }
-      krakenW(x, y, .42, t * 2, { sad: 1, flip: true });
+      krakenW(x, y, .42, t * 2, { sad: 1 });
       ftxt('Pfff…', K.x - 40, K.y - 80, u * 1.6, '#d8f0e8', 28); }
     ftxt('Boss vaincu !', W / 2, 400, (T - 120) / 190, '#ffd23f', 36); }
 }
