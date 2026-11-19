@@ -15711,7 +15711,7 @@ SKINS.push(PECHEUR);
    - La plante carnivore : éveillée (tête levée, gueule ouverte), elle se jette sur un ballon qui passe près d'elle ;
      fatiguée, elle bâille, se referme et s'endort tête basse. Pas de bonus : un danger de plus.
    ========================================================= */
-const MK_HOLD = 30;
+const MK_HOLD = 40;
 function monkeyHand(c) { const d = Math.sign(c.vx) || 1; return { x: c.x + d * 20, y: c.y + 8 }; }
 /* le ballon tenu par un singe suit sa main ; renvoie true tant qu'il est tenu */
 function heldBall(b) { const m = b.held; if (!m) return false; const h = monkeyHand(m); b.x = h.x + (Math.sign(m.vx) || 1) * b.r * .55; b.y = h.y + b.r * .15; b.vx = 0; b.vy = 0; return true; }
@@ -15723,9 +15723,10 @@ function updateMonkey2(c) {
   const nx = c.ax + Math.sin(th) * Lr, ny = top + Math.cos(th) * Lr; c.dx = nx - c.x; c.dy = ny - c.y; c.x = nx; c.y = ny; c.th = th; c.top = top;
   if (c.thrown) c.thrown--; if (c.laugh) c.laugh--;
   if (c.held) { c.hold--; const dth = Math.cos(c.t * c.w + c.ph); /* lâche en haut de l'arc, ou avant de sortir de l'écran */
-    if (c.hold <= 0 || (c.hold < MK_HOLD - 14 && Math.abs(dth) < .2) || c.x < 24 || c.x > PW - 24) releaseMonkeyBall(c); }
+    if (c.hold <= 0 || (c.hold < MK_HOLD - 26 && Math.abs(dth) < .2) || c.x < 24 || c.x > PW - 24) releaseMonkeyBall(c); }
 }
 function spawnMonkey() {
+  if (FX.critters.some(c => c.kind === 'monkey' && !c.dead)) return; /* un seul singe à l'écran à la fois */
   const dir = R.rng() < .5 ? 1 : -1, minY = hudBottom() + 120, maxY = groundY() - 170, ax = dir > 0 ? -70 : PW + 70;
   FX.critters.push({ kind: 'monkey', ax, x: ax, y0: minY + R.rng() * Math.max(10, maxY - minY), y: minY, vx: dir * (1.5 + R.rng() * .6), t: 0, ph: R.rng() * TAU, A: .45 + R.rng() * .2, w: .055 + R.rng() * .01, hit: false, dx: 0, dy: 0, th: 0 });
 }
@@ -15735,16 +15736,16 @@ function drawMonkey(c, th) {
   if (off) { const left = c.vx > 0, ex = left ? 10 : PW - 10, k = 1 - Math.min(1, Math.abs(left ? c.x : c.x - PW) / 90);
     ctx.globalAlpha = .35 + .55 * k; ctx.fillStyle = '#7a4a26'; ctx.beginPath(); if (left) { ctx.moveTo(ex + 12, c.y); ctx.lineTo(ex, c.y - 8); ctx.lineTo(ex, c.y + 8); } else { ctx.moveTo(ex - 12, c.y); ctx.lineTo(ex, c.y - 8); ctx.lineTo(ex, c.y + 8); } ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; return; }
   const d = Math.sign(c.vx) || 1, top = c.top || hudBottom() - 24, brown = '#7a4a26', dark = '#5a3418', tan = '#ecc28e', t = c.t;
-  /* liane : de l'ancrage en haut jusqu'à la main */ const hx = c.x - Math.sin(c.th) * 26, hy = c.y - Math.cos(c.th) * 26;
+  /* liane : de l'ancrage en haut jusqu'à la main levée (point (-3, -40) du singe, mis à l'échelle et tourné comme lui) */
+  const MS = 1.6, ra = -c.th * .9, lx = -3 * d * MS, ly = -40 * MS, hx = c.x + lx * Math.cos(ra) - ly * Math.sin(ra), hy = c.y + lx * Math.sin(ra) + ly * Math.cos(ra);
   ctx.strokeStyle = '#3f7a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(c.ax, top); ctx.quadraticCurveTo((c.ax + hx) / 2 + d * 6, (top + hy) / 2, hx, hy); ctx.stroke();
   ctx.fillStyle = '#5fae3c'; for (let k = .25; k < .9; k += .22) { const x = c.ax + (hx - c.ax) * k, y = top + (hy - top) * k; ctx.beginPath(); ctx.ellipse(x + 5, y, 7, 3.4, .6, 0, TAU); ctx.fill(); }
   const near = !c.hit && R && R.balls.some(b => b.state === 'fall' && Math.hypot(b.x - c.x, b.y - c.y) < 120);
   const pose = c.held ? 'carry' : c.laugh ? 'laugh' : near ? 'reach' : 'swing';
-  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(-c.th * .9); ctx.scale(d * 1.6, 1.6);
+  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(ra); ctx.scale(d * MS, MS);
   ctx.lineCap = 'round';
   /* queue en spirale */ ctx.strokeStyle = dark; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-8, 10); ctx.bezierCurveTo(-26, 14, -30, -6, -20, -9); ctx.quadraticCurveTo(-13, -10, -15, -3); ctx.stroke();
   /* jambes qui pendent et suivent le balancement */ ctx.strokeStyle = brown; ctx.lineWidth = 5.5; for (const [dx, ph] of [[-5, 0], [5, 1.4]]) { const sw = Math.sin(t * .1 + ph) * 3 + c.dx * 1.2; ctx.beginPath(); ctx.moveTo(dx, 10); ctx.quadraticCurveTo(dx - sw * .5, 17, dx - sw, 23); ctx.stroke(); ctx.fillStyle = tan; ctx.beginPath(); ctx.ellipse(dx - sw + 1, 24, 4, 2.8, 0, 0, TAU); ctx.fill(); }
-  /* bras qui tient la liane */ ctx.strokeStyle = brown; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(-3, -9); ctx.lineTo(0, -21); ctx.stroke(); ctx.fillStyle = tan; ctx.beginPath(); ctx.arc(0, -22, 3.6, 0, TAU); ctx.fill();
   /* corps */ ctx.fillStyle = brown; ctx.beginPath(); ctx.ellipse(0, 2, 11.5, 13, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = tan; ctx.beginPath(); ctx.ellipse(2, 5, 6.5, 8, 0, 0, TAU); ctx.fill();
   /* bras libre : il tend la main vers le ballon, le serre, ou fait coucou en riant */
@@ -15762,7 +15763,12 @@ function drawMonkey(c, th) {
   else { const blink = (t % 150) < 5; for (const dx of [-4, 4]) { if (blink) { ctx.beginPath(); ctx.moveTo(dx - 2, -2); ctx.lineTo(dx + 2, -2); ctx.stroke(); continue; }
       ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(dx, -2, 2.8, 3.2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1208'; ctx.beginPath(); ctx.arc(dx + .6 + (pose === 'reach' ? 1 : 0), -1.6, 1.9, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(dx, -2.6, .7, 0, TAU); ctx.fill(); }
     ctx.strokeStyle = '#1a1208'; ctx.lineWidth = 1.3; ctx.beginPath(); if (pose === 'reach') { ctx.ellipse(1, 4, 2, 2.4, 0, 0, TAU); } else ctx.arc(0, 2.5, 3, .25, Math.PI - .25); ctx.stroke(); }
-  ctx.restore(); ctx.restore();
+  ctx.restore();
+  /* bras levé qui tient la liane, bien visible à côté de la tête ; la main serre la liane */
+  ctx.strokeStyle = brown; ctx.lineWidth = 5.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-8, -6); ctx.quadraticCurveTo(-17, -22, -5, -38); ctx.stroke();
+  ctx.fillStyle = tan; ctx.beginPath(); ctx.ellipse(-3, -40, 4.2, 3.6, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,52,24,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-5.5, -41.5); ctx.lineTo(-1, -41.5); ctx.moveTo(-5.5, -39); ctx.lineTo(-1, -39); ctx.stroke();
+  ctx.restore();
 }
 
 /* ---------- la plante carnivore ---------- */
