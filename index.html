@@ -15926,7 +15926,7 @@ updateSnake = function (B) {
   const busy = R.balls.some(b => b.state === 'fall' || b.state === 'bounce'), base = snBase(B), s = B.side, P = R.plat;
   let tx = 0, ty = 0, mouth = 0, straight = 0, puff = 0;
   if (!B.att) {
-    if (B.phase >= 2 && !busy && --B.strikeT <= 0) snStart(B, B.phase >= 3 && (B.strikeN = (B.strikeN || 0) + 1) % 2 === 1 ? 'strike' : 'tug');
+    if (B.phase >= 2 && !busy && --B.strikeT <= 0) { const n = (B.strikeN = (B.strikeN || 0) + 1); snStart(B, B.phase >= 3 && n % 2 === 1 ? 'strike' : (B.p2n = (B.p2n || 0) + 1) % 2 ? 'hypno' : 'rain'); }
     else if ((!busy || B.fireT > SN_SPIT_W) && --B.fireT <= SN_SPIT_W) snStart(B, 'spit');
   }
   const a = B.att, T = ++B.at;
@@ -15937,6 +15937,19 @@ updateSnake = function (B) {
       sfx.spit(); buzz(15); for (let i = 0; i < 8; i++) FX.particles.push({ x: m.x, y: m.y, vx: -s * (1 + Math.random() * 2), vy: (Math.random() - .7) * 2, g: .1, drag: .95, life: 18, size: 3, color: '#9be36a', rot: 0, vr: 0, shape: 'dot' }); }
     else if (T < SN_SPIT_W + 20) { const k = 1 - (T - SN_SPIT_W) / 20; tx = -s * 16 * k; mouth = k; }
     else { B.att = null; B.fireT = [0, 230, 200, 175][B.phase]; } }
+  else if (a === 'hypno') { /* l'hypnose : il fixe le ballon, ses yeux tournent en spirale, le ballon est attiré vers lui */
+    const H1 = 34, H2 = 130, H3 = 22; ty = -6; mouth = 0;
+    if (T === 1) { sfx.hiss && sfx.hiss(); floatText('Regarde-moi…', base.x, base.y - 64, 22, 'ink'); }
+    B.hypno = T < H1 ? T / H1 * .4 : T < H1 + H2 ? 1 : Math.max(0, 1 - (T - H1 - H2) / H3);
+    B.pull = T >= H1 && T < H1 + H2 ? 1 : 0;
+    if (T >= H1 + H2 + H3) { B.att = null; B.hypno = 0; B.pull = 0; B.strikeT = B.phase === 2 ? 240 : 200; } }
+  else if (a === 'rain') { /* la pluie de venin : il lève la tête, crache vers le ciel, des ombres montrent où ça va retomber */
+    const R1 = 30, R2 = 56; if (T === 1) { const c0 = clamp(P.x, 50, PW - 50), off = 58 + Math.random() * 18; B.rainX = [c0 - off, c0, c0 + off].map(x => clamp(x + (Math.random() - .5) * 20, 26, PW - 26)); }
+    if (T < R1) { const k = T / R1; tx = -s * 14 * k; ty = -16 * k; puff = k; }
+    else if (T === R1) { const m = snMouth(B); for (let i = 0; i < 3; i++) FX.particles.push({ x: m.x, y: m.y - 6, vx: (i - 1) * 1.4 - s * .6, vy: -11 - i * .8, g: .05, drag: 1, life: 44, size: 11, color: '#9be36a', rot: 0, vr: 0, shape: 'dot' }); floatText('Ptou !', m.x, m.y - 40, 22, 'ink'); sfx.spit(); buzz(12); B.rainT = 0; }
+    else if (T < R1 + 16) { const k = 1 - (T - R1) / 16; tx = -s * 14; ty = -16 * k; mouth = k; }
+    if (T >= R1) { B.rainT = T - R1; const tt = B.rainT; for (let i = 0; i < 3; i++) if (tt === R2 + i * 10) FX.venom.push({ x: B.rainX[i], y: hudBottom() - 10, vx: 0, vy: 5, g: .28, r: 11, rain: 1 }); }
+    if (T >= R1 + R2 + 40) { B.att = null; B.rainX = null; B.strikeT = B.phase === 2 ? 240 : 200; } }
   else if (a === 'tug') { /* il tend le cou jusqu'à la liane de la plateforme, la mord et tire dessus */
     const top = hudBottom() - 30, vx = P.cx != null ? P.cx + (P.x - P.cx) * .8 : P.x, vy = top + (platY() - top) * .8, [r1, r2, r3] = SN_TUG;
     const reach = T < r1 ? T / r1 : T < r1 + r2 ? 1 : 1 - (T - r1 - r2) / r3, e = reach * reach * (3 - 2 * reach);
@@ -15958,6 +15971,7 @@ updateSnake = function (B) {
   if (R.tug > 0 && P.drift) { if (P.drift.amp0 == null) P.drift.amp0 = P.drift.amp; R.tug--; P.drift.amp = P.drift.amp0 * (1 + .75 * Math.min(1, R.tug / 60)); P.drift.w = (P.drift.w0 || (P.drift.w0 = P.drift.w)) * (1 + .35 * Math.min(1, R.tug / 60)); }
   else if (P.drift && P.drift.amp0 != null) { P.drift.amp = P.drift.amp0; if (P.drift.w0) P.drift.w = P.drift.w0; }
   if (R.slime > 0) { R.slime--; R.ice = true; if (!R.slime) R.ice = !!R.iceBase; }
+  if (B.pull) { const h = snHead(B); for (const b of R.balls) { if (b.state === 'aim') b.x = clamp(b.x + (h.x - b.x) * .006, b.r * .3, PW - b.r * .3); else if (b.state === 'fall' && !b.held) b.vx += Math.sign(h.x - b.x) * .05; } }
 };
 /* morsure : le ballon qui touche le cou tendu */
 const _hazardHitSN = hazardHit;
@@ -15970,7 +15984,14 @@ const _updateVenomSN = updateVenom;
 updateVenom = function () { const P = R && R.plat, top = platY();
   if (P) for (const v of FX.venom) if (!v.dead && v.vy > 0 && v.y >= top - 4 && v.y <= top + 14 && Math.abs(v.x - P.x) < P.w / 2 + 6) { v.dead = true; if (R.iceBase == null) R.iceBase = R.ice; R.slime = 150; R.slimeX = v.x - P.x; burst(v.x, top, 10, '#9be36a'); sfx.blub && sfx.blub(); floatText('Gluant !', P.x, top - 40, 20, 'ink'); }
   _updateVenomSN(); };
+function drawSnakeHypno(B) { const k = B.hypno || 0; if (k <= 0) return; const h = snHead(B), t = G.frame;
+  /* ondes qui partent de sa tête vers le ballon */ if (B.pull) for (let i = 0; i < 4; i++) { const q = ((t * .02 + i / 4) % 1); ctx.strokeStyle = `rgba(190,140,255,${(.55 * (1 - q) * k).toFixed(3)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(h.x, h.y, 30 + q * 150, 0, TAU); ctx.stroke(); }
+  /* les yeux en spirale (par-dessus les yeux normaux) */ for (const ex of [-11, 11]) { const x = h.x + ex * 1.15, y = h.y - 5 * 1.15, r = 9.6 * 1.15; ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.6); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#8a4ae0'; ctx.lineWidth = 2; ctx.beginPath(); for (let a = 0; a < 14; a += .3) { const rr = a / 14 * r * .9, aa = a + t * .25 * (ex < 0 ? 1 : -1); a ? ctx.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr) : ctx.moveTo(x, y); } ctx.stroke(); ctx.restore(); } }
 function drawSnakeExtras(B) { const P = R && R.plat;
+  if (B.rainX && B.rainT != null) { /* ombres vertes qui grandissent là où les gouttes vont tomber */ for (let i = 0; i < 3; i++) { const q = clamp((B.rainT - i * 10) / 56, 0, 1); if (q <= 0 || B.rainT > 56 + i * 10 + 20) continue; const x = B.rainX[i], y = lavaY() - 4;
+    ctx.fillStyle = `rgba(60,170,40,${(.3 + .45 * q).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(x, y, 10 + q * 16, 4 + q * 5, 0, 0, TAU); ctx.fill(); if (q > .3 && G.frame % 16 < 10) { ctx.fillStyle = '#ffffff'; ctx.font = '18px "Lilita One"'; ctx.textAlign = 'center'; ctx.fillText('!', x, y - 14); }
+    const g = ctx.createLinearGradient(0, hudBottom(), 0, y); g.addColorStop(0, 'rgba(150,240,110,0)'); g.addColorStop(1, `rgba(150,240,110,${(.38 * q).toFixed(3)})`); ctx.fillStyle = g; ctx.fillRect(x - 6 - q * 4, hudBottom(), 12 + q * 8, y - hudBottom()); } }
   if (R && R.slime > 0 && P) { const top = platY(), a = Math.min(1, R.slime / 30), w = P.w * .5; ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#7ad83a'; ctx.beginPath(); ctx.ellipse(P.x + clamp(R.slimeX || 0, -P.w * .2, P.w * .2), top + 1, w, 4.5, 0, 0, TAU); ctx.fill();
     for (const dx of [-.6, .1, .5]) { ctx.beginPath(); ctx.ellipse(P.x + dx * w, top + 6 + Math.sin(G.frame * .1 + dx * 5) * 1.5, 2.6, 4.6, 0, 0, TAU); ctx.fill(); } ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(P.x - w * .3, top - .5, w * .25, 1.4, 0, 0, TAU); ctx.fill(); ctx.restore(); }
   if (B.warnS > 0 && !B.dead) { /* la ligne de la morsure : feuilles qui tremblent + bande discrète + « ! » côté serpent */
@@ -15980,7 +16001,7 @@ function drawSnakeExtras(B) { const P = R && R.plat;
 /* les joues qui gonflent avant le crachat */
 const _snHeadDraw = snHeadDraw;
 snHeadDraw = function (B, h, P) { if (B.puff > .05) { ctx.save(); ctx.translate(h.x, h.y + 10); ctx.scale(1 + B.puff * .12, 1 - B.puff * .04); ctx.translate(-h.x, -(h.y + 10)); _snHeadDraw(B, h, P); ctx.restore(); } else _snHeadDraw(B, h, P); };
-drawBoss = (prev => function (th) { const B = G.boss; if (B && B.type === 'snake') { drawSnakeExtras(B); drawSnake2(B); return; } return prev(th); })(drawBoss);
+drawBoss = (prev => function (th) { const B = G.boss; if (B && B.type === 'snake') { drawSnakeExtras(B); drawSnake2(B); drawSnakeHypno(B); return; } return prev(th); })(drawBoss);
 
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
 if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
