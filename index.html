@@ -15796,7 +15796,7 @@ function drawMonkey(c, th) {
 
 /* ---------- la plante carnivore ---------- */
 const PL_SNAP = 7, PL_WIND = 6, PL_S = 2.2; /* la tête est assez grande pour avaler un ballon */
-function makePlant(p) { const P = R.plat, amp = P.drift ? P.drift.amp : 40, cx = P.drift ? P.cx : P.x, side = R.rng() < .5 ? -1 : 1;
+function makePlant(p) { const P = R.plat, amp = P.drift ? P.drift.amp : 40, cx = P.drift ? P.cx : P.x, side = (G.jeyes && G.jeyes.st !== 'baby') || (jungleZone() === 3 && !S.owned.includes('bebe_serpent')) ? 1 : R.rng() < .5 ? -1 : 1; /* au Temple, la plante laisse la place aux yeux du secret (à gauche) */
   const x = clamp(cx + side * amp * (.35 + R.rng() * .35), 60, PW - 60);
   return { x, st: 'awake', t: 0, awake: p.plant[1], sleep: p.plant[2], open: 0, lift: 1, lunge: 0, tx: 0, ty: 0, chew: 0 }; }
 /* la tête pend au bout de sa liane ; éveillée elle regarde vers le haut, endormie elle pique du nez */
@@ -15816,13 +15816,13 @@ function updatePlant() {
   const Pl = R.plant; if (!Pl) return; Pl.t++;
   const fall = R.balls.find(b => b.state === 'fall' && !b.held);
   if (Pl.st === 'awake') { Pl.open += (1 - Pl.open) * .18; Pl.lift += (1 - Pl.lift) * .12;
-    if (fall) { const m = plantMouth(Pl); if (Math.hypot(fall.x - m.x, fall.y - m.y) < fall.r + 34 * PL_S * .9) { Pl.st = 'wind'; Pl.t = 0; Pl.target = fall; sfx.tap && sfx.tap(0); } }
+    if (fall) { const m = plantMouth(Pl); if (Math.hypot(fall.x - m.x, fall.y - m.y) < fall.r * .62 + 46) { Pl.st = 'wind'; /* portée : le ballon doit vraiment frôler sa gueule */ Pl.t = 0; Pl.target = fall; sfx.tap && sfx.tap(0); } }
     if (Pl.st === 'awake' && Pl.t > Pl.awake) { Pl.st = 'yawn'; Pl.t = 0; } }
   else if (Pl.st === 'wind') { /* anticipation : elle recule et ouvre grand */ Pl.open = 1.15; Pl.lunge = -.25 * (Pl.t / PL_WIND);
     if (Pl.t >= PL_WIND) { Pl.st = 'snap'; Pl.t = 0; const b = Pl.target, m0 = plantMouth({ ...Pl, lunge: 0 }); Pl.tx = b ? clamp(b.x - m0.x, -30, 30) * .9 : 0; Pl.ty = b ? clamp(b.y - m0.y, -30, 30) * .9 : 0; } }
   else if (Pl.st === 'snap') { /* elle se jette, mâchoires qui claquent */ const k = Pl.t / PL_SNAP; Pl.lunge = Math.sin(Math.min(1, k) * Math.PI / 2); Pl.open = Math.max(0, 1.15 * (1 - k * 1.3));
     if (Pl.t === PL_SNAP) { const b = Pl.target, m = plantMouth(Pl); shake = reduceMotion ? 0 : 3; buzz(15);
-      if (b && b.state === 'fall' && Math.hypot(b.x - m.x, b.y - m.y) < b.r + 26 * PL_S && eatBall(b)) { Pl.st = 'chew'; Pl.t = 0; Pl.chew = 1; }
+      if (b && b.state === 'fall' && Math.hypot(b.x - m.x, b.y - m.y) < b.r * .62 + 40 && eatBall(b)) { Pl.st = 'chew'; Pl.t = 0; Pl.chew = 1; }
       else { Pl.st = 'miss'; Pl.t = 0; floatText('Raté !', m.x, m.y - 36, 20, 'ink'); } } }
   else if (Pl.st === 'miss') { Pl.lunge *= .85; Pl.open += (.6 - Pl.open) * .2; if (Pl.t > 30) { Pl.st = 'awake'; Pl.t = Math.max(0, Pl.awake - 70); } }
   else if (Pl.st === 'chew') { if (Pl.gulp && ++Pl.gulp.t > 16) Pl.gulp = null; Pl.lunge *= .9; Pl.open = Pl.gulp ? .55 * (1 - Pl.gulp.t / 16) : Math.abs(Math.sin(Pl.t * .25)) * .12; if (Pl.t > 70) { Pl.st = 'sleep'; Pl.t = 0; Pl.chew = 0; } }
@@ -15894,12 +15894,17 @@ function snPath(B) { const tx = snTrunkX(B), s = B.side, h = snHead(B), pts = []
     const x = (1 - u) ** 3 * e.x + 3 * (1 - u) ** 2 * u * c1x + 3 * (1 - u) * u * u * c2x + u ** 3 * (h.x + s * 14), y = (1 - u) ** 3 * e.y + 3 * (1 - u) ** 2 * u * c1y + 3 * (1 - u) * u * u * c2y + u ** 3 * (h.y + 12);
     pts.push({ x, y, z: 1, r: 13 + Math.sin(u * Math.PI) * 2 - u * 1 }); }
   return pts; }
-function snSegs(pts, P, front) { for (let i = 0; i < pts.length; i++) { const p = pts[i]; if ((p.z >= 0) !== front) continue;
-    const r = p.r, dk = p.z < 0 ? .25 : 0; ctx.fillStyle = dk ? snMix(P.g1, P.g2, .6) : P.g1; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); }
-  for (let i = 0; i < pts.length; i++) { const p = pts[i]; if ((p.z >= 0) !== front || p.z < 0) continue;
-    ctx.fillStyle = P.g0; ctx.beginPath(); ctx.arc(p.x - p.r * .18, p.y - p.r * .2, p.r * .78, 0, TAU); ctx.fill();
-    if (i % 7 === 3) { ctx.fillStyle = SN.spot; ctx.beginPath(); ctx.ellipse(p.x, p.y - p.r * .25, p.r * .42, p.r * .3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.ellipse(p.x - p.r * .1, p.y - p.r * .35, p.r * .18, p.r * .1, 0, 0, TAU); ctx.fill(); }
-    if (i % 3 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.ellipse(p.x - p.r * .35, p.y - p.r * .45, p.r * .3, p.r * .16, -.5, 0, TAU); ctx.fill(); } } }
+function snSegs(pts, P, front) { /* regroupé par couleur : même rendu, beaucoup moins d'appels de dessin */
+  const back = [], body = [];
+  for (const p of pts) { if ((p.z >= 0) !== front) continue; (p.z < 0 ? back : body).push(p); }
+  const fillAll = (arr, col, f) => { if (!arr.length) return; ctx.fillStyle = col; ctx.beginPath(); for (const p of arr) { const [x, y, r] = f(p); ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU); } ctx.fill(); };
+  fillAll(back, snMix(P.g1, P.g2, .6), p => [p.x, p.y, p.r]);
+  fillAll(body, P.g1, p => [p.x, p.y, p.r]);
+  fillAll(body, P.g0, p => [p.x - p.r * .18, p.y - p.r * .2, p.r * .78]);
+  const idx = new Map(pts.map((p, i) => [p, i])), spots = body.filter(p => idx.get(p) % 7 === 3), shines = body.filter(p => idx.get(p) % 3 === 0);
+  if (spots.length) { ctx.fillStyle = SN.spot; ctx.beginPath(); for (const p of spots) { ctx.moveTo(p.x + p.r * .42, p.y - p.r * .25); ctx.ellipse(p.x, p.y - p.r * .25, p.r * .42, p.r * .3, 0, 0, TAU); } ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); for (const p of spots) { ctx.moveTo(p.x - p.r * .1 + p.r * .18, p.y - p.r * .35); ctx.ellipse(p.x - p.r * .1, p.y - p.r * .35, p.r * .18, p.r * .1, 0, 0, TAU); } ctx.fill(); }
+  if (shines.length) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); for (const p of shines) { const x = p.x - p.r * .35, y = p.y - p.r * .45; ctx.moveTo(x + p.r * .3, y); ctx.ellipse(x, y, p.r * .3, p.r * .16, -.5, 0, TAU); } ctx.fill(); } }
 function snHeadDraw(B, h, P) { const ab = R && (R.balls.find(b => b.state === 'fall') || R.balls.find(b => b.state === 'aim'));
   const lx = ab ? clamp((ab.x - h.x) / 120, -1, 1) : 0, ly = ab ? clamp((ab.y - h.y) / 160, -1, 1) : .3, t = B.t, blink = (t % 210) < 6, hurt = B.hurt % 4 > 1;
   ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(lx * .18); ctx.scale(1.15, 1.15);
@@ -16443,7 +16448,7 @@ function hut(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
   const rg = c.createLinearGradient(-40, -64, 40, -30); rg.addColorStop(0, '#e8c87a'); rg.addColorStop(1, '#a8823a'); c.fillStyle = rg; c.beginPath(); c.moveTo(-42, -30); c.lineTo(0, -66); c.lineTo(42, -30); c.fill();
   c.strokeStyle = 'rgba(120,80,30,0.6)'; for (let i = 0; i < 8; i++) { c.beginPath(); c.moveTo(-40 + i * 11, -30); c.lineTo(0, -64); c.stroke(); } c.restore(); }
 function rainCurtain(t, a) { const x0 = ((t * .4) % (W + 300)) - 150; const g = c.createLinearGradient(x0, 0, x0 + 160, 0); g.addColorStop(0, 'rgba(220,235,240,0)'); g.addColorStop(.5, `rgba(220,235,240,${a})`); g.addColorStop(1, 'rgba(220,235,240,0)');
-  c.fillStyle = g; c.fillRect(x0, 0, 160, H); c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 1; for (let i = 0; i < 60; i++) { const x = x0 + h1(i) * 160, y = (h1(i * 3) * H + t * 9) % H; c.beginPath(); c.moveTo(x, y); c.lineTo(x - 2, y + 14); c.stroke(); } }
+  c.fillStyle = g; c.fillRect(x0, 0, 160, H); c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 1; c.beginPath(); for (let i = 0; i < 60; i++) { const x = x0 + h1(i) * 160, y = (h1(i * 3) * H + t * 9) % H; c.moveTo(x, y); c.lineTo(x - 2, y + 14); } c.stroke(); }
 function temple(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
   const st = (x0, y0, w, h, col) => { c.fillStyle = col; c.fillRect(x0, y0, w, h); c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 1; for (let yy = y0 + 10; yy < y0 + h; yy += 12) { c.beginPath(); c.moveTo(x0, yy); c.lineTo(x0 + w, yy); c.stroke(); } };
   /* étages en gradins */ st(-110, -60, 220, 60, '#3a4a40'); st(-86, -110, 172, 50, '#40524a'); st(-62, -150, 124, 40, '#465a50'); st(-36, -184, 72, 34, '#4c6256');
