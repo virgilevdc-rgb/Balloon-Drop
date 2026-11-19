@@ -130,8 +130,16 @@ function iceCave(x, y, s, t, eyes) { c.save(); c.translate(x, y); c.scale(s, s);
   for (const [a, b] of [[[-40, -150], [-30, -60]], [[20, -168], [10, -70]], [[80, -126], [60, -50]]]) { c.strokeStyle = 'rgba(160,230,255,0.25)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.stroke(); }
   /* bouche de la grotte */
   c.fillStyle = '#040816'; c.beginPath(); c.moveTo(-44, 0); c.quadraticCurveTo(-40, -70, 4, -78); c.quadraticCurveTo(46, -70, 50, 0); c.fill();
-  for (let i = 0; i < 7; i++) { const sx = -36 + i * 12; c.fillStyle = 'rgba(180,230,255,0.85)'; c.beginPath(); c.moveTo(sx - 4, -66 + Math.abs(i - 3) * 3); c.lineTo(sx + 4, -66 + Math.abs(i - 3) * 3); c.lineTo(sx, -50 + Math.abs(i - 3) * 3 - (i % 2) * 6); c.fill(); }
-  if (eyes) { const ea = .6 + .3 * Math.sin(t * .03); for (const dx of [-12, 12]) { const eg = c.createRadialGradient(4 + dx, -34, 1, 4 + dx, -34, 14); eg.addColorStop(0, `rgba(140,240,255,${ea.toFixed(3)})`); eg.addColorStop(1, 'rgba(140,240,255,0)'); c.fillStyle = eg; c.beginPath(); c.arc(4 + dx, -34, 14, 0, TAU); c.fill(); c.fillStyle = `rgba(220,252,255,${ea.toFixed(3)})`; c.beginPath(); c.ellipse(4 + dx, -34, 4.5, 2.5, dx > 0 ? -.2 : .2, 0, TAU); c.fill(); } }
+  if (eyes) { /* une lueur au loin, au fond de la grotte : quelque chose vit là-dedans */
+    const ea = .75 + .25 * Math.sin(t * .025);
+    const g1 = c.createRadialGradient(6, -18, 2, 6, -18, 40); g1.addColorStop(0, `rgba(255,214,150,${(.95 * ea).toFixed(3)})`); g1.addColorStop(.35, `rgba(255,170,110,${(.45 * ea).toFixed(3)})`); g1.addColorStop(1, 'rgba(255,150,90,0)');
+    c.save(); c.beginPath(); c.moveTo(-44, 0); c.quadraticCurveTo(-40, -70, 4, -78); c.quadraticCurveTo(46, -70, 50, 0); c.clip();
+    c.fillStyle = g1; c.fillRect(-50, -80, 100, 80);
+    c.fillStyle = `rgba(255,236,190,${(.9 * ea).toFixed(3)})`; c.beginPath(); c.ellipse(6, -14, 7, 10, 0, 0, TAU); c.fill(); /* le petit foyer lointain */
+    c.fillStyle = 'rgba(4,8,22,0.55)'; c.beginPath(); c.moveTo(-44, 0); c.quadraticCurveTo(-30, -40, 4, -46); c.quadraticCurveTo(-18, -30, -20, 0); c.fill(); /* paroi qui cache un peu */
+    c.restore();
+    /* la lumière déborde sur la glace devant l'entrée */
+    const g2 = c.createRadialGradient(6, 2, 4, 6, 2, 90); g2.addColorStop(0, `rgba(255,190,120,${(.6 * ea).toFixed(3)})`); g2.addColorStop(1, 'rgba(255,190,120,0)'); c.save(); c.scale(1, .3); c.fillStyle = g2; c.beginPath(); c.arc(6, 6, 90, 0, TAU); c.fill(); c.restore(); }
   c.restore(); }
 function crystal(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s); const a = .55 + .3 * Math.sin(t * .04 + x);
   const g = c.createRadialGradient(0, -20, 2, 0, -20, 36); g.addColorStop(0, `rgba(140,240,255,${(a * .5).toFixed(3)})`); g.addColorStop(1, 'rgba(140,240,255,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, -20, 36, 0, TAU); c.fill();
@@ -140,6 +148,15 @@ function crystal(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s); const
 function snowfall(t, n, slant, speed, a) { c.fillStyle = `rgba(255,255,255,${a})`; for (let i = 0; i < n; i++) { const sp = (1 + h1(i) * 1.5) * speed, y = (h1(i * 3) * H + t * sp) % (H + 20) - 10, x = (h1(i * 5) * (W + 200) + y * slant + t * slant * sp * .6) % (W + 200) - 100, r = .8 + h1(i * 7) * 1.8; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } }
 function blizzardStreaks(t, n) { c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineCap = 'round'; for (let i = 0; i < n; i++) { const sp = 6 + h1(i) * 6, y = h1(i * 3) * H, x = ((h1(i * 5) * (W + 300) + t * sp) % (W + 300)) - 150, l = 20 + h1(i * 7) * 50; c.lineWidth = .8 + h1(i * 2) * 1.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + l, y + l * .12); c.stroke(); } }
 
+
+/* empreintes de Yéti sur la glace, qui mènent jusqu'à la grotte (perspective : de plus en plus petites) */
+function yetiTracks(t) { const x0 = 196, y0 = HZ + 150, x1 = 254, y1 = HZ + 12, n = 9;
+  for (let i = 0; i < n; i++) { const u = i / (n - 1), k = 1 - u * .78, x = x0 + (x1 - x0) * Math.pow(u, .8) + (i % 2 ? 9 : -9) * k, y = y0 + (y1 - y0) * Math.pow(u, .7), s = 1.5 * k;
+    c.save(); c.translate(x, y); c.scale(s, s * .45); c.rotate((i % 2 ? .12 : -.12));
+    const warm = Math.pow(u, 1.5); c.fillStyle = 'rgba(190,220,255,0.28)'; c.beginPath(); c.ellipse(1.5, -4, 14, 24, 0, 0, TAU); c.fill(); c.fillStyle = `rgba(${(8 + warm * 90) | 0},${(16 + warm * 50) | 0},${(44 - warm * 10) | 0},0.85)`; c.beginPath(); c.ellipse(0, 0, 9, 15, 0, 0, TAU); c.fill();
+    for (const [dx, dy, r] of [[-7.5, -19, 3.8], [-1, -22, 4], [6, -20, 3.6], [10, -13, 3]]) { c.beginPath(); c.arc(dx, dy, r, 0, TAU); c.fill(); }
+    c.strokeStyle = `rgba(${(170 + warm * 85) | 0},${(225 - warm * 20) | 0},255,0.8)`; c.lineWidth = 2; c.beginPath(); c.ellipse(0, 0, 9.5, 15.5, 0, Math.PI * .85, Math.PI * 1.65); c.stroke();
+    c.restore(); } }
 /* ===== zones ===== */
 function zone1(t) {
   ZN.refl = .5; ZN.reflDraw = () => { peaks(HZ - 6, 1.1, 3, mix(ZN.mtn, '#ffffff', .25), mix(ZN.mtnSh, ZN.sky[2][1], .3)); };
@@ -182,10 +199,11 @@ function zone3(t) {
   sky(t); aurora(t, ZN.aur, ZN.aurY);
   peaks(HZ - 6, 1.15, 3, ZN.mtn, ZN.mtnSh);
   iceCave(250, HZ + 6, .95, t, true);
-  peaks(HZ + 4, .65, 21, mix(ZN.mtn, '#000000', .2), ZN.mtnSh);
+  c.save(); c.beginPath(); c.rect(0, 0, 186, H); c.rect(318, 0, W, H); c.clip(); peaks(HZ + 4, .65, 21, mix(ZN.mtn, '#000000', .2), ZN.mtnSh); c.restore(); /* dégage l'entrée de la grotte */
   iceSheet(t);
   drift(70, HZ + 16, 90, 14); drift(350, HZ + 20, 80, 12);
   crystal(110, HZ + 60, .9, t); crystal(330, HZ + 74, 1.1, t); crystal(40, HZ + 90, .7, t);
+  yetiTracks(t);
   igloo(170, HZ + 46, .5, t, { lit: 1 });
   drift(30, 760, 120, 26); drift(380, 750, 130, 30);
   iceSpike(40, 745, 1.3); iceSpike(352, 738, 1); inukshuk(320, 752, .9);
