@@ -652,19 +652,19 @@ var pingu = function (x, y, s, t, o = {}) {
 function sfxTxt(txt, x, y, k, col, size) { yTxt(txt, x, y, k, col, size); }
 /* séquence du secret : il marche, 1re touche il se retourne, 2e il sursaute, 3e il glisse sur le ventre jusqu'au trou et plonge */
 function penguinSecret(t) {
-  const T = t % 360, HX = 110, HY = HZ + 118, tap = (k, x, y) => { if (k < 0 || k > 1) return; c.save(); c.globalAlpha = 1 - k; c.strokeStyle = '#ffffff'; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 10 + k * 26, 0, TAU); c.stroke(); c.restore(); };
-  let px = 300, py = 742, pose = 'walk', dir = -1, sc = 1.25, bag = true;
-  if (T < 60) { px = 330 - T * .6; }
-  else if (T < 110) { px = 294; pose = 'turn'; tap((T - 60) / 20, px, py - 50); yTxt('?', px + 6, py - 110, (T - 62) / 40, '#ffffff', 28); }
-  else if (T < 160) { px = 294; pose = 'jump'; py = 742 - Math.sin(Math.min(1, (T - 110) / 20) * Math.PI) * 30; tap((T - 110) / 20, px, py - 50); yTxt('!', px + 6, py - 110, (T - 112) / 40, '#ffd23f', 34); }
-  else if (T < 240) { const q = (T - 160) / 80, e = q * q * (3 - 2 * q); pose = 'slide'; px = 294 + (HX - 294) * e; py = 742 + (HY - 742) * e; sc = 1.25 - e * .45; tap((T - 160) / 20, 294, 692);
-    for (let k = 0; k < 4; k++) { const back = Math.max(0, e - k * .06); c.fillStyle = `rgba(255,255,255,${(.7 - k * .15).toFixed(3)})`; c.beginPath(); c.arc(294 + (HX - 294) * back + 20, 742 + (HY - 742) * back, 4 - k * .6, 0, TAU); c.fill(); }
-    yTxt('Wiiii !', px, py - 70, q, '#ffffff', 24); }
-  else { const q = (T - 240) / 120; px = HX; py = HY; if (q < .12) { pose = 'slide'; sc = .8 * (1 - q / .12); }
-    else sc = 0;
-    for (let n = 0; n < 12; n++) { const a = Math.PI + n / 11 * Math.PI, d = Math.min(1, q * 3) * 30; c.fillStyle = `rgba(200,235,255,${Math.max(0, 1 - q * 2.5).toFixed(3)})`; c.beginPath(); c.arc(HX + Math.cos(a) * d * 1.4, HY + Math.sin(a) * d * .8 - Math.sin(q * 6) * 10, 3.5, 0, TAU); c.fill(); }
-    for (let n = 0; n < 4; n++) { const qq = ((q * 2 + n / 4) % 1); c.strokeStyle = `rgba(255,255,255,${(.8 * (1 - qq)).toFixed(3)})`; c.lineWidth = 1.6; c.beginPath(); c.arc(HX + (n - 1.5) * 6, HY - qq * 26, 2 + qq * 3, 0, TAU); c.stroke(); }
-    yTxt('Plouf !', HX, HY - 60, q * 1.3, '#ffffff', 28); yTxt('Un passage secret…', W / 2, 420, (q - .3) * 1.4, '#ffd23f', 26); }
+  /* le pingouin passe sur la même ligne que ceux du fond : petit et discret */
+  const T = t % 360, HX = 110, HY = HZ + 118, PY = HZ + 130, S0 = .42, tap = (k, x, y) => { if (k < 0 || k > 1) return; c.save(); c.globalAlpha = 1 - k; c.strokeStyle = '#ffffff'; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, 6 + k * 18, 0, TAU); c.stroke(); c.restore(); };
+  let px = 340, py = PY, pose = 'walk', dir = -1, sc = S0;
+  if (T < 60) { px = 370 - T * .5; }
+  else if (T < 110) { px = 340; pose = 'turn'; tap((T - 60) / 20, px, py - 18); yTxt('?', px + 3, py - 44, (T - 62) / 40, '#ffffff', 20); }
+  else if (T < 160) { px = 340; pose = 'jump'; py = PY - Math.sin(Math.min(1, (T - 110) / 20) * Math.PI) * 12; tap((T - 110) / 20, px, py - 18); yTxt('!', px + 3, py - 46, (T - 112) / 40, '#ffd23f', 24); }
+  else if (T < 240) { const q = (T - 160) / 80, e = q * q * (3 - 2 * q); pose = 'slide'; px = 340 + (HX - 340) * e; py = PY + (HY - PY) * e; tap((T - 160) / 20, 340, PY - 18);
+    for (let k = 0; k < 4; k++) { const back = Math.max(0, e - k * .05); c.fillStyle = `rgba(255,255,255,${(.7 - k * .15).toFixed(3)})`; c.beginPath(); c.arc(340 + (HX - 340) * back + 9, PY + (HY - PY) * back, 2.2 - k * .3, 0, TAU); c.fill(); }
+    yTxt('Wiiii !', px, py - 30, q, '#ffffff', 18); }
+  else { const q = (T - 240) / 120; px = HX; py = HY; if (q < .12) { pose = 'slide'; sc = S0 * (1 - q / .12); } else sc = 0;
+    for (let n = 0; n < 12; n++) { const a = Math.PI + n / 11 * Math.PI, d = Math.min(1, q * 3) * 16; c.fillStyle = `rgba(200,235,255,${Math.max(0, 1 - q * 2.5).toFixed(3)})`; c.beginPath(); c.arc(HX + Math.cos(a) * d * 1.4, HY + Math.sin(a) * d * .8 - Math.sin(q * 6) * 6, 2.2, 0, TAU); c.fill(); }
+    for (let n = 0; n < 4; n++) { const qq = ((q * 2 + n / 4) % 1); c.strokeStyle = `rgba(255,255,255,${(.8 * (1 - qq)).toFixed(3)})`; c.lineWidth = 1.2; c.beginPath(); c.arc(HX + (n - 1.5) * 4, HY - qq * 16, 1.5 + qq * 2, 0, TAU); c.stroke(); }
+    yTxt('Plouf !', HX, HY - 34, q * 1.3, '#ffffff', 20); yTxt('Un passage secret…', W / 2, 420, (q - .3) * 1.4, '#ffd23f', 26); }
   if (sc > 0) pingu(px, py, sc, t, { pose, dir });
 }
 
