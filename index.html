@@ -14859,26 +14859,63 @@ const PERROQUET_SKIN = { id: 'perroquet', name: 'Le Perroquet', secret: true, du
     c.save(); c.translate(px, py); if (Math.sin(a + Math.PI / 2) < 0) c.scale(-1, 1); ara(1, flap, 1, true); c.restore(); }
 } };
 SKINS.push(PERROQUET_SKIN);
-/* ballon secret du Monde 6 : le Bébé serpent (enroulé autour du ballon, la tête dépasse en haut ; style du jeu) */
-const BEBE_SERPENT_SKIN = { id: 'bebe_serpent', name: 'Le Bébé serpent', secret: true, dust: '#7ae08a', gloss: .5,
-  paint: (c, r, t = 0) => {
-    const g = c.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#fffbea'); g.addColorStop(.55, '#ffe08a'); g.addColorStop(1, '#d8963a'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+/* ballon secret du Monde 6 : le Bébé serpent. Son corps est une vraie spirale autour de la sphère : il passe derrière le bord du ballon
+   et revient plus haut, puis sa tête se pose sur le dessus. Écailles qui glissent, corps qui respire, yeux qui regardent autour. */
+const BEBE_SERPENT_SKIN = (() => {
+  const ss = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+  const mixc = (a, b, k) => { const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16), m = sh => Math.round((A >> sh & 255) + ((B >> sh & 255) - (A >> sh & 255)) * k); return `rgb(${m(16)},${m(8)},${m(0)})`; };
+  const G0 = '#6ee886', G1 = '#2fae50', G2 = '#1a7a36';
+  /* points du corps : de la queue (en bas devant) à la nuque (en haut à droite devant) */
+  function body(r, t) { const pts = [], N = 150, T = 1.62;
+    for (let i = 0; i <= N; i++) { const s = i / N, lat = -1.12 + s * 1.82, lon = .95 - (1 - s) * T * TAU;
+      const cl = Math.cos(lat), x = r * cl * Math.sin(lon), y = -r * Math.sin(lat), z = cl * Math.cos(lon), th = r * (.04 + .14 * ss(s * 1.15) + .015 * Math.sin(t * .06 - s * 6) * s); /* il respire : une petite vague parcourt le corps */
+      pts.push({ x, y, z, th, s }); }
+    return pts; }
+  const paint = (c, r, t = 0) => {
+    /* le ballon : crème doré, petites feuilles claires bien dessinées */
+    const g = c.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#fffcee'); g.addColorStop(.5, '#ffe596'); g.addColorStop(1, '#dc9a3e'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
     c.save(); c.beginPath(); c.arc(0, 0, r, 0, TAU); c.clip();
-    /* petites feuilles en motif */ c.fillStyle = 'rgba(170,110,30,0.22)'; for (const [x, y, a] of [[-.5, -.2, .6], [.45, .35, -.4], [-.15, .55, 1.2], [.1, -.6, -.9]]) { c.save(); c.translate(x * r, y * r); c.rotate(a); c.beginPath(); c.ellipse(0, 0, r * .14, r * .05, 0, 0, TAU); c.fill(); c.restore(); }
-    /* le corps : deux tours en ruban autour du ballon (on voit le devant) */ const band = (y0, y1, wv) => { c.beginPath(); c.moveTo(-r * 1.1, y0 * r); c.bezierCurveTo(-r * .4, (y0 + wv) * r, r * .4, (y1 - wv) * r, r * 1.1, y1 * r); };
-    for (const [y0, y1, wv] of [[.62, -.05, .22], [.18, -.62, .22]]) { band(y0, y1, wv); c.strokeStyle = '#2fb04e'; c.lineWidth = r * .3; c.lineCap = 'round'; c.stroke(); band(y0 - .03, y1 - .03, wv); c.strokeStyle = '#5fe07a'; c.lineWidth = r * .2; c.stroke();
-      band(y0 - .08, y1 - .08, wv); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = r * .04; c.stroke();
-      for (let i = 1; i < 5; i++) { const u = i / 5, x = -r * 1.1 + u * r * 2.2, y = r * ((1 - u) * (1 - u) * (1 - u) * y0 + 3 * (1 - u) * (1 - u) * u * (y0 + wv) + 3 * (1 - u) * u * u * (y1 - wv) + u * u * u * y1); c.fillStyle = '#f2b705'; c.beginPath(); c.ellipse(x, y - r * .03, r * .05, r * .035, 0, 0, TAU); c.fill(); } }
-    c.restore(); },
-  after: (c, r, t = 0) => {
-    /* bout de queue qui frétille en bas à gauche */ const wq = Math.sin(t * .12) * r * .06; c.strokeStyle = '#2fb04e'; c.lineWidth = r * .12; c.lineCap = 'round'; c.beginPath(); c.moveTo(-r * .9, r * .5); c.quadraticCurveTo(-r * 1.12, r * .62, -r * 1.06 + wq, r * .82); c.stroke();
-    /* la tête qui dépasse en haut à droite */ const bob = Math.sin(t * .05) * r * .03, hx = r * .55, hy = -r * .82 + bob, hs = r * .3;
-    c.strokeStyle = '#2fb04e'; c.lineWidth = r * .2; c.beginPath(); c.moveTo(r * .78, -r * .48); c.quadraticCurveTo(r * .78, -r * .7, hx + hs * .3, hy + hs * .4); c.stroke();
-    c.fillStyle = '#2fb04e'; c.beginPath(); c.ellipse(hx, hy, hs, hs * .8, -.2, 0, TAU); c.fill(); c.fillStyle = '#5fe07a'; c.beginPath(); c.ellipse(hx - hs * .1, hy - hs * .12, hs * .86, hs * .62, -.2, 0, TAU); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.4)'; c.beginPath(); c.ellipse(hx - hs * .45, hy - hs * .42, hs * .3, hs * .13, -.5, 0, TAU); c.fill();
-    const bl = (t % 160) < 6; for (const ex of [-.36, .36]) { const x = hx + ex * hs, y = hy - hs * .05; c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x, y, hs * .3, bl ? hs * .04 : hs * .34, 0, 0, TAU); c.fill(); if (!bl) { c.fillStyle = '#1a1208'; c.beginPath(); c.ellipse(x + hs * .05, y + hs * .04, hs * .16, hs * .22, 0, 0, TAU); c.fill(); c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x - hs * .04, y - hs * .1, hs * .07, 0, TAU); c.fill(); } }
-    c.fillStyle = 'rgba(255,120,150,0.55)'; c.beginPath(); c.ellipse(hx - hs * .62, hy + hs * .26, hs * .14, hs * .08, 0, 0, TAU); c.ellipse(hx + hs * .62, hy + hs * .26, hs * .14, hs * .08, 0, 0, TAU); c.fill();
-    if ((t % 110) < 22) { const q = Math.sin((t % 110) / 22 * Math.PI), tx = hx + hs * .2, ty = hy + hs * .55; c.strokeStyle = '#ff4a6a'; c.lineWidth = Math.max(.8, r * .025); c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx + hs * .1, ty + hs * .5 * q); c.moveTo(tx + hs * .1, ty + hs * .5 * q); c.lineTo(tx - hs * .05, ty + hs * .75 * q); c.moveTo(tx + hs * .1, ty + hs * .5 * q); c.lineTo(tx + hs * .28, ty + hs * .7 * q); c.stroke(); } } };
+    for (const [x, y, a, s] of [[-.52, -.12, .7, 1], [.4, .5, -.5, .9], [-.2, .62, 1.3, .8], [.05, -.55, -.9, .85], [.62, -.1, .2, .7]]) { c.save(); c.translate(x * r, y * r); c.rotate(a); c.scale(s, s); c.fillStyle = 'rgba(255,255,255,0.35)';
+      c.beginPath(); c.moveTo(-r * .14, 0); c.quadraticCurveTo(0, -r * .07, r * .14, 0); c.quadraticCurveTo(0, r * .07, -r * .14, 0); c.fill(); c.strokeStyle = 'rgba(200,140,50,0.35)'; c.lineWidth = Math.max(.5, r * .012); c.beginPath(); c.moveTo(-r * .12, 0); c.lineTo(r * .12, 0); c.stroke(); c.restore(); }
+    /* ombre portée du corps sur le ballon */
+    const pts = body(r, t); c.fillStyle = 'rgba(150,80,20,0.18)'; c.beginPath(); for (const p of pts) if (p.z > 0) { c.moveTo(p.x + r * .03 + p.th * 1.05, p.y + r * .05); c.arc(p.x + r * .03, p.y + r * .05, p.th * 1.05, 0, TAU); } c.fill();
+    /* le corps : chaque anneau plus sombre près du bord (il tourne derrière), clair face à la lumière */
+    const vis = pts.filter(p => p.z > -.02).sort((a, b) => a.z - b.z);
+    for (const p of vis) { const k = Math.max(0, Math.min(1, p.z * 1.6)); c.fillStyle = mixc(G2, G1, k); c.beginPath(); c.arc(p.x, p.y, p.th, 0, TAU); c.fill(); }
+    for (const p of vis) { const k = Math.max(0, Math.min(1, p.z * 1.6)); if (k < .15) continue; c.fillStyle = mixc(G1, G0, k); c.beginPath(); c.arc(p.x - p.th * .16, p.y - p.th * .2, p.th * .74, 0, TAU); c.fill(); }
+    /* ventre crème le long du bas du corps */ c.fillStyle = 'rgba(255,241,194,0.9)'; c.beginPath(); for (const p of vis) { const k = p.z * 1.6; if (k < .3) continue; const x = p.x + p.th * .05, y = p.y + p.th * .52, w = p.th * .55, h = p.th * .22; c.moveTo(x + w, y); c.ellipse(x, y, w, h, 0, 0, TAU); } c.fill();
+    /* écailles dorées en losange, qui glissent doucement le long du corps */
+    const off = (t * .004) % 1; for (const p of vis) { const q = (p.s * 9 + off * 9) % 1; if (q > .12 || p.z < .25) continue; const sz = p.th * .5; c.fillStyle = '#f7c232'; c.beginPath(); c.moveTo(p.x, p.y - sz * .9); c.lineTo(p.x + sz * .6, p.y - sz * .2); c.lineTo(p.x, p.y + sz * .5); c.lineTo(p.x - sz * .6, p.y - sz * .2); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.arc(p.x - sz * .15, p.y - sz * .45, sz * .18, 0, TAU); c.fill(); }
+    /* reflet en filet le long du corps */ c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineCap = 'round'; c.lineWidth = Math.max(.6, r * .02); c.beginPath(); let on = false; for (const p of pts) { if (p.z > .35) { const x = p.x - p.th * .35, y = p.y - p.th * .55; on ? c.lineTo(x, y) : c.moveTo(x, y); on = true; } else on = false; } c.stroke();
+    c.restore(); };
+  const after = (c, r, t = 0) => {
+    const pts = body(r, t), e = pts[pts.length - 1];
+    /* le bout de la queue dépasse en bas à gauche et frétille */ { const w = Math.sin(t * .14) * r * .05, x0 = -r * .78, y0 = r * .62; c.strokeStyle = G1; c.lineCap = 'round'; c.lineWidth = r * .1; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(x0 - r * .26, y0 + r * .06, x0 - r * .24 + w, y0 + r * .26); c.stroke();
+      c.strokeStyle = G0; c.lineWidth = r * .05; c.beginPath(); c.moveTo(x0 - r * .02, y0 - r * .02); c.quadraticCurveTo(x0 - r * .26, y0 + r * .03, x0 - r * .25 + w, y0 + r * .22); c.stroke(); }
+    /* la nuque sort du ballon et la tête vient se poser, menton sur le bord */
+    const bob = Math.sin(t * .05) * r * .025, hx = r * .5, hy = -r * .9 + bob, hs = r * .36;
+    for (let i = 0; i <= 14; i++) { const u = i / 14, x = e.x + (hx - r * .05 - e.x) * u, y = e.y + (hy + hs * .35 - e.y) * u - Math.sin(u * Math.PI) * r * .06, th = e.th * (1 - u * .12);
+      c.fillStyle = G1; c.beginPath(); c.arc(x, y, th, 0, TAU); c.fill(); c.fillStyle = G0; c.beginPath(); c.arc(x - th * .16, y - th * .2, th * .74, 0, TAU); c.fill(); }
+    /* tête ronde, un peu penchée */ c.save(); c.translate(hx, hy); c.rotate(-.12 + Math.sin(t * .021) * .06);
+    c.fillStyle = 'rgba(150,80,20,0.2)'; c.beginPath(); c.ellipse(hs * .1, hs * .7, hs * .8, hs * .2, 0, 0, TAU); c.fill();
+    c.fillStyle = G1; c.beginPath(); c.ellipse(0, 0, hs, hs * .84, 0, 0, TAU); c.fill(); c.fillStyle = G0; c.beginPath(); c.ellipse(-hs * .08, -hs * .1, hs * .88, hs * .68, 0, 0, TAU); c.fill();
+    c.fillStyle = '#fff3c8'; c.beginPath(); c.ellipse(hs * .02, hs * .44, hs * .58, hs * .26, 0, 0, Math.PI); c.fill(); /* menton crème */
+    c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.ellipse(-hs * .42, -hs * .48, hs * .3, hs * .13, -.45, 0, TAU); c.fill();
+    c.fillStyle = '#f7c232'; for (const [x, y, s2] of [[-.05, -.62, .13], [.3, -.55, .09], [-.38, -.3, .07]]) { c.beginPath(); c.ellipse(x * hs, y * hs, s2 * hs, s2 * hs * .75, 0, 0, TAU); c.fill(); }
+    /* grands yeux : ils regardent autour, clignent ; deux reflets */
+    const bl = (t % 170) < 6, lk = Math.sin(t * .013) * .12, lkY = Math.cos(t * .017) * .05;
+    for (const ex of [-.36, .36]) { const x = ex * hs, y = -hs * .06; c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x, y, hs * .3, bl ? hs * .05 : hs * .35, 0, 0, TAU); c.fill();
+      if (!bl) { const px = x + (lk + .04) * hs, py = y + (lkY + .05) * hs; c.fillStyle = '#1a1208'; c.beginPath(); c.ellipse(px, py, hs * .19, hs * .24, 0, 0, TAU); c.fill();
+        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(px - hs * .07, py - hs * .1, hs * .08, 0, TAU); c.fill(); c.beginPath(); c.arc(px + hs * .07, py + hs * .08, hs * .035, 0, TAU); c.fill(); } }
+    c.fillStyle = 'rgba(255,110,140,0.6)'; c.beginPath(); c.ellipse(-hs * .66, hs * .24, hs * .15, hs * .09, 0, 0, TAU); c.ellipse(hs * .66, hs * .24, hs * .15, hs * .09, 0, 0, TAU); c.fill();
+    /* petit sourire + narines */ c.strokeStyle = '#1a5a2a'; c.lineWidth = Math.max(.6, hs * .055); c.lineCap = 'round'; c.beginPath(); c.arc(0, hs * .3, hs * .16, .35, Math.PI - .35); c.stroke();
+    c.fillStyle = 'rgba(20,70,30,0.55)'; c.beginPath(); c.arc(-hs * .1, hs * .18, hs * .03, 0, TAU); c.arc(hs * .1, hs * .18, hs * .03, 0, TAU); c.fill();
+    /* la langue fourchue sort de temps en temps */ const tq = t % 120; if (tq < 24) { const q = Math.sin(tq / 24 * Math.PI), w = Math.sin(t * 1.3) * hs * .05, ty = hs * .44; c.strokeStyle = '#ff4a6a'; c.lineWidth = Math.max(.7, hs * .06);
+      c.beginPath(); c.moveTo(0, ty); c.lineTo(w, ty + hs * .32 * q); c.moveTo(w, ty + hs * .32 * q); c.lineTo(w - hs * .1, ty + hs * .46 * q); c.moveTo(w, ty + hs * .32 * q); c.lineTo(w + hs * .1, ty + hs * .46 * q); c.stroke(); }
+    c.restore(); };
+  return { id: 'bebe_serpent', name: 'Le Bébé serpent', secret: true, dust: '#7ae08a', gloss: .45, paint, after };
+})();
+
 SKINS.push(BEBE_SERPENT_SKIN);
 
 if (window.__BOT) window.__NAV = { story: w => { showScreen('story'); storyWorld = w; renderStory(null, false); }, intro: (w, i) => showLevelIntro(w, i) };
