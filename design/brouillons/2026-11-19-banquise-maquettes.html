@@ -567,7 +567,7 @@ const SS = +(Q.get('s') || 0);
 if (SS === 1) { ZN.name = 'Le pingouin perdu'; ZN.levels = 'Touche-le 3 fois'; }
 if (SS === 2) { ZN.name = 'Sous la banquise'; ZN.levels = 'Niveau secret'; }
 /* grand pingouin détaillé : pose = 'walk' | 'turn' | 'jump' | 'slide' | 'sit' ; le baluchon sur un bâton, sur l'épaule */
-function pingu(x, y, s, t, o = {}) {
+var pinguV1 = function (x, y, s, t, o = {}) {
   const pose = o.pose || 'walk', dir = o.dir || 1, blink = (t % 180) < 6 ? .12 : 1, wob = pose === 'walk' ? Math.sin(t * .18) * .12 : 0;
   c.save(); c.translate(x, y); c.scale(s * dir, s);
   /* ombre */ c.fillStyle = 'rgba(30,50,110,0.25)'; c.beginPath(); c.ellipse(2, 2, pose === 'slide' ? 38 : 22, 5, 0, 0, TAU); c.fill();
@@ -602,6 +602,53 @@ function pingu(x, y, s, t, o = {}) {
   c.fillStyle = '#26304a'; c.beginPath(); c.ellipse(0, 12, 5.5, 15, 0, 0, TAU); c.fill(); c.restore();
   /* liseré de lumière */ c.strokeStyle = 'rgba(200,225,255,0.55)'; c.lineWidth = 2; c.beginPath(); c.moveTo(-20, -14); c.bezierCurveTo(-24, -34, -20, -62, 0, -64); c.stroke();
   c.restore(); }
+/* ===== Pingouin v2 : grosse tête « chibi », deux grands yeux de trois quarts, gros bec, contour doux ===== */
+var pingu = function (x, y, s, t, o = {}) {
+  const pose = o.pose || 'walk', dir = o.dir || 1, blink = (t % 180) < 6 ? .1 : 1, wob = pose === 'walk' ? Math.sin(t * .18) * .1 : 0, OUT = '#0c1222';
+  const step = pose === 'walk' ? Math.sin(t * .18) : 0, jump = pose === 'jump', open = jump ? 1 : (o.mouth || 0);
+  c.save(); c.translate(x, y); c.scale(s * dir, s);
+  c.fillStyle = 'rgba(30,50,110,0.25)'; c.beginPath(); c.ellipse(2, 2, pose === 'slide' ? 40 : 24, 5, 0, 0, TAU); c.fill();
+  if (pose === 'slide') { c.translate(-4, -16); c.rotate(Math.PI / 2 - .5); c.translate(-6, 28); }
+  c.rotate(wob);
+  const ln = (w) => { c.strokeStyle = OUT; c.lineWidth = w; c.lineJoin = 'round'; c.stroke(); };
+  /* baluchon (derrière) */
+  if (!o.noBag) { c.save(); c.translate(-12, -40); c.rotate(pose === 'slide' ? 1.5 + Math.sin(t * .4) * .15 : .7 + Math.sin(t * .18) * .06);
+    c.strokeStyle = '#7a4a26'; c.lineWidth = 3.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(6, 6); c.lineTo(-28, -6); c.stroke();
+    c.translate(-32, -2 + Math.sin(t * .18) * 1.5);
+    const hg = c.createRadialGradient(-6, -2, 2, 0, 6, 18); hg.addColorStop(0, '#ff6a6a'); hg.addColorStop(1, '#b8202e'); c.fillStyle = hg;
+    c.beginPath(); c.moveTo(-15, 2); c.bezierCurveTo(-19, 24, 17, 26, 15, 4); c.quadraticCurveTo(6, -7, 0, -5); c.quadraticCurveTo(-8, -7, -15, 2); c.fill(); ln(1.6);
+    c.fillStyle = '#ffffff'; for (const [dx, dy] of [[-8, 8], [2, 13], [8, 4], [-3, 2], [7, 17], [-10, 16]]) { c.beginPath(); c.arc(dx, dy, 2, 0, TAU); c.fill(); }
+    c.fillStyle = '#b8202e'; c.beginPath(); c.moveTo(-4, -4); c.lineTo(-10, -12); c.lineTo(-2, -7); c.lineTo(4, -13); c.lineTo(3, -5); c.fill(); c.restore(); }
+  /* pieds (qui alternent quand il marche) */
+  if (pose !== 'slide') for (const sd of [-1, 1]) { const lift = Math.max(0, step * sd) * 4; c.fillStyle = '#ff9a1e'; c.beginPath(); c.ellipse(sd * 8 + 4, -2 - lift, 9, 4, sd * .1, 0, TAU); c.fill(); ln(1.4); c.fillStyle = 'rgba(255,255,255,0.4)'; c.beginPath(); c.ellipse(sd * 8 + 2, -4 - lift, 4, 1.3, 0, 0, TAU); c.fill(); }
+  /* corps (petit, en poire) */
+  const bodyP = () => { c.beginPath(); c.moveTo(0, -42); c.bezierCurveTo(20, -42, 22, -18, 19, -8); c.quadraticCurveTo(15, 2, 0, 2); c.quadraticCurveTo(-15, 2, -19, -8); c.bezierCurveTo(-22, -18, -20, -42, 0, -42); c.closePath(); };
+  const bg = c.createLinearGradient(-18, -40, 18, 0); bg.addColorStop(0, '#3e4c70'); bg.addColorStop(1, '#161c30'); c.fillStyle = bg; bodyP(); c.fill(); ln(2);
+  const vg = c.createRadialGradient(0, -22, 3, 3, -16, 20); vg.addColorStop(0, '#ffffff'); vg.addColorStop(1, '#d4e0f2'); c.fillStyle = vg; c.beginPath(); c.ellipse(3, -17, 12, 16, 0, 0, TAU); c.fill();
+  /* nageoires */ for (const sd of [-1, 1]) { c.save(); c.translate(sd * 17, -30); c.rotate(sd * (jump ? -2.4 : pose === 'slide' ? -1.4 : .35 + Math.sin(t * .18 + sd) * .2)); c.fillStyle = '#26304a'; c.beginPath(); c.ellipse(0, 11, 5.5, 13, 0, 0, TAU); c.fill(); ln(1.6); c.restore(); }
+  /* tête : grosse, ronde */
+  const HY = -60;
+  const hg2 = c.createRadialGradient(-10, HY - 12, 3, 0, HY, 30); hg2.addColorStop(0, '#4a5a82'); hg2.addColorStop(1, '#161c30'); c.fillStyle = hg2; c.beginPath(); c.ellipse(1, HY, 27, 25, 0, 0, TAU); c.fill(); ln(2);
+  /* masque blanc en cœur */
+  c.fillStyle = '#fbfdff'; c.beginPath(); c.moveTo(7, HY - 14); c.bezierCurveTo(14, HY - 22, 26, HY - 14, 24, HY - 2); c.bezierCurveTo(23, HY + 10, 14, HY + 18, 6, HY + 18); c.bezierCurveTo(-2, HY + 18, -12, HY + 10, -12, HY - 2); c.bezierCurveTo(-13, HY - 14, 0, HY - 22, 7, HY - 14); c.fill();
+  /* joues */ c.fillStyle = 'rgba(255,130,160,0.6)'; c.beginPath(); c.ellipse(-8, HY + 7, 4.5, 3, 0, 0, TAU); c.ellipse(22, HY + 7, 4, 3, 0, 0, TAU); c.fill();
+  /* deux grands yeux (trois quarts) */
+  const big = jump ? 1.25 : 1;
+  for (const [ex, sz] of [[0, .92], [14, 1]]) { const ey = HY - 3;
+    c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(ex, ey, 6.5 * sz * big, 8 * sz * big * blink, 0, 0, TAU); c.fill(); c.strokeStyle = OUT; c.lineWidth = 1.2; c.stroke();
+    if (blink > .5) { c.fillStyle = '#141a2c'; c.beginPath(); c.ellipse(ex + 1.5, ey + (o.sad ? 2 : .5), 3.8 * sz * (jump ? .8 : 1), 4.6 * sz * (jump ? .8 : 1), 0, 0, TAU); c.fill();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex - .2, ey - 2, 1.7 * sz, 0, TAU); c.fill(); c.beginPath(); c.arc(ex + 3, ey + 2.2, .8 * sz, 0, TAU); c.fill(); } }
+  if (o.sad) { c.strokeStyle = OUT; c.lineWidth = 1.8; c.beginPath(); c.moveTo(-5, HY - 13); c.lineTo(4, HY - 11); c.moveTo(10, HY - 11); c.lineTo(19, HY - 13); c.stroke(); }
+  /* bec : gros, deux tons, s'ouvre */
+  c.save(); c.translate(19, HY + 6);
+  c.fillStyle = '#e8700e'; c.beginPath(); c.moveTo(-4, 1); c.quadraticCurveTo(10, 3 + open * 5, 14, 2 + open * 6); c.quadraticCurveTo(6, 7 + open * 7, -3, 5 + open * 4); c.closePath(); c.fill(); ln(1.3);
+  if (open > .2) { c.fillStyle = '#c83a3a'; c.beginPath(); c.ellipse(3, 4 + open * 3, 5, 2 + open * 2, 0, 0, TAU); c.fill(); }
+  c.fillStyle = '#ffb02e'; c.beginPath(); c.moveTo(-5, -4); c.quadraticCurveTo(8, -6, 16, 1); c.quadraticCurveTo(8, 3, -4, 2); c.closePath(); c.fill(); ln(1.3);
+  c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.ellipse(3, -2, 5, 1.3, -.1, 0, TAU); c.fill(); c.restore();
+  /* reflet sur le haut de la tête (lumière haut-gauche) */
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.ellipse(-10, HY - 15, 10, 5, -.5, 0, TAU); c.fill();
+  c.restore(); };
+
 function sfxTxt(txt, x, y, k, col, size) { yTxt(txt, x, y, k, col, size); }
 /* séquence du secret : il marche, 1re touche il se retourne, 2e il sursaute, 3e il glisse sur le ventre jusqu'au trou et plonge */
 function penguinSecret(t) {
@@ -676,9 +723,9 @@ function bundleBig(x, y, s, t, hits, open) { c.save(); c.translate(x, y); c.scal
   c.restore(); }
 function pinguCarrier(x, y, s, t, o) { /* le pingouin porte le baluchon sur la tête/le dos */
   pingu(x, y, s, t, { pose: o.pose || 'walk', dir: o.dir || 1, noBag: true });
-  bundleBig(x + (o.dir || 1) * 2 * s, y - 84 * s + Math.abs(Math.sin(t * .18)) * 1.5, s * .9, t, o.hits || 0, o.open);
+  bundleBig(x + (o.dir || 1) * 2 * s, y - 104 * s + Math.abs(Math.sin(t * .18)) * 1.5, s * .9, t, o.hits || 0, o.open);
   /* les deux nageoires levées qui tiennent le baluchon sur la tête */
-  for (const sd of [-1, 1]) { c.save(); c.translate(x + sd * 17 * s, y - 50 * s); c.rotate(sd * -2.7); c.fillStyle = '#26304a'; c.beginPath(); c.ellipse(0, 12 * s, 5 * s, 15 * s, 0, 0, TAU); c.fill(); c.restore(); } }
+  for (const sd of [-1, 1]) { c.save(); c.translate(x + sd * 20 * s, y - 34 * s); c.rotate(sd * -2.75); c.fillStyle = '#26304a'; c.beginPath(); c.ellipse(0, 12 * s, 5 * s, 15 * s, 0, 0, TAU); c.fill(); c.restore(); } }
 function grotteScene(t) {
   caveWall(t);
   iceColumn(250, 18, t, .3); iceColumn(130, 14, t, .25); iceColumn(40, 30, t, .55); iceColumn(350, 36, t, .55);
@@ -689,13 +736,13 @@ function grotteScene(t) {
   const px = 195 + Math.sin(T * .012) * 110, py = 710;
   if (hit < 5) {
     pinguCarrier(px, py, 1.15, t, { dir, hits: hit });
-    const bx = 195 + Math.sin((T - u + 60) * .012) * 110, landY = py - 84 * 1.15 - 24 * 1.035 - 34;
+    const bx = 195 + Math.sin((T - u + 60) * .012) * 110, landY = py - 104 * 1.15 - 24 * 1.035 - 34;
     if (u < 60) { const q = u / 60, by = 260 + (landY - 260) * q * q; if (u > 15) { const g = c.createRadialGradient(bx - 10, by - 10, 2, bx, by, 34); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, '#e23a6e'); g.addColorStop(1, '#6a1030'); c.fillStyle = g; c.beginPath(); c.arc(bx, by, 32, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(bx - 12, by - 13, 5, 8, -.6, 0, TAU); c.fill(); } }
     else yTxt('★ ' + (hit + 1) + '/5', px, landY - 30, (u - 60) / 30, '#ffd23f', 26);
   } else { const q = (T - 450) / 70;
     pingu(px, py, 1.15, t, { pose: 'jump', dir, noBag: true });
     /* le baluchon s'ouvre : le tissu s'étale, une lumière dorée, le ballon secret s'envole */
-    const ox = px, oy = py - 97; c.save(); c.globalAlpha = Math.max(0, 1 - q * 1.5); bundleBig(ox, oy, 1.03, t, 5, 1); c.restore();
+    const ox = px, oy = py - 120; c.save(); c.globalAlpha = Math.max(0, 1 - q * 1.5); bundleBig(ox, oy, 1.03, t, 5, 1); c.restore();
     const gl = c.createRadialGradient(ox, oy, 4, ox, oy, 120); gl.addColorStop(0, `rgba(255,236,170,${(.8 * Math.min(1, q * 2)).toFixed(3)})`); gl.addColorStop(1, 'rgba(255,220,120,0)'); c.fillStyle = gl; c.beginPath(); c.arc(ox, oy, 120, 0, TAU); c.fill();
     const by = oy - q * 140; c.fillStyle = 'rgba(200,240,255,0.95)'; c.beginPath(); c.arc(ox, by, 30, 0, TAU); c.fill(); c.fillStyle = '#141a2c'; c.font = '30px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('?', ox, by + 2);
     yTxt('Le trésor du pingouin !', W / 2, 300, q, '#ffd23f', 28); }
