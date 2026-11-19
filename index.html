@@ -15846,6 +15846,67 @@ updateGame = function () { _updateGameJG(); try { if (R && R.plant && !G.ending)
 const _drawHazardsJG = drawHazards;
 drawHazards = function (th) { try { if (R && R.plant) drawPlant(); } catch (e) {} _drawHazardsJG(th); };
 
+/* =========================================================
+   Monde 6 : le Serpent géant v2 (étape 1 : le look)
+   Il s'enroule autour d'une grosse branche en haut de l'écran (la liane de la plateforme y est accrochée)
+   et pend, tête vers le ballon. Corps = chaîne d'anneaux le long d'une courbe ; style du jeu (aplats, reflets, pas de contour).
+   ========================================================= */
+const SN = { g0: '#3fbf5a', g1: '#2a9a48', g2: '#1a6a34', belly: '#f6e6a8', spot: '#f2b705', spotD: '#c88a00', rage0: '#ff7a5a', rage1: '#e8463a', rage2: '#9a1e2a' };
+/* une grosse liane verticale au bord de l'écran ; le serpent s'enroule autour et avance la tête vers le centre */
+const snTrunkX = B => B.side > 0 ? PW - 30 : 30;
+function snHead(B) { const tx = snTrunkX(B), t = B.t, gy = groundY(); return { x: tx - B.side * (92 + Math.sin(t * .021) * 10), y: gy - 128 + Math.sin(t * .04) * 6 }; }
+/* mélange de deux couleurs #rrggbb, résultat en #rrggbb (réutilisable pour d'autres mélanges) */
+const snMix = (a, b, k) => { const A = parseInt(a.slice(1), 16), B2 = parseInt(b.slice(1), 16), m = sh => Math.round((A >> sh & 255) + ((B2 >> sh & 255) - (A >> sh & 255)) * k); return '#' + [16, 8, 0].map(sh => m(sh).toString(16).padStart(2, '0')).join(''); };
+function snPalette(B) { const r = B.rage || 0; return { g0: snMix(SN.g0, SN.rage0, r), g1: snMix(SN.g1, SN.rage1, r), g2: snMix(SN.g2, SN.rage2, r) }; }
+function drawTrunk(B) { const x = snTrunkX(B), y0 = hudBottom() - 30, y1 = lavaY() + 10;
+  const g = ctx.createLinearGradient(x - 14, 0, x + 14, 0); g.addColorStop(0, '#5fae3c'); g.addColorStop(.5, '#3f8a2a'); g.addColorStop(1, '#245a1a'); ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(x - 11, y0); for (let y = y0; y <= y1; y += 20) ctx.lineTo(x - 11 + Math.sin(y * .02) * 3, y); ctx.lineTo(x + 11, y1); for (let y = y1; y >= y0; y -= 20) ctx.lineTo(x + 11 + Math.sin(y * .02) * 3, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(x - 8, y0, 3, y1 - y0);
+  ctx.fillStyle = '#4caf3c'; for (let y = y0 + 30; y < y1; y += 52) { const sd = (y / 52 | 0) % 2 ? 1 : -1; ctx.save(); ctx.translate(x + sd * 8, y); ctx.rotate(sd > 0 ? .5 : 2.6); ctx.beginPath(); ctx.ellipse(11, 0, 13, 4.6, 0, 0, TAU); ctx.fill(); ctx.restore(); } }
+/* la courbe du corps : la queue s'enroule 3 fois autour de la liane en descendant, puis le cou se détache vers le centre */
+function snPath(B) { const tx = snTrunkX(B), s = B.side, h = snHead(B), pts = [], top = hudBottom() + 60, bot = h.y + 40, R0 = 17;
+  const N = 150, turns = 3; for (let i = 0; i <= N; i++) { const u = i / N, a = u * turns * TAU + B.t * .012, y = top + (bot - top) * u; pts.push({ x: tx + Math.sin(a) * R0, y: y + Math.cos(a) * 4, z: Math.cos(a), r: 4 + u * 9 }); }
+  const e = pts[pts.length - 1], sw = Math.sin(B.t * .03) * 10;
+  for (let i = 1; i <= 60; i++) { const u = i / 60, c1x = e.x - s * 30, c1y = e.y + 40 + sw, c2x = h.x + s * 40, c2y = h.y + 50 - sw;
+    const x = (1 - u) ** 3 * e.x + 3 * (1 - u) ** 2 * u * c1x + 3 * (1 - u) * u * u * c2x + u ** 3 * (h.x + s * 14), y = (1 - u) ** 3 * e.y + 3 * (1 - u) ** 2 * u * c1y + 3 * (1 - u) * u * u * c2y + u ** 3 * (h.y + 12);
+    pts.push({ x, y, z: 1, r: 13 + Math.sin(u * Math.PI) * 2 - u * 1 }); }
+  return pts; }
+function snSegs(pts, P, front) { for (let i = 0; i < pts.length; i++) { const p = pts[i]; if ((p.z >= 0) !== front) continue;
+    const r = p.r, dk = p.z < 0 ? .25 : 0; ctx.fillStyle = dk ? snMix(P.g1, P.g2, .6) : P.g1; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); }
+  for (let i = 0; i < pts.length; i++) { const p = pts[i]; if ((p.z >= 0) !== front || p.z < 0) continue;
+    ctx.fillStyle = P.g0; ctx.beginPath(); ctx.arc(p.x - p.r * .18, p.y - p.r * .2, p.r * .78, 0, TAU); ctx.fill();
+    if (i % 7 === 3) { ctx.fillStyle = SN.spot; ctx.beginPath(); ctx.ellipse(p.x, p.y - p.r * .25, p.r * .42, p.r * .3, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.ellipse(p.x - p.r * .1, p.y - p.r * .35, p.r * .18, p.r * .1, 0, 0, TAU); ctx.fill(); }
+    if (i % 3 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.beginPath(); ctx.ellipse(p.x - p.r * .35, p.y - p.r * .45, p.r * .3, p.r * .16, -.5, 0, TAU); ctx.fill(); } } }
+function snHeadDraw(B, h, P) { const ab = R && (R.balls.find(b => b.state === 'fall') || R.balls.find(b => b.state === 'aim'));
+  const lx = ab ? clamp((ab.x - h.x) / 120, -1, 1) : 0, ly = ab ? clamp((ab.y - h.y) / 160, -1, 1) : .3, t = B.t, blink = (t % 210) < 6, hurt = B.hurt % 4 > 1;
+  ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(lx * .18); ctx.scale(1.15, 1.15);
+  /* crâne rond, museau ; ventre crème sous la mâchoire */
+  ctx.fillStyle = hurt ? '#ffffff' : P.g1; ctx.beginPath(); ctx.ellipse(0, 0, 30, 24, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = hurt ? '#ffffff' : P.g0; ctx.beginPath(); ctx.ellipse(-4, -4, 25, 18, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = SN.belly; ctx.beginPath(); ctx.ellipse(0, 14, 18, 8, 0, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.beginPath(); ctx.ellipse(-12, -14, 10, 4.5, -.4, 0, TAU); ctx.fill();
+  /* taches dorées sur le dessus */ ctx.fillStyle = SN.spot; for (const [x, y, r] of [[-2, -17, 4], [9, -15, 3], [-13, -11, 2.6]]) { ctx.beginPath(); ctx.ellipse(x, y, r, r * .75, 0, 0, TAU); ctx.fill(); }
+  /* grands yeux qui suivent le ballon */
+  for (const ex of [-11, 11]) { const ey = -5; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, ey, 8.5, blink ? 1.2 : 9.5, 0, 0, TAU); ctx.fill();
+    if (!blink) { const px = ex + lx * 3.5, py = ey + ly * 3.5; ctx.fillStyle = B.rage ? '#c8102a' : '#1a1208'; ctx.beginPath(); ctx.ellipse(px, py, 3, 6.5, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px - 2, py - 3.5, 1.8, 0, TAU); ctx.fill(); }
+    /* paupière boudeuse */ ctx.fillStyle = hurt ? '#ffffff' : P.g1; ctx.beginPath(); ctx.ellipse(ex, ey - 7.5, 9.5, 4, ex < 0 ? .25 : -.25, Math.PI, TAU); ctx.fill(); }
+  /* narines + bouche ; la langue fourchue sort par moments */
+  ctx.fillStyle = 'rgba(0,40,10,0.45)'; ctx.beginPath(); ctx.ellipse(-4, 9, 1.6, 1, 0, 0, TAU); ctx.ellipse(4, 9, 1.6, 1, 0, 0, TAU); ctx.fill();
+  const mo = B.mouth || 0; ctx.fillStyle = '#5a0a24'; ctx.beginPath(); ctx.ellipse(0, 15, 12, 1.5 + mo * 7, 0, 0, Math.PI); ctx.fill();
+  if (mo > .3) { ctx.fillStyle = '#ffffff'; for (const fx of [-6, 6]) { ctx.beginPath(); ctx.moveTo(fx - 2, 15); ctx.lineTo(fx, 15 + 5 * mo); ctx.lineTo(fx + 2, 15); ctx.fill(); } }
+  const tq = t % 120; if (tq < 22 && mo < .3) { const k = Math.sin(tq / 22 * Math.PI), wig = Math.sin(t * 1.2) * 3; ctx.strokeStyle = '#e8304a'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(wig * .5, 16 + 14 * k); ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(wig * .5, 16 + 14 * k); ctx.lineTo(wig - 4, 16 + 20 * k); ctx.moveTo(wig * .5, 16 + 14 * k); ctx.lineTo(wig + 4, 16 + 20 * k); ctx.stroke(); }
+  ctx.restore(); }
+function drawSnake2(B) { const P = snPalette(B), pts = snPath(B), h = snHead(B);
+  if (B.dead) ctx.globalAlpha = Math.max(0, 1 - B.deadT / 60);
+  snSegs(pts, P, false); drawTrunk(B); snSegs(pts, P, true); snHeadDraw(B, h, P); ctx.globalAlpha = 1; }
+/* étape 1 : on place la tête (cible des tirs) ; les attaques actuelles restent en attendant l'étape 2 */
+const _updateBossSN = updateBoss;
+updateBoss = function () { _updateBossSN(); const B = G.boss; if (B && B.type === 'snake' && !B.dead) { const h = snHead(B); B.x = h.x; B.y = h.y; } };
+const _drawBossSN = drawBoss;
+drawBoss = function (th) { const B = G.boss; if (B && B.type === 'snake') { drawSnake2(B); if (B.warn > 0 || B.lunge > 0) drawSnakeLunge(B); return; } return _drawBossSN(th); };
+
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
 if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
 requestAnimationFrame(t => { last = t; frame(t); });
