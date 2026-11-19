@@ -315,6 +315,79 @@ function glowFrog(x, y, s, t) { const a = .6 + .4 * Math.sin(t * .05); const g =
   for (const dx of [-7, 7]) { c.beginPath(); c.arc(dx, -18, 5, 0, TAU); c.fillStyle = '#2ac0a0'; c.fill(); aln(1.2); cuteEye(dx, -18.5, 3.2, k, '#141a2c'); }
   c.restore(); }
 
+/* ===== le singe v2 (origine = centre du corps ; dir = sens de la marche) ===== */
+function monkey2(x, y, s, t, o = {}) { const pose = o.pose || 'swing', k = blinkK(t, o.ph || 1, 170), fur = '#8a5a34', furD = '#5a3418', tan = '#f2cfa0';
+  c.save(); c.translate(x, y); c.scale(s * (o.dir || 1), s); c.rotate(o.rot || 0);
+  /* queue en spirale */ c.strokeStyle = furD; c.lineWidth = 4.5; c.lineCap = 'round'; c.beginPath(); c.moveTo(-10, 12); c.bezierCurveTo(-30, 18, -36, -6, -24, -10); c.quadraticCurveTo(-16, -12, -18, -4); c.stroke(); c.strokeStyle = AOUT; c.lineWidth = 1; 
+  /* jambes qui pendent */ for (const [dx, a] of [[-5, .25], [6, -.15]]) { c.save(); c.translate(dx, 14); c.rotate(a + Math.sin(t * .1 + dx) * .15); c.beginPath(); c.roundRect(-3.5, 0, 7, 16, 3.5); c.fillStyle = fur; c.fill(); aln(1.3); c.beginPath(); c.ellipse(1, 17, 5, 3.4, 0, 0, TAU); c.fillStyle = tan; c.fill(); aln(1.1); c.restore(); }
+  /* bras arrière : tient la liane au-dessus */ const up = pose === 'throw' ? [[-8, -12, -14, -46], [8, -12, 14, -46]] : [[-6, -12, -2, -46]];
+  for (const [sx, sy, hx, hy] of up) { c.beginPath(); c.moveTo(sx, sy); c.quadraticCurveTo(sx - 4, (sy + hy) / 2, hx, hy); c.strokeStyle = AOUT; c.lineWidth = 8.5; c.stroke(); c.strokeStyle = fur; c.lineWidth = 6; c.stroke(); c.beginPath(); c.arc(hx, hy, 4.4, 0, TAU); c.fillStyle = tan; c.fill(); aln(1.1); }
+  /* corps en poire, ventre clair */ c.beginPath(); c.ellipse(0, 2, 13, 15, 0, 0, TAU); c.fillStyle = rg(0, 2, 15, '#b07a48', furD); c.fill(); aln(1.6);
+  c.beginPath(); c.ellipse(2, 5, 7.5, 9.5, 0, 0, TAU); c.fillStyle = tan; c.fill();
+  /* bras avant : tendu vers le ballon (attraper) ou le long du corps */
+  if (pose !== 'throw') { const rx = pose === 'reach' ? 26 : 14, ry = pose === 'reach' ? -10 : 8; c.beginPath(); c.moveTo(8, -6); c.quadraticCurveTo(16, -4, rx, ry); c.strokeStyle = AOUT; c.lineWidth = 8.5; c.stroke(); c.strokeStyle = fur; c.lineWidth = 6; c.stroke(); c.beginPath(); c.arc(rx, ry, 4.4, 0, TAU); c.fillStyle = tan; c.fill(); aln(1.1); }
+  /* tête : grosse, oreilles rondes, masque en cœur, grands yeux */
+  c.save(); c.translate(4, -20); c.rotate(pose === 'throw' ? -.15 : Math.sin(t * .05) * .06);
+  for (const dx of [-15, 15]) { c.beginPath(); c.arc(dx, -1, 6, 0, TAU); c.fillStyle = fur; c.fill(); aln(1.3); c.beginPath(); c.arc(dx, -1, 3.4, 0, TAU); c.fillStyle = '#f0b890'; c.fill(); }
+  c.beginPath(); c.arc(0, -2, 14, 0, TAU); c.fillStyle = rg(0, -2, 14, '#b07a48', furD); c.fill(); aln(1.6);
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.ellipse(-6, -10, 6, 3, -.4, 0, TAU); c.fill();
+  c.beginPath(); c.moveTo(0, -6); c.bezierCurveTo(4, -14, 13, -10, 11, -2); c.bezierCurveTo(10, 6, 5, 10, 0, 10); c.bezierCurveTo(-5, 10, -10, 6, -11, -2); c.bezierCurveTo(-13, -10, -4, -14, 0, -6); c.fillStyle = tan; c.fill();
+  if (pose === 'throw') { c.strokeStyle = AOUT; c.lineWidth = 1.8; for (const dx of [-5, 5]) { c.beginPath(); c.moveTo(dx - 3, -5); c.lineTo(dx, -3); c.lineTo(dx - 3, -1); c.stroke(); } /* yeux plissés de rire */
+    c.beginPath(); c.moveTo(-6, 3); c.quadraticCurveTo(0, 11, 6, 3); c.closePath(); c.fillStyle = '#5a1a20'; c.fill(); aln(1.1); c.fillStyle = '#ff7a8a'; c.beginPath(); c.ellipse(1, 7.5, 3, 2.4, 0, 0, TAU); c.fill(); }
+  else { cuteEye(-4.5, -3, 3.4, k, '#141a2c'); cuteEye(5, -3, 3.6, k, '#141a2c'); c.strokeStyle = AOUT; c.lineWidth = 1.3; c.beginPath(); c.arc(0, 3.5, 4, .25, Math.PI - .25); c.stroke();
+    c.fillStyle = '#3a2418'; c.beginPath(); c.ellipse(-1.4, 1.4, .9, .7, 0, 0, TAU); c.ellipse(1.4, 1.4, .9, .7, 0, 0, TAU); c.fill(); }
+  c.restore(); c.restore(); }
+
+/* ===== la plante carnivore (tête = mâchoires ; dir = côté où elle regarde) ===== */
+/* open : 0 fermée → 1 grande ouverte ; shake : tremblement d'avertissement ; full : elle mâche (ballon avalé) */
+function carnivore(x, y, s, t, o = {}) { const op = o.open || 0, sh = (o.shake || 0) * Math.sin(t * 1.3) * 2, chew = o.full ? Math.abs(Math.sin(t * .3)) * .12 : 0, gy = o.ground || 800;
+  /* tige qui sort de l'eau, deux feuilles */ c.strokeStyle = AOUT; c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 8 * (o.dir || 1), gy); c.quadraticCurveTo(x - 26 * (o.dir || 1), (gy + y) / 2, x, y + 18 * s); c.stroke(); c.strokeStyle = '#3aa040'; c.lineWidth = 6; c.stroke();
+  for (const [u, sd] of [[.35, 1], [.6, -1]]) { const yy = gy + (y - gy) * u, xx = x - 20 * (o.dir || 1) * Math.sin(u * Math.PI); c.save(); c.translate(xx, yy); c.rotate(sd * .8 - .3); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(14, -12, 32, -4); c.quadraticCurveTo(14, 4, 0, 0); c.fillStyle = rg(14, -4, 16, '#7ee06a', '#2a8a3a'); c.fill(); aln(1.3); c.restore(); }
+  c.save(); c.translate(x + sh, y); c.scale(s * (o.dir || 1), s);
+  const jaw = (up) => { const a = (up ? -1 : 1) * (op * .85 + chew); c.save(); c.rotate(a);
+    /* extérieur vert, intérieur rose tacheté, cils-dents sur le bord */
+    c.beginPath(); c.moveTo(-14, 0); c.bezierCurveTo(-12, up ? -30 : 26, 34, up ? -32 : 28, 40, 0); c.closePath(); c.fillStyle = rg(10, up ? -12 : 10, 26, '#9af07a', '#2a8a3a'); c.fill(); aln(1.6);
+    if (op > .12) { c.beginPath(); c.moveTo(-10, 0); c.bezierCurveTo(-8, up ? -20 : 17, 28, up ? -22 : 19, 36, 0); c.closePath(); c.fillStyle = rg(10, up ? -8 : 8, 20, '#ff9ab0', '#c8204a'); c.fill();
+    c.fillStyle = 'rgba(120,10,40,0.6)'; for (const [px, py] of [[4, 6], [14, 9], [22, 5], [10, 13]]) { c.beginPath(); c.arc(px, up ? -py : py, 1.6, 0, TAU); c.fill(); } }
+    else { c.strokeStyle = 'rgba(20,80,30,0.5)'; c.lineWidth = 1.2; for (let i = 0; i < 4; i++) { c.beginPath(); c.moveTo(i * 9, up ? -4 : 4); c.lineTo(i * 9 + 4, up ? -12 : 12); c.stroke(); } }
+    c.fillStyle = '#fffbea'; for (let i = 0; i < 7; i++) { const u = i / 6, px = -6 + u * 42, py = (up ? -1 : 1) * Math.sin(u * Math.PI) * 2; c.beginPath(); c.moveTo(px - 2.6, py); c.lineTo(px, py + (up ? 8 : -8)); c.lineTo(px + 2.6, py); c.fill(); }
+    if (up) { /* deux petits yeux sur la mâchoire du haut : mignonne mais pas commode */ for (const dx of [6, 18]) { c.beginPath(); c.arc(dx, -22, 5, 0, TAU); c.fillStyle = '#9af07a'; c.fill(); aln(1.2); cuteEye(dx, -22.5, 3.2, op > .1 ? 1 : .15, '#141a2c'); }
+      c.strokeStyle = AOUT; c.lineWidth = 2; c.beginPath(); c.moveTo(1, -29); c.lineTo(10, o.shake ? -26 : -28); c.moveTo(23, -29); c.lineTo(14, o.shake ? -26 : -28); c.stroke(); }
+    c.restore(); };
+  if (op > .15) { c.fillStyle = '#5a0a24'; c.beginPath(); c.ellipse(14, 0, 22 * op, 14 * op, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(16, 4 * op, 10 * op, 5 * op, 0, 0, TAU); c.fillStyle = '#ff6a8a'; c.fill(); }
+  jaw(false); jaw(true);
+  if (o.full) { c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.arc(34, -10 - Math.abs(Math.sin(t * .1)) * 6, 2.4, 0, TAU); c.fill(); }
+  c.restore(); }
+/* zone de danger (cercle autour de la bouche) : elle n'existe que gueule ouverte */
+const CARN_R = 30;
+/* démo : le cycle de la plante (ouverte 130, avertissement 24, claque, fermée 90) avec deux ballons */
+function carnScene(t) { const T = t % 520, PX0 = 196, top = 672, cx = PX0 + 62, cy = top - 6;
+  const cyc = T % 260, open = cyc < 130 ? Math.min(1, cyc / 16) : cyc < 154 ? 1 : cyc < 162 ? 1 - (cyc - 154) / 8 : cyc < 240 ? 0 : (cyc - 240) / 20, shake = cyc >= 130 && cyc < 154 ? 1 : 0;
+  const first = T < 260, bx = first ? PX0 + 40 : PX0 + 6, r = 30;
+  let eaten = false;
+  /* ballon 1 : lâché près de la plante, gueule ouverte → croqué. ballon 2 : lâché quand elle est fermée → posé */
+  const drop = first ? 40 : 170, U = cyc - drop, fall = U / 34;
+  if (first && fall >= 1) eaten = true;
+  carnivore(cx, cy, 1, t, { open: eaten && cyc < 200 ? Math.max(0, open - .6) : open, shake, full: eaten && cyc < 200, dir: -1, ground: FL });
+  post(PX0, top);
+  if (U < 0) { c.save(); c.globalAlpha = .9; c.fillStyle = '#fff'; c.beginPath(); c.roundRect(bx - 7, 300 + r + 30, 14, 30, 7); c.fill(); c.restore(); }
+  const by = U < 0 ? 300 : 300 + (top - 8 - r - 300) * Math.min(1, fall * fall);
+  if (!eaten) { const g = c.createRadialGradient(bx - r * .35, by - r * .35, r * .1, bx, by, r * 1.05); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, '#e23a6e'); g.addColorStop(1, '#6a1030'); c.fillStyle = g; c.beginPath(); c.arc(bx, by, r, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(bx - r * .38, by - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill(); }
+  if (first) { if (eaten) { yTxt2('Miam !', cx, cy - 60, (U - 34) / 70, '#ffffff', 30); if (U > 70) yTxt2('Burp.', cx + 20, cy - 40, (U - 70) / 60, '#ffd8e4', 20); } }
+  else if (fall >= 1) yTxt2('+1', bx + 30, top - 70, (U - 34) / 60, '#ffd23f', 30);
+  /* repère : la zone de danger quand la gueule est ouverte */
+  if (open > .5 && !eaten) { c.save(); c.setLineDash([4, 6]); c.strokeStyle = 'rgba(255,90,120,0.6)'; c.lineWidth = 2; c.beginPath(); c.arc(cx - 14, cy, CARN_R + r * .5, 0, TAU); c.stroke(); c.restore(); }
+  yTxt2(first ? 'Gueule ouverte : danger' : 'Fermée : on peut y aller', W / 2, 240, ((first ? cyc : cyc - 150)) / 120, '#ffffff', 20); }
+function yTxt2(txt, x, y, k, col, size = 26) { if (k <= 0 || k >= 1) return; c.save(); c.globalAlpha = k < .15 ? k / .15 : 1 - Math.max(0, (k - .6) / .4); c.translate(x, y - k * 36); c.font = size + 'px "Lilita One"'; c.textAlign = 'center'; c.lineWidth = 5; c.strokeStyle = 'rgba(6,30,20,0.8)'; c.strokeText(txt, 0, 0); c.fillStyle = col; c.fillText(txt, 0, 0); c.restore(); }
+/* démo : les singes v2 (il passe en se balançant, tend le bras, attrape le ballon et le relance en riant) */
+function monkeyScene(t) { const T = t % 300, x = -40 + T * 1.6, sw = Math.sin(T * .05) * .25, ay = 330;
+  const hx = x + Math.sin(sw) * 0, near = Math.abs(x - 200) < 70, caught = T > 135 && T < 175, pose = caught ? 'throw' : near ? 'reach' : 'swing';
+  const by = ay + 130; c.strokeStyle = '#3f7a2a'; c.lineWidth = 3; c.beginPath(); c.moveTo(x - 60, 0); c.quadraticCurveTo(x - 30, ay * .6, x - 2, ay + 40 * 0 + 74); c.stroke();
+  monkey2(x + 4, ay + 120, 1.25, t, { pose, dir: 1, rot: sw * .5 });
+  let bx = 200, bY = 420; if (T > 135) { const q = Math.min(1, (T - 135) / 60); bx = 200 + q * 120; bY = 420 - Math.sin(q * Math.PI) * 120 + q * 60; }
+  if (T < 135 || T < 260) { const r = 30, g = c.createRadialGradient(bx - r * .35, bY - r * .35, r * .1, bx, bY, r * 1.05); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, '#e23a6e'); g.addColorStop(1, '#6a1030'); c.fillStyle = g; c.beginPath(); c.arc(bx, bY, r, 0, TAU); c.fill(); }
+  if (T > 135) yTxt2('Ouh ouh !', 220, 380, (T - 135) / 80, '#ffffff', 28); if (T > 175) yTxt2('Hi hi hi !', x + 20, ay + 60, (T - 175) / 70, '#ffe0a0', 20); }
+
 /* ===== sol : rivière (zones 1 et 3) ou mer de nuages et de feuilles (zone 2) ===== */
 function river(t) { const [a, b, d] = ZN.water; c.fillStyle = lg(FL - 14, H, [[0, a], [.4, b], [1, d]]); c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 10) c.lineTo(x, FL - 6 + Math.sin(x * .035 + t * .05) * 3); c.lineTo(W, H); c.fill();
   c.strokeStyle = ZN.night ? 'rgba(160,255,220,0.35)' : 'rgba(255,255,255,0.8)'; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= W; x += 10) { const y = FL - 6 + Math.sin(x * .035 + t * .05) * 3; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
@@ -465,7 +538,9 @@ function planche(t) { c.fillStyle = '#e8f0dc'; c.fillRect(0, 0, W, H); c.fillSty
   macaw2(70, 240, 2.1, t); macaw2(150, 240, 1.8, t + 50, { col: 'blue', dir: -1, ph: 2 }); toucan2(270, 240, 2, t, { dir: -1 });
   sloth(300, 470, 2.2, t); treeFrog(90, 560, 2.6, t); hummingbird(190, 380, 2.4, t); morpho(80, 700, 3, t); morpho(170, 720, 2.4, t + 9, { col: 'orange', rot: .4 });
   c.fillStyle = '#163c38'; c.fillRect(220, 640, 170, 204); bat(270, 690, 2, t, 0); glowFrog(320, 800, 2.2, t); }
-function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0); if (AN) { planche(t); return; } [zone1, zone2, zone3][Z - 1](t); post(170, 672); balloon(230, 330, 40, '#e23a6e', t); hud(); }
+const MM = +(Q.get('m') || 0);
+function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0); if (AN) { planche(t); return; }
+  if (MM === 1) { zone3(t); carnScene(t); hud(); return; } if (MM === 2) { zone1(t); post(170, 672); monkeyScene(t); hud(); return; } [zone1, zone2, zone3][Z - 1](t); post(170, 672); balloon(230, 330, 40, '#e23a6e', t); hud(); }
 Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
   if (FIX != null) { frame(+FIX); window.__READY = 1; return; }
   let t = 0; (function loop() { frame(t++); requestAnimationFrame(loop); })();
