@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquettes Banquise</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#0a1428}canvas{display:block;width:390px;height:844px}</style></head>
+<body><canvas id="cv"></canvas>
+<script>
+/* Monde 5 « La Banquise » : la même banquise, du matin calme à la nuit polaire.
+   Signature : « la lumière polaire » — la glace est un miroir qui reflète le ciel (soleil rose, puis aurore). Doré réservé aux gains. */
+const Q = new URLSearchParams(location.search), Z = +(Q.get('z') || 1), FIX = Q.get('t');
+const W = 390, H = 844, TAU = Math.PI * 2, DPR = 2, HZ = 520, ICE = 800;
+const cv = document.getElementById('cv'); cv.width = W * DPR; cv.height = H * DPR; const c = cv.getContext('2d');
+const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; };
+const mix = (a, b, k) => { const A = hex(a), B = hex(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
+const ZONES = {
+  1: { name: 'Le Village', levels: 'Niveaux 1 à 3', sky: [[0, '#4a98e0'], [.45, '#a8ccf0'], [.75, '#ffc8dc'], [1, '#ffe2cc']], sun: [118, 452, 34, '#fff0d8'], mtn: '#9ab8e0', mtnSh: '#6a88c0', rim: '#ffe8f0', snow: '#f4f8ff', snowSh: '#b8c8ec', ice: ['#d8ecff', '#a8d0f4'], ink: '#123a5c', aur: 0, night: 0, blizz: 0 },
+  2: { name: 'Le Blizzard', levels: 'Niveaux 4 à 6', sky: [[0, '#6a7fa8'], [.5, '#a8b8d0'], [1, '#d8e0ec']], sun: [70, 170, 0, '#ffffff'], mtn: '#a8b4cc', mtnSh: '#7a88a8', rim: '#e8eef8', snow: '#eef2fa', snowSh: '#a8b4cc', ice: ['#c8d4e4', '#98a8c4'], ink: '#1e3050', aur: .25, night: 0, blizz: 1 },
+  3: { name: 'La Nuit polaire', levels: 'Niveaux 7 à 10', sky: [[0, '#040a20'], [.55, '#0e1c44'], [1, '#1c2c5c']], sun: [74, 120, 22, '#f0f4ff'], mtn: '#24345e', mtnSh: '#141e40', rim: '#7affc8', snow: '#3a4c7e', snowSh: '#1c2852', ice: ['#1c3060', '#0e1c40'], ink: '#eef4ff', aur: 1, night: 1, blizz: 0 },
+};
+const ZN = ZONES[Z];
+
+/* ===== ciel ===== */
+function sky(t) {
+  c.fillStyle = lg(0, HZ, ZN.sky); c.fillRect(0, 0, W, HZ + 2);
+  if (ZN.night) for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${(.25 + .6 * Math.abs(Math.sin(t * .02 + i))).toFixed(3)})`; c.beginPath(); c.arc(h1(i) * W, h1(i * 3) * HZ * .85, .5 + h1(i * 5) * 1.2, 0, TAU); c.fill(); }
+  const [sx, sy, sr, sc] = ZN.sun;
+  if (sr) { const g = c.createRadialGradient(sx, sy, sr * .4, sx, sy, sr * 7); g.addColorStop(0, rgba(sc, .7)); g.addColorStop(.3, rgba(sc, .2)); g.addColorStop(1, rgba(sc, 0)); c.fillStyle = g; c.fillRect(0, 0, W, HZ);
+    c.fillStyle = sc; c.beginPath(); c.arc(sx, sy, sr, 0, TAU); c.fill();
+    if (ZN.night) { c.fillStyle = 'rgba(160,175,215,0.35)'; for (const [dx, dy, r] of [[-6, -4, 4.5], [5, 4, 6], [-2, 9, 3]]) { c.beginPath(); c.arc(sx + dx, sy + dy, r, 0, TAU); c.fill(); } } }
+}
+/* aurore boréale : rideaux ondulants (signature) */
+function aurora(t, k, yTop = 80, mirror = false) { if (k <= 0) return;
+  c.save(); if (mirror) { c.translate(0, ICE + (ICE - HZ) * 0); }
+  const bands = [[0, '#5affb0', 1], [1, '#8a6aff', .75], [2, '#4ad8ff', .6]];
+  for (const [b, col, a] of bands) { for (let x = -20; x < W + 20; x += 3) {
+      const base = yTop + 40 + b * 34 + Math.sin(x * .012 + t * .01 + b * 2) * 34 + Math.sin(x * .031 - t * .017 + b) * 14, len = 110 + Math.sin(x * .02 + t * .013 + b) * 40;
+      const g = c.createLinearGradient(0, base - len, 0, base + 10); g.addColorStop(0, rgba(col, 0)); g.addColorStop(.75, rgba(col, .16 * k * a)); g.addColorStop(1, rgba(col, .5 * k * a));
+      c.fillStyle = g; c.fillRect(x, base - len, 3.2, len + 10); } }
+  c.restore(); }
+/* montagnes glacées en fond (arête nette, face éclairée en haut à gauche) */
+function peaks(y, s, seed, col, sh, fog) {
+  const pts = []; let x = -20; let i = 0;
+  while (x < W + 40) { const w = (50 + h1(seed + i) * 70) * s, h = (60 + h1(seed * 3 + i) * 90) * s; pts.push([x, y], [x + w * .45, y - h], [x + w, y]); x += w * .75; i++; }
+  for (let k = 0; k < pts.length; k += 3) { const [a, p, b] = [pts[k], pts[k + 1], pts[k + 2]];
+    c.fillStyle = sh; c.beginPath(); c.moveTo(...a); c.lineTo(...p); c.lineTo(...b); c.fill();
+    c.fillStyle = col; c.beginPath(); c.moveTo(...a); c.lineTo(...p); c.lineTo(p[0] + (b[0] - p[0]) * .25, a[1] - (a[1] - p[1]) * .2); c.lineTo(p[0] - (p[0] - a[0]) * .2, a[1]); c.fill();
+    /* neige au sommet */
+    c.fillStyle = ZN.night ? 'rgba(200,220,255,0.35)' : 'rgba(255,255,255,0.9)'; const sn = .28; c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(p[0] + (a[0] - p[0]) * sn, p[1] + (a[1] - p[1]) * sn); c.lineTo(p[0] - 3 * s, p[1] + (a[1] - p[1]) * sn * .8); c.lineTo(p[0] + (b[0] - p[0]) * sn * .7, p[1] + (b[1] - p[1]) * sn * .9); c.closePath(); c.fill();
+    c.strokeStyle = rgba(ZN.rim, ZN.night ? .35 : .7); c.lineWidth = 1.4; c.beginPath(); c.moveTo(...a); c.lineTo(...p); c.stroke(); }
+}
+function inukshuk(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s);
+  const st = (x0, y0, w, h, r) => { c.save(); c.translate(x0, y0); c.rotate(r); const g = c.createLinearGradient(-w / 2, -h, w / 2, 0); g.addColorStop(0, ZN.night ? '#5a6890' : '#a8b0c0'); g.addColorStop(1, ZN.night ? '#2a3458' : '#6a7488'); c.fillStyle = g; c.beginPath(); c.roundRect(-w / 2, -h, w, h, 4); c.fill(); c.fillStyle = ZN.night ? 'rgba(160,200,255,0.35)' : 'rgba(255,255,255,0.85)'; c.beginPath(); c.roundRect(-w / 2 + 1, -h, w - 2, 3.5, 2); c.fill(); c.restore(); };
+  c.fillStyle = 'rgba(40,60,120,0.2)'; c.beginPath(); c.ellipse(4, 2, 30, 5, 0, 0, TAU); c.fill();
+  st(-11, 0, 12, 26, -.05); st(11, 0, 12, 26, .05); st(0, -26, 44, 12, 0); st(0, -38, 18, 14, .03); st(0, -52, 32, 9, -.04); st(0, -61, 14, 12, 0);
+  c.restore(); }
+function iceSpike(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s);
+  for (const [dx, h, w] of [[0, 40, 10], [-11, 26, 7], [10, 30, 7]]) { const g = c.createLinearGradient(dx - w, 0, dx + w, 0); g.addColorStop(0, ZN.night ? '#4a7ad0' : '#d8f0ff'); g.addColorStop(1, ZN.night ? '#1c3060' : '#8ac0ea'); c.fillStyle = g; c.beginPath(); c.moveTo(dx - w, 0); c.lineTo(dx, -h); c.lineTo(dx + w, 0); c.fill();
+    c.fillStyle = ZN.night ? 'rgba(160,230,255,0.5)' : 'rgba(255,255,255,0.9)'; c.beginPath(); c.moveTo(dx - w, 0); c.lineTo(dx, -h); c.lineTo(dx - w * .35, 0); c.fill(); }
+  c.restore(); }
+function haze(y0, y1, col, a) { c.fillStyle = lg(y0, y1, [[0, rgba(col, 0)], [.6, rgba(col, a)], [1, rgba(col, 0)]]); c.fillRect(0, y0, W, y1 - y0); }
+/* la banquise : grande plaine de glace-miroir en perspective */
+function iceSheet(t) {
+  c.fillStyle = lg(HZ, H, [[0, ZN.ice[0]], [1, ZN.ice[1]]]); c.fillRect(0, HZ, W, H - HZ);
+  /* reflet du ciel (miroir) */
+  c.save(); c.globalAlpha = .38; c.translate(0, HZ * 2); c.scale(1, -1); c.fillStyle = lg(0, HZ, ZN.sky); c.fillRect(0, HZ - 200, W, 200); c.restore();
+  c.save(); c.beginPath(); c.rect(0, HZ, W, H - HZ); c.clip();
+  if (ZN.aur) { c.save(); c.globalAlpha = .6; c.translate(0, HZ); c.scale(1, -.75); c.translate(0, -HZ); aurora(t, ZN.aur, ZN.aurY || 120); c.restore(); }
+  /* les montagnes se reflètent dans la glace (signature « glace miroir ») */
+  if (ZN.refl) { c.save(); c.globalAlpha = ZN.refl; c.translate(0, HZ); c.scale(1, -.6); c.translate(0, -HZ); ZN.reflDraw(); c.restore(); }
+  c.restore();
+  const [sx, , sr, sc] = ZN.sun; if (sr) for (let i = 0; i < 22; i++) { const k = i / 22, y = HZ + 6 + k * k * 220, w = 6 + k * 50; c.fillStyle = rgba(sc, (.5 - k * .4) * (.6 + .4 * Math.sin(t * .06 + i))); c.fillRect(sx - w / 2 + Math.sin(i * 2) * 4, y, w, 1.5 + k * 2); }
+  /* fissures en perspective + plaques */
+  c.strokeStyle = ZN.night ? 'rgba(120,200,255,0.25)' : 'rgba(255,255,255,0.6)'; c.lineWidth = 1.2;
+  for (let i = 0; i < 9; i++) { const y = HZ + 14 + Math.pow(i / 9, 1.7) * 280; c.beginPath(); c.moveTo(0, y); for (let x = 0; x <= W; x += 30) c.lineTo(x, y + Math.sin(x * .03 + i) * (1 + i * .4)); c.stroke(); }
+  c.strokeStyle = ZN.night ? 'rgba(10,20,50,0.35)' : 'rgba(110,150,200,0.35)'; for (let i = 0; i < 7; i++) { const x0 = 40 + i * 52; c.beginPath(); c.moveTo(W / 2 + (x0 - W / 2) * .2, HZ + 4); c.lineTo(x0 + (x0 - W / 2) * .6, H); c.stroke(); }
+}
+function drift(x, y, w, h) { /* congère de neige */
+  c.fillStyle = ZN.snowSh; c.beginPath(); c.ellipse(x + 4, y + 3, w, h, 0, Math.PI, TAU); c.fill();
+  c.fillStyle = lg(y - h, y, [[0, ZN.snow], [1, mix(ZN.snow, ZN.snowSh, .4)]]); c.beginPath(); c.ellipse(x, y, w, h, 0, Math.PI, TAU); c.fill();
+  c.strokeStyle = ZN.night ? 'rgba(160,200,255,0.5)' : 'rgba(255,255,255,0.95)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, w - 2, h - 2, 0, Math.PI * 1.1, Math.PI * 1.55); c.stroke(); }
+/* igloo : blocs, entrée en tunnel, lueur chaude, fumée */
+function igloo(x, y, s, t, o = {}) { c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = 'rgba(40,60,120,0.18)'; c.beginPath(); c.ellipse(6, 2, 52, 8, 0, 0, TAU); c.fill();
+  const g = c.createRadialGradient(-16, -34, 4, 0, -10, 60); g.addColorStop(0, ZN.night ? '#5a6ca8' : '#ffffff'); g.addColorStop(.6, ZN.snow); g.addColorStop(1, ZN.snowSh); c.fillStyle = g;
+  c.beginPath(); c.ellipse(0, 0, 44, 40, 0, Math.PI, TAU); c.fill();
+  c.strokeStyle = rgba(ZN.night ? '#0e1838' : '#8aa0c8', .55); c.lineWidth = 1.4;
+  for (let r = 0; r < 4; r++) { const yy = -r * 10; const hw = Math.sqrt(Math.max(0, 1 - (yy / 40) ** 2)) * 44; c.beginPath(); c.moveTo(-hw, yy); c.lineTo(hw, yy); c.stroke();
+    for (let k = 0; k < 5; k++) { const xx = -hw + (k + (r % 2) * .5) * hw * 2 / 5; c.beginPath(); c.moveTo(xx, yy); c.lineTo(xx, yy - 10); c.stroke(); } }
+  /* tunnel d'entrée + lueur */
+  c.fillStyle = mix(ZN.snow, ZN.snowSh, .2); c.beginPath(); c.ellipse(32, 0, 18, 18, 0, Math.PI, TAU); c.fill();
+  const lit = o.lit == null ? 1 : o.lit; c.fillStyle = lit ? '#ffb46a' : '#1a2440'; c.beginPath(); c.ellipse(38, 0, 9, 12, 0, Math.PI, TAU); c.fill();
+  if (lit) { const lgw = c.createRadialGradient(38, -4, 2, 38, -4, 40); lgw.addColorStop(0, 'rgba(255,180,100,0.5)'); lgw.addColorStop(1, 'rgba(255,180,100,0)'); c.fillStyle = lgw; c.beginPath(); c.arc(38, -4, 40, 0, TAU); c.fill(); }
+  if (o.smoke) for (let i = 0; i < 6; i++) { const q = ((t * .006 + i / 6) % 1); c.fillStyle = `rgba(230,236,248,${(.5 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(-10 + q * 18 + Math.sin(q * 6) * 4, -46 - q * 60, 4 + q * 10, 0, TAU); c.fill(); }
+  if (o.buried) { c.fillStyle = ZN.snow; c.beginPath(); c.ellipse(-10, 2, 60, 22 * o.buried, 0, Math.PI, TAU); c.fill(); }
+  c.restore(); }
+function penguin(x, y, s, t, ph = 0, dir = 1) { const wob = Math.sin(t * .12 + ph) * .12; c.save(); c.translate(x, y); c.scale(s * dir, s); c.rotate(wob);
+  c.fillStyle = 'rgba(40,60,120,0.2)'; c.beginPath(); c.ellipse(1, 1, 9, 2.5, 0, 0, TAU); c.fill();
+  c.fillStyle = '#1e2638'; c.beginPath(); c.ellipse(0, -12, 8, 12, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(1, -25, 6.5, 0, TAU); c.fill();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(1.5, -10, 5.5, 9, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(3, -25, 3.6, 4, 0, 0, TAU); c.fill();
+  c.fillStyle = '#ffb02e'; c.beginPath(); c.moveTo(6, -25); c.lineTo(11, -23.5); c.lineTo(6, -22); c.fill(); c.fillRect(-4, -1, 4, 2); c.fillRect(2, -1, 4, 2);
+  c.fillStyle = '#1e2638'; c.beginPath(); c.arc(4, -26, 1.2, 0, TAU); c.fill();
+  c.fillStyle = '#2a3448'; c.beginPath(); c.ellipse(-6, -12, 2.5, 7, .3 + Math.sin(t * .2 + ph) * .3, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.25)'; c.beginPath(); c.ellipse(-3, -18, 2, 5, -.3, 0, TAU); c.fill();
+  c.restore(); }
+function sled(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s);
+  c.strokeStyle = '#6a4228'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-26, 0); c.lineTo(22, 0); c.quadraticCurveTo(30, 0, 30, -8); c.stroke();
+  c.fillStyle = '#8a5a34'; c.fillRect(-24, -10, 44, 6); c.fillStyle = '#c84a4a'; c.fillRect(-20, -20, 30, 10); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-20, -20, 10, 10);
+  c.strokeStyle = '#6a4228'; c.lineWidth = 2; c.beginPath(); c.moveTo(-22, -10); c.lineTo(-22, -2); c.moveTo(16, -10); c.lineTo(16, -2); c.stroke(); c.restore(); }
+function dog(x, y, s, t, ph) { const b = Math.abs(Math.sin(t * .15 + ph)) * 1.5; c.save(); c.translate(x, y - b); c.scale(s, s);
+  c.fillStyle = '#6a7488'; c.beginPath(); c.ellipse(0, -8, 11, 6, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(10, -14, 5, 4.5, -.3, 0, TAU); c.fill();
+  c.fillStyle = '#e8ecf4'; c.beginPath(); c.ellipse(2, -5, 7, 3, 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(12, -12, 3, 2.5, 0, 0, TAU); c.fill();
+  c.fillStyle = '#6a7488'; c.beginPath(); c.moveTo(8, -18); c.lineTo(9, -23); c.lineTo(11, -18); c.fill(); c.beginPath(); c.moveTo(-10, -10); c.quadraticCurveTo(-16, -18, -12, -20); c.lineTo(-10, -12); c.fill();
+  c.fillRect(-7, -4, 2.5, 5); c.fillRect(5, -4, 2.5, 5); c.restore(); }
+function fishHole(x, y, w) { c.fillStyle = '#123a64'; c.beginPath(); c.ellipse(x, y, w, w * .28, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, w, w * .28, 0, 0, TAU); c.stroke(); c.fillStyle = 'rgba(120,200,255,0.35)'; c.beginPath(); c.ellipse(x - w * .3, y - 1, w * .3, w * .06, 0, 0, TAU); c.fill(); }
+function lantern(x, y, s, t, swing) { const a = Math.sin(t * .08) * swing; c.save(); c.translate(x, y); c.scale(s, s);
+  c.fillStyle = '#5a4630'; c.fillRect(-1.5, -60, 3, 60); c.fillRect(-1.5, -60, 14, 2.5);
+  c.translate(11, -58); c.rotate(a); c.strokeStyle = '#3a2a1a'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 8); c.stroke();
+  const g = c.createRadialGradient(0, 16, 2, 0, 16, 30); g.addColorStop(0, 'rgba(255,190,110,0.6)'); g.addColorStop(1, 'rgba(255,190,110,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 16, 30, 0, TAU); c.fill();
+  c.fillStyle = '#ffcf7a'; c.beginPath(); c.roundRect(-5, 8, 10, 14, 3); c.fill(); c.fillStyle = '#3a2a1a'; c.fillRect(-6, 7, 12, 2.5); c.fillRect(-6, 21, 12, 2.5); c.restore(); }
+function flagPole(x, y, s, t, col, wind) { c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = '#5a4630'; c.fillRect(-1.5, -70, 3, 70);
+  c.fillStyle = col; c.beginPath(); c.moveTo(1.5, -70); for (let i = 0; i <= 6; i++) c.lineTo(1.5 + i * 5 * wind, -70 + Math.sin(t * .3 + i) * 2.5 * wind + (wind < .6 ? i * 2.5 : 0)); c.lineTo(1.5 + 30 * wind, -58 + Math.sin(t * .3 + 6) * 2.5); for (let i = 6; i >= 0; i--) c.lineTo(1.5 + i * 5 * wind, -58 + Math.sin(t * .3 + i) * 2.5 * wind + (wind < .6 ? i * 2.5 : 0)); c.fill(); c.restore(); }
+/* grotte de glace du Yéti (zone 3) */
+function iceCave(x, y, s, t, eyes) { c.save(); c.translate(x, y); c.scale(s, s);
+  const g = c.createLinearGradient(-90, -150, 90, 0); g.addColorStop(0, '#4a7ad0'); g.addColorStop(.5, '#24407e'); g.addColorStop(1, '#101c40'); c.fillStyle = g;
+  c.beginPath(); c.moveTo(-110, 0); c.lineTo(-90, -70); c.lineTo(-70, -96); c.lineTo(-40, -150); c.lineTo(-10, -118); c.lineTo(20, -168); c.lineTo(52, -110); c.lineTo(80, -126); c.lineTo(100, -60); c.lineTo(118, 0); c.fill();
+  c.strokeStyle = 'rgba(160,230,255,0.55)'; c.lineWidth = 2; c.beginPath(); c.moveTo(-110, 0); c.lineTo(-90, -70); c.lineTo(-70, -96); c.lineTo(-40, -150); c.lineTo(-10, -118); c.lineTo(20, -168); c.stroke();
+  for (const [a, b] of [[[-40, -150], [-30, -60]], [[20, -168], [10, -70]], [[80, -126], [60, -50]]]) { c.strokeStyle = 'rgba(160,230,255,0.25)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.stroke(); }
+  /* bouche de la grotte */
+  c.fillStyle = '#040816'; c.beginPath(); c.moveTo(-44, 0); c.quadraticCurveTo(-40, -70, 4, -78); c.quadraticCurveTo(46, -70, 50, 0); c.fill();
+  for (let i = 0; i < 7; i++) { const sx = -36 + i * 12; c.fillStyle = 'rgba(180,230,255,0.85)'; c.beginPath(); c.moveTo(sx - 4, -66 + Math.abs(i - 3) * 3); c.lineTo(sx + 4, -66 + Math.abs(i - 3) * 3); c.lineTo(sx, -50 + Math.abs(i - 3) * 3 - (i % 2) * 6); c.fill(); }
+  if (eyes) { const ea = .6 + .3 * Math.sin(t * .03); for (const dx of [-12, 12]) { const eg = c.createRadialGradient(4 + dx, -34, 1, 4 + dx, -34, 14); eg.addColorStop(0, `rgba(140,240,255,${ea.toFixed(3)})`); eg.addColorStop(1, 'rgba(140,240,255,0)'); c.fillStyle = eg; c.beginPath(); c.arc(4 + dx, -34, 14, 0, TAU); c.fill(); c.fillStyle = `rgba(220,252,255,${ea.toFixed(3)})`; c.beginPath(); c.ellipse(4 + dx, -34, 4.5, 2.5, dx > 0 ? -.2 : .2, 0, TAU); c.fill(); } }
+  c.restore(); }
+function crystal(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s); const a = .55 + .3 * Math.sin(t * .04 + x);
+  const g = c.createRadialGradient(0, -20, 2, 0, -20, 36); g.addColorStop(0, `rgba(140,240,255,${(a * .5).toFixed(3)})`); g.addColorStop(1, 'rgba(140,240,255,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, -20, 36, 0, TAU); c.fill();
+  for (const [dx, h, w, r] of [[0, 46, 9, 0], [-10, 30, 7, -.3], [10, 34, 7, .3]]) { c.save(); c.translate(dx, 0); c.rotate(r); c.fillStyle = '#6ac8ff'; c.beginPath(); c.moveTo(-w, 0); c.lineTo(-w * .8, -h * .8); c.lineTo(0, -h); c.lineTo(w * .8, -h * .8); c.lineTo(w, 0); c.fill(); c.fillStyle = 'rgba(230,252,255,0.75)'; c.beginPath(); c.moveTo(-w * .8, -h * .8); c.lineTo(0, -h); c.lineTo(-w * .1, -h * .2); c.fill(); c.restore(); }
+  c.restore(); }
+function snowfall(t, n, slant, speed, a) { c.fillStyle = `rgba(255,255,255,${a})`; for (let i = 0; i < n; i++) { const sp = (1 + h1(i) * 1.5) * speed, y = (h1(i * 3) * H + t * sp) % (H + 20) - 10, x = (h1(i * 5) * (W + 200) + y * slant + t * slant * sp * .6) % (W + 200) - 100, r = .8 + h1(i * 7) * 1.8; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); } }
+function blizzardStreaks(t, n) { c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineCap = 'round'; for (let i = 0; i < n; i++) { const sp = 6 + h1(i) * 6, y = h1(i * 3) * H, x = ((h1(i * 5) * (W + 300) + t * sp) % (W + 300)) - 150, l = 20 + h1(i * 7) * 50; c.lineWidth = .8 + h1(i * 2) * 1.6; c.beginPath(); c.moveTo(x, y); c.lineTo(x + l, y + l * .12); c.stroke(); } }
+
+/* ===== zones ===== */
+function zone1(t) {
+  ZN.refl = .5; ZN.reflDraw = () => { peaks(HZ - 6, 1.1, 3, mix(ZN.mtn, '#ffffff', .25), mix(ZN.mtnSh, ZN.sky[2][1], .3)); };
+  sky(t);
+  /* bandes de nuages roses du matin */
+  for (const [x, y, w, a] of [[250, 250, 170, .7], [90, 320, 120, .55], [300, 380, 140, .5]]) { const g = c.createLinearGradient(x - w / 2, 0, x + w / 2, 0); g.addColorStop(0, 'rgba(255,214,228,0)'); g.addColorStop(.5, `rgba(255,214,228,${a})`); g.addColorStop(1, 'rgba(255,214,228,0)'); c.fillStyle = g; c.beginPath(); c.roundRect(x - w / 2, y, w, 9, 5); c.fill(); c.fillStyle = `rgba(255,255,255,${a * .8})`; c.beginPath(); c.roundRect(x - w * .3, y - 1, w * .5, 3, 2); c.fill(); }
+  peaks(HZ - 6, 1.1, 3, mix(ZN.mtn, '#ffffff', .25), mix(ZN.mtnSh, ZN.sky[2][1], .3));
+  { const g = c.createRadialGradient(118, 452, 10, 118, 452, 230); g.addColorStop(0, 'rgba(255,236,210,0.75)'); g.addColorStop(.35, 'rgba(255,200,215,0.3)'); g.addColorStop(1, 'rgba(255,200,215,0)'); c.fillStyle = g; c.fillRect(0, 200, W, HZ - 200); }
+  haze(HZ - 120, HZ + 10, '#ffe0ec', .55);
+  peaks(HZ + 2, .7, 9, ZN.mtn, ZN.mtnSh);
+  iceSheet(t);
+  drift(70, HZ + 14, 90, 14); drift(320, HZ + 18, 110, 16);
+  igloo(300, HZ + 44, .9, t, { smoke: 1 }); igloo(70, HZ + 34, .62, t, { smoke: 1 });
+  sled(170, HZ + 62, .9); for (let i = 0; i < 3; i++) dog(205 + i * 22, HZ + 64, .8, t, i);
+  fishHole(110, HZ + 118, 26);
+  penguin(150, HZ + 116, 1.1, t, 0, -1); penguin(250, HZ + 130, 1.25, t, 1.4); penguin(276, HZ + 136, 1.05, t, 2.6, -1);
+  flagPole(20, HZ + 50, .9, t, '#e8566a', .5);
+  drift(30, 760, 120, 26); drift(380, 750, 130, 30);
+  inukshuk(44, 742, 1.2); iceSpike(350, 735, 1.1);
+  snowfall(t, 40, .1, .6, .7);
+}
+function zone2(t) {
+  ZN.refl = .2; ZN.reflDraw = () => peaks(HZ - 6, 1.1, 3, mix(ZN.mtn, '#ffffff', .35), mix(ZN.mtnSh, '#c8d0e0', .4));
+  sky(t); aurora(t, ZN.aur * .5, 30);
+  peaks(HZ - 6, 1.1, 3, mix(ZN.mtn, '#ffffff', .35), mix(ZN.mtnSh, '#c8d0e0', .4), '#c8d0e0');
+  haze(HZ - 160, HZ + 20, '#e0e6f0', .8);
+  iceSheet(t);
+  drift(70, HZ + 14, 120, 20); drift(320, HZ + 18, 130, 24);
+  igloo(300, HZ + 48, .9, t, { buried: .55 }); igloo(70, HZ + 36, .62, t, { buried: .7 });
+  for (const [x, y, s] of [[200, HZ + 70, .9], [130, HZ + 90, .7], [350, HZ + 96, .8]]) lantern(x, y, s, t, .5);
+  flagPole(20, HZ + 54, .9, t, '#e8566a', 1);
+  penguin(240, HZ + 132, 1.15, t, 0, -1); penguin(258, HZ + 136, 1.0, t, 1.2, -1); penguin(222, HZ + 138, 1.05, t, 2.4, -1); /* serrés dos au vent */
+  drift(30, 760, 150, 34); drift(380, 750, 150, 38);
+  inukshuk(44, 748, 1.2); c.fillStyle = ZN.snow; c.beginPath(); c.ellipse(44, 750, 40, 12, 0, Math.PI, TAU); c.fill();
+  haze(0, H, '#e8eef8', .35);
+  blizzardStreaks(t, 70); snowfall(t, 120, 1.6, 1.4, .9);
+}
+function zone3(t) {
+  ZN.aurY = 170; ZN.refl = .45; ZN.reflDraw = () => { peaks(HZ - 6, 1.15, 3, ZN.mtn, ZN.mtnSh); iceCave(250, HZ + 6, .95, t, false); };
+  sky(t); aurora(t, ZN.aur, ZN.aurY);
+  peaks(HZ - 6, 1.15, 3, ZN.mtn, ZN.mtnSh);
+  iceCave(250, HZ + 6, .95, t, true);
+  peaks(HZ + 4, .65, 21, mix(ZN.mtn, '#000000', .2), ZN.mtnSh);
+  iceSheet(t);
+  drift(70, HZ + 16, 90, 14); drift(350, HZ + 20, 80, 12);
+  crystal(110, HZ + 60, .9, t); crystal(330, HZ + 74, 1.1, t); crystal(40, HZ + 90, .7, t);
+  igloo(170, HZ + 46, .5, t, { lit: 1 });
+  drift(30, 760, 120, 26); drift(380, 750, 130, 30);
+  iceSpike(40, 745, 1.3); iceSpike(352, 738, 1); inukshuk(320, 752, .9);
+  snowfall(t, 30, .05, .4, .6);
+}
+
+/* jouables + HUD */
+function icePlat(x, y) {
+  c.fillStyle = 'rgba(40,70,120,0.25)'; c.beginPath(); c.ellipse(x + 6, ICE + 4, 30, 6, 0, 0, TAU); c.fill();
+  const g = c.createLinearGradient(x - 14, 0, x + 14, 0); g.addColorStop(0, '#bfe6fa'); g.addColorStop(.5, '#ffffff'); g.addColorStop(1, '#8cc8ea'); c.fillStyle = g; c.fillRect(x - 14, y, 28, ICE - y);
+  c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect(x - 10, y + 6, 3, ICE - y - 6);
+  c.fillStyle = '#e8f6ff'; c.beginPath(); c.roundRect(x - 40, y - 8, 80, 14, 6); c.fill(); c.strokeStyle = 'rgba(80,140,200,0.5)'; c.lineWidth = 1.5; c.stroke();
+  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 5, 26, 4.5, 2.25); c.fill(); }
+function water(t) { c.fillStyle = lg(ICE, H, [[0, ZN.night ? '#1c3a6a' : '#5aa9d6'], [1, ZN.night ? '#0a1c3a' : '#2a6a9e']]); c.fillRect(0, ICE, W, H - ICE);
+  c.fillStyle = ZN.night ? 'rgba(120,200,255,0.4)' : 'rgba(255,255,255,0.8)'; for (let i = 0; i < 8; i++) { const x = ((i * 70 + t * .3) % (W + 60)) - 30; c.beginPath(); c.roundRect(x, ICE + 4 + (i % 3) * 8, 34, 6, 3); c.fill(); } }
+function balloon(x, y, r, col, t) { y += Math.sin(t * .05) * 2;
+  c.strokeStyle = rgba(ZN.ink, .55); c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x + 10, y - r - 18, x + 2, y - r - 34); c.stroke();
+  const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, mix(col, '#ffffff', .35)); g.addColorStop(.6, col); g.addColorStop(1, mix(col, '#2a0a30', .35));
+  c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill();
+  c.setLineDash([3, 5]); c.strokeStyle = rgba(ZN.ink, .35); c.beginPath(); c.moveTo(x, y + r + 6); c.lineTo(x, 660); c.stroke(); c.setLineDash([]); }
+function chip(x, y, txt) { c.font = '800 13px Nunito'; const w = c.measureText(txt).width + 24; c.fillStyle = ZN.night ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.72)'; c.beginPath(); c.roundRect(x, y, w, 26, 13); c.fill(); c.fillStyle = ZN.ink; c.textBaseline = 'middle'; c.fillText(txt, x + 12, y + 13); return w; }
+function hud() { c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(14, 14, 44, 44, 14); c.fill(); c.fillStyle = '#123a5c'; c.fillRect(30, 28, 4, 16); c.fillRect(38, 28, 4, 16);
+  c.font = '44px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = ZN.ink; c.fillText('3', W / 2, 58); c.textAlign = 'left';
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(W - 100, 16, 86, 36, 18); c.fill(); c.fillStyle = '#f2b705'; c.beginPath(); c.arc(W - 80, 34, 8, 0, TAU); c.fill(); c.font = '800 16px Nunito'; c.fillStyle = '#123a5c'; c.textBaseline = 'middle'; c.fillText('480', W - 66, 35);
+  let x = 80; x += chip(x, 78, Z === 1 ? 'Manche 2/7' : Z === 2 ? 'Manche 3/8' : 'Manche 4/9') + 8; chip(x, 78, Z === 2 ? 'Rafales ←' : '★★ à 17 pts');
+  c.font = '18px "Lilita One"'; c.fillStyle = ZN.ink; c.textAlign = 'center'; c.fillText(ZN.name, W / 2, 128); c.font = '800 11px Nunito'; c.globalAlpha = .65; c.fillText(ZN.levels.toUpperCase(), W / 2, 146); c.globalAlpha = 1; c.textAlign = 'left'; }
+function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0); [zone1, zone2, zone3][Z - 1](t); water(t); icePlat(140 + Math.sin(t * .01) * 30 * (Z > 1), 672); balloon(220, 330, 40, '#e23a6e', t); hud(); }
+Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
+  if (FIX != null) { frame(+FIX); window.__READY = 1; return; }
+  let t = 0; (function loop() { frame(t++); requestAnimationFrame(loop); })();
+});
+</script></body></html>
