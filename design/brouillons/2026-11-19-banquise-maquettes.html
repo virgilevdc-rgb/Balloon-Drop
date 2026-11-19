@@ -229,6 +229,7 @@ function snowCap(x, y, w) { /* neige sur le dessus, qui déborde et coule */
 function iceGrad(x0, x1) { const g = c.createLinearGradient(x0, 0, x1, 0);
   if (ZN.night) { g.addColorStop(0, '#9ad8ff'); g.addColorStop(.35, '#5aa0e0'); g.addColorStop(1, '#1e4a8a'); } else { g.addColorStop(0, '#ffffff'); g.addColorStop(.35, '#cfeafc'); g.addColorStop(1, '#7ab4e0'); } return g; }
 function icePlat(x, y) {
+  if (PV === 3) return meltPlat(x, y, 0, 0); /* pic de glace à la vraie largeur du jeu */
   const top = y, bot = ICE - 6;
   if (PV === 1) { /* A : pilier de glace facetté, évasé à la base, qui sort d'une congère */
     platBase(x, 34);
@@ -529,35 +530,32 @@ function yetiScene(t) {
 /* ===== démo : la glace qui fond (?m=1) — sans bonus : plus tu attends, plus le sommet fond et rétrécit ===== */
 const MM = +(Q.get('m') || 0);
 if (MM) { ZN.name = 'La glace qui fond'; ZN.levels = 'Plus tu attends, plus elle rétrécit'; }
-function meltPlat(x, y, k, t) { /* k : 0 = intacte, 1 = fondue au maximum */
-  const w = 86 - k * 52, top = y + k * 10, bot = ICE - 6;
-  platBase(x, 40);
-  /* le pic se creuse en sablier, le sommet s'amincit */
-  const nw = 22 - k * 9;
-  c.fillStyle = iceGrad(x - 40, x + 40); c.beginPath(); c.moveTo(x - w / 2 + 6, top + 2); c.quadraticCurveTo(x - nw, top + 50, x - 22, (top + bot) / 2); c.quadraticCurveTo(x - 44, bot - 20, x - 46, bot); c.lineTo(x + 46, bot); c.quadraticCurveTo(x + 40, bot - 24, x + 20, (top + bot) / 2); c.quadraticCurveTo(x + nw, top + 50, x + w / 2 - 6, top + 2); c.closePath(); c.fill();
-  c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(x - w / 2 + 8, top + 4); c.quadraticCurveTo(x - nw + 4, top + 50, x - 16, (top + bot) / 2); c.lineTo(x - 22, (top + bot) / 2); c.quadraticCurveTo(x - nw, top + 50, x - w / 2 + 6, top + 4); c.fill();
-  /* surface mouillée qui brille de plus en plus */
-  c.fillStyle = `rgba(190,235,255,${(.25 + k * .5).toFixed(3)})`; c.fillRect(x - w / 2 + 8, top + 6, w - 16, 40 + k * 30);
-  platBase(x, 50, 1);
-  /* plateau : la neige fond (de moins en moins de neige, la glace apparaît) */
-  c.fillStyle = '#d8f2ff'; c.beginPath(); c.roundRect(x - w / 2, top - 8, w, 11, 5); c.fill();
-  c.fillStyle = `rgba(255,255,255,${(1 - k * .85).toFixed(3)})`; c.beginPath(); c.roundRect(x - w / 2, top - 9, w, 9, 5); c.fill();
-  for (const [dx, h] of [[-w * .3, 8], [w * .25, 11]]) { c.fillStyle = `rgba(255,255,255,${(1 - k).toFixed(3)})`; c.beginPath(); c.ellipse(x + dx, top + 2, 4, h * (1 - k * .6), 0, 0, TAU); c.fill(); }
-  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 12, top - 8, 24, 4, 2); c.fill();
-  /* gouttes qui tombent, de plus en plus nombreuses */
-  const n = 1 + Math.floor(k * 5); for (let i = 0; i < n; i++) { const q = ((t * .03 + i / n) % 1), dx = (h1(i * 7) - .5) * (w - 10); c.fillStyle = 'rgba(170,225,255,0.9)'; c.beginPath(); c.ellipse(x + dx, top + 6 + q * (bot - top - 10), 2, 3.5, 0, 0, TAU); c.fill(); }
-  /* flaque au pied qui s'étale */
-  c.fillStyle = `rgba(150,215,255,${(.2 + k * .45).toFixed(3)})`; c.beginPath(); c.ellipse(x, bot + 8, 50 + k * 34, 7 + k * 4, 0, 0, TAU); c.fill();
+const PW0 = 46; /* largeur réelle d'une plateforme du jeu (390 px de large, niveau de la Banquise) */
+function meltPlat(x, y, k, t) { /* k : 0 = intacte (largeur normale du jeu), 1 = fondue (55 % de la largeur) */
+  const w = PW0 * (1 - k * .45), top = y + k * 8, bot = ICE - 6, nw = w * .3 + 3, bw = 36;
+  platBase(x, 30);
+  c.fillStyle = iceGrad(x - bw, x + bw); c.beginPath(); c.moveTo(x - w / 2, top + 2); c.quadraticCurveTo(x - nw, top + 50, x - nw - 2, (top + bot) / 2); c.quadraticCurveTo(x - bw + 4, bot - 20, x - bw, bot); c.lineTo(x + bw, bot); c.quadraticCurveTo(x + bw - 4, bot - 24, x + nw + 2, (top + bot) / 2); c.quadraticCurveTo(x + nw, top + 50, x + w / 2, top + 2); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(x - w / 2 + 2, top + 4); c.quadraticCurveTo(x - nw + 3, top + 50, x - nw + 2, (top + bot) / 2); c.lineTo(x - nw - 2, (top + bot) / 2); c.quadraticCurveTo(x - nw, top + 50, x - w / 2, top + 4); c.fill();
+  for (const [dx, h] of [[-bw, 22], [bw - 6, 16]]) { c.fillStyle = iceGrad(x + dx - 6, x + dx + 6); c.beginPath(); c.moveTo(x + dx - 6, bot); c.lineTo(x + dx + (dx < 0 ? -2 : 2), bot - h); c.lineTo(x + dx + 6, bot); c.fill(); }
+  c.fillStyle = `rgba(190,235,255,${(.2 + k * .5).toFixed(3)})`; c.fillRect(x - nw, top + 8, nw * 2, 30 + k * 30);
+  platBase(x, 40, 1);
+  /* plateau = la vraie surface d'atterrissage (même largeur que dans le jeu) */
+  c.fillStyle = '#d8f2ff'; c.beginPath(); c.roundRect(x - w / 2 - 2, top - 7, w + 4, 10, 5); c.fill();
+  c.fillStyle = `rgba(255,255,255,${(1 - k * .85).toFixed(3)})`; c.beginPath(); c.roundRect(x - w / 2 - 2, top - 8, w + 4, 8, 4); c.fill();
+  c.fillStyle = `rgba(255,255,255,${(1 - k).toFixed(3)})`; c.beginPath(); c.ellipse(x - w * .28, top + 2, 3, 6 * (1 - k * .6), 0, 0, TAU); c.fill(); c.beginPath(); c.ellipse(x + w * .26, top + 2, 3, 8 * (1 - k * .6), 0, 0, TAU); c.fill();
+  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - w * .17, top - 7, w * .34, 4, 2); c.fill();
+  const n = 1 + Math.floor(k * 4); for (let i = 0; i < n; i++) { const q = ((t * .03 + i / n) % 1), dx = (h1(i * 7) - .5) * (w - 6); c.fillStyle = 'rgba(170,225,255,0.9)'; c.beginPath(); c.ellipse(x + dx, top + 6 + q * (bot - top - 10), 1.8, 3.2, 0, 0, TAU); c.fill(); }
+  c.fillStyle = `rgba(150,215,255,${(.2 + k * .45).toFixed(3)})`; c.beginPath(); c.ellipse(x, bot + 8, 40 + k * 28, 6 + k * 4, 0, 0, TAU); c.fill();
   return { top, w }; }
 function meltBall(x, y, r, t, o = {}) { const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, '#e23a6e'); g.addColorStop(1, '#6a1030');
   c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r * (o.sq || 1), r / (o.sq || 1), 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill(); }
 function meltScene(t) { /* cycle 440 : lâcher tôt (réussi) puis lâcher tard (raté) */
-  const T = t % 440, first = T < 200, U = first ? T : T - 200, PX0 = 170, r = 28;
+  const T = t % 440, first = T < 200, U = first ? T : T - 200, PX0 = 170, r = 46;
   const wait = first ? 20 : 140, k = Math.min(1, U / 160);
   const P = meltPlat(PX0, 672, k, t);
   /* jauge de fonte au-dessus de la plateforme (pas de bonus : juste le temps qui presse) */
-  c.save(); c.translate(PX0, P.top - 26); c.fillStyle = 'rgba(10,30,70,0.35)'; c.beginPath(); c.roundRect(-30, -4, 60, 8, 4); c.fill(); c.fillStyle = k > .7 ? '#ff7a5a' : '#7ad8ff'; c.beginPath(); c.roundRect(-30, -4, 60 * (1 - k), 8, 4); c.fill(); c.restore();
-  const bx = first ? PX0 : PX0 + 34; let by = 300;
+  c.save(); c.translate(PX0, P.top + 40); c.fillStyle = 'rgba(10,30,70,0.35)'; c.beginPath(); c.roundRect(-24, -3, 48, 6, 3); c.fill(); c.fillStyle = k > .7 ? '#ff7a5a' : '#7ad8ff'; c.beginPath(); c.roundRect(-24, -3, 48 * (1 - k), 6, 3); c.fill(); c.restore();
+  const bx = first ? PX0 : PX0 + 20; let by = 300;
   if (U < wait) { c.save(); c.globalAlpha = .9; c.fillStyle = '#fff'; c.beginPath(); c.roundRect(bx - 7, by + r + 30, 14, 30, 7); c.fill(); c.restore(); meltBall(bx, by + Math.sin(t * .05) * 2, r, t); }
   else { const q = (U - wait) / 30, landY = P.top - 8 - r;
     if (first) { const yy = q < 1 ? by + (landY - by) * q * q : landY; meltBall(bx, yy, r, t, { sq: q >= 1 && q < 1.2 ? 1.15 : 1 }); yTxt('+1', bx + 40, landY - 20, (q - 1) / 1.5, '#ffd23f', 32); }
