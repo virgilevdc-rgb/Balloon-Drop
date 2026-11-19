@@ -217,8 +217,12 @@ function icePlat(x, y) {
   c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect(x - 10, y + 6, 3, ICE - y - 6);
   c.fillStyle = '#e8f6ff'; c.beginPath(); c.roundRect(x - 40, y - 8, 80, 14, 6); c.fill(); c.strokeStyle = 'rgba(80,140,200,0.5)'; c.lineWidth = 1.5; c.stroke();
   c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 5, 26, 4.5, 2.25); c.fill(); }
-function water(t) { c.fillStyle = lg(ICE, H, [[0, ZN.night ? '#1c3a6a' : '#5aa9d6'], [1, ZN.night ? '#0a1c3a' : '#2a6a9e']]); c.fillRect(0, ICE, W, H - ICE);
-  c.fillStyle = ZN.night ? 'rgba(120,200,255,0.4)' : 'rgba(255,255,255,0.8)'; for (let i = 0; i < 8; i++) { const x = ((i * 70 + t * .3) % (W + 60)) - 30; c.beginPath(); c.roundRect(x, ICE + 4 + (i % 3) * 8, 34, 6, 3); c.fill(); } }
+function water(t) { /* plus d'eau : la banquise continue jusqu'en bas (glace épaisse, givre, petites congères) */
+  c.fillStyle = lg(ICE - 30, H, [[0, 'rgba(0,0,0,0)'], [1, ZN.night ? 'rgba(4,10,30,0.35)' : 'rgba(90,130,190,0.18)']]); c.fillRect(0, ICE - 30, W, H - ICE + 30);
+  c.strokeStyle = ZN.night ? 'rgba(140,210,255,0.22)' : 'rgba(255,255,255,0.7)'; c.lineWidth = 1.2;
+  for (const [x0, y0, a] of [[60, 812, .4], [250, 822, -.3], [330, 806, .2]]) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + 26, y0 + 8 * a + 4); c.lineTo(x0 + 40, y0 + 2); c.moveTo(x0 + 26, y0 + 8 * a + 4); c.lineTo(x0 + 30, y0 + 18); c.stroke(); }
+  for (let i = 0; i < 26; i++) { const x = h1(i * 11) * W, y = ICE + 6 + h1(i * 7) * 36; c.fillStyle = ZN.night ? `rgba(160,220,255,${(.3 + .4 * Math.abs(Math.sin(t * .05 + i))).toFixed(3)})` : `rgba(255,255,255,${(.5 + .5 * Math.abs(Math.sin(t * .05 + i))).toFixed(3)})`; c.beginPath(); c.arc(x, y, .9 + h1(i) * .8, 0, TAU); c.fill(); }
+}
 function balloon(x, y, r, col, t) { y += Math.sin(t * .05) * 2;
   c.strokeStyle = rgba(ZN.ink, .55); c.lineWidth = 1.4; c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x + 10, y - r - 18, x + 2, y - r - 34); c.stroke();
   const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, mix(col, '#ffffff', .35)); g.addColorStop(.6, col); g.addColorStop(1, mix(col, '#2a0a30', .35));
