@@ -14866,9 +14866,9 @@ const BEBE_SERPENT_SKIN = (() => {
   const mixc = (a, b, k) => { const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16), m = sh => Math.round((A >> sh & 255) + ((B >> sh & 255) - (A >> sh & 255)) * k); return `rgb(${m(16)},${m(8)},${m(0)})`; };
   const G0 = '#6ee886', G1 = '#2fae50', G2 = '#1a7a36';
   /* points du corps : de la queue (en bas devant) à la nuque (en haut à droite devant) */
-  function body(r, t) { const pts = [], N = 150, T = 1.62;
-    for (let i = 0; i <= N; i++) { const s = i / N, lat = -1.12 + s * 1.82, lon = .95 - (1 - s) * T * TAU;
-      const cl = Math.cos(lat), x = r * cl * Math.sin(lon), y = -r * Math.sin(lat), z = cl * Math.cos(lon), th = r * (.04 + .14 * ss(s * 1.15) + .015 * Math.sin(t * .06 - s * 6) * s); /* il respire : une petite vague parcourt le corps */
+  function body(r, t) { const pts = [], N = 150, T = 1.247; /* 1 tour un quart : la queue finit devant, en bas */
+    for (let i = 0; i <= N; i++) { const s = i / N, lat = -1.0 + s * 1.7, lon = .95 - (1 - s) * T * TAU;
+      const cl = Math.cos(lat), x = r * cl * Math.sin(lon), y = -r * Math.sin(lat), z = cl * Math.cos(lon), th = r * (.055 + .125 * ss(s * 1.15) + .015 * Math.sin(t * .06 - s * 6) * s); /* il respire : une petite vague parcourt le corps */
       pts.push({ x, y, z, th, s }); }
     return pts; }
   const paint = (c, r, t = 0) => {
@@ -14890,8 +14890,13 @@ const BEBE_SERPENT_SKIN = (() => {
     c.restore(); };
   const after = (c, r, t = 0) => {
     const pts = body(r, t), e = pts[pts.length - 1];
-    /* le bout de la queue dépasse en bas à gauche et frétille */ { const w = Math.sin(t * .14) * r * .05, x0 = -r * .78, y0 = r * .62; c.strokeStyle = G1; c.lineCap = 'round'; c.lineWidth = r * .1; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(x0 - r * .26, y0 + r * .06, x0 - r * .24 + w, y0 + r * .26); c.stroke();
-      c.strokeStyle = G0; c.lineWidth = r * .05; c.beginPath(); c.moveTo(x0 - r * .02, y0 - r * .02); c.quadraticCurveTo(x0 - r * .26, y0 + r * .03, x0 - r * .25 + w, y0 + r * .22); c.stroke(); }
+    /* le bout de la queue : il prolonge le corps dans sa direction, s'affine en pointe, sort du ballon et s'enroule vers le haut en frétillant */
+    { const p0 = pts[0], p1 = pts[4], len = Math.hypot(p0.x - p1.x, p0.y - p1.y) || 1; let dx = (p0.x - p1.x) / len, dy = (p0.y - p1.y) / len, x = p0.x, y = p0.y; const C = [{ x, y, th: p0.th }], N2 = 22;
+      for (let i = 1; i <= N2; i++) { const u = i / N2, a = (.14 + .1 * Math.sin(t * .13 - u * 2.5)) * (.4 + u * 1.6); const ndx = dx * Math.cos(a) - dy * Math.sin(a), ndy = dx * Math.sin(a) + dy * Math.cos(a); dx = ndx; dy = ndy; x += dx * r * .028; y += dy * r * .028; C.push({ x, y, th: p0.th * Math.pow(1 - u, .8) + r * .006 }); }
+      const side = (k, sc, ox, oy) => C.map((q, i) => { const n = C[Math.min(C.length - 1, i + 1)], m = C[Math.max(0, i - 1)], tx = n.x - m.x, ty = n.y - m.y, l = Math.hypot(tx, ty) || 1; return [q.x + ox * q.th - ty / l * q.th * sc * k, q.y + oy * q.th + tx / l * q.th * sc * k]; });
+      const shape = (sc, ox, oy) => { const A = side(1, sc, ox, oy), B = side(-1, sc, ox, oy).reverse(); c.beginPath(); A.concat(B).forEach(([px, py], i) => i ? c.lineTo(px, py) : c.moveTo(px, py)); c.closePath(); c.fill(); const e2 = C[C.length - 1]; c.beginPath(); c.arc(e2.x + ox * e2.th, e2.y + oy * e2.th, e2.th * sc, 0, TAU); c.fill(); };
+      c.fillStyle = G1; shape(1, 0, 0); c.fillStyle = G0; shape(.62, -.16, -.22);
+      c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); for (let i = 2; i < C.length - 4; i += 3) { const q = C[i]; c.moveTo(q.x - q.th * .3 + q.th * .16, q.y - q.th * .45); c.arc(q.x - q.th * .3, q.y - q.th * .45, q.th * .16, 0, TAU); } c.fill(); }
     /* la nuque sort du ballon et la tête vient se poser, menton sur le bord */
     const bob = Math.sin(t * .05) * r * .025, hx = r * .5, hy = -r * .9 + bob, hs = r * .36;
     for (let i = 0; i <= 14; i++) { const u = i / 14, x = e.x + (hx - r * .05 - e.x) * u, y = e.y + (hy + hs * .35 - e.y) * u - Math.sin(u * Math.PI) * r * .06, th = e.th * (1 - u * .12);
