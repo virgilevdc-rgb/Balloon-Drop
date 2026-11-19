@@ -16,9 +16,15 @@ const mix = (a, b, k) => { const A = hex(a), B = hex(b); return '#' + A.map((v, 
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
 const lg = (y0, y1, st) => { const g = c.createLinearGradient(0, y0, 0, y1); st.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
 const ZONES = {
-  1: { name: 'La Lisière', levels: 'Niveaux 1 à 3', sky: [[0, '#f7e6a8'], [.35, '#cfe6a0'], [.7, '#7cc48a'], [1, '#3f9a6a']], far: '#7cbf9a', mid: '#3f8f5e', near: '#1f6a42', deep: '#0f4a2c', leaf: '#2f8a3e', leafL: '#7ed36a', leafD: '#14532a', trunk: '#5a3e2a', trunkL: '#8a6a44', light: '#fff2b0', water: ['#5ec8b0', '#2a8a7a', '#145a50'], ink: '#123a24', night: 0 },
-  2: { name: 'La Canopée', levels: 'Niveaux 4 à 6', sky: [[0, '#bfe0d8'], [.5, '#d8eccc'], [1, '#a8d4a8']], far: '#a8cdb4', mid: '#5fa478', near: '#2f7a4a', deep: '#185a34', leaf: '#3a9a48', leafL: '#8ee07a', leafD: '#1a5e30', trunk: '#5e4430', trunkL: '#927252', light: '#ffffff', water: ['#cfe8dc', '#9ccab4', '#6aa890'], ink: '#123a24', night: 0 },
-  3: { name: 'Le Temple perdu', levels: 'Niveaux 7 à 10', sky: [[0, '#0a1e24'], [.5, '#103a3a'], [1, '#1a4a40']], far: '#1e4a48', mid: '#143a34', near: '#0c2a24', deep: '#061a16', leaf: '#1e5a3e', leafL: '#4aa070', leafD: '#0a2a1e', trunk: '#2e2620', trunkL: '#4a3e30', light: '#bfffe0', water: ['#1a4a48', '#0e3030', '#061c1c'], ink: '#eaffef', night: 1 },
+  1: { name: 'La Lisière', levels: 'Niveaux 1 à 3', sky: [[0, '#fffbe2'], [.35, '#f4f2c0'], [.7, '#d6eaa4'], [1, '#b4d890']],
+    P: ['#d4e6a6', '#a8d08a', '#6eae66', '#3a8a4a', '#16502e'], HI: ['#eef6c4', '#cfe8a0', '#a8dc7a', '#86d064', '#5aa848'], haze: '#f6f4cc',
+    leaf: '#2f8a3e', leafL: '#8ee070', leafD: '#14532a', trunk: '#6a4a30', trunkL: '#a07a4c', light: '#fff4c0', water: ['#7ad8c0', '#2f9a84', '#145a50'], ink: '#123a24', night: 0 },
+  2: { name: 'La Canopée', levels: 'Niveaux 4 à 6', sky: [[0, '#eef6f0'], [.5, '#d8ecdc'], [1, '#bcdcc4']],
+    P: ['#cfe2d4', '#a6cbb2', '#6fa784', '#3d7c54', '#174a30'], HI: ['#e6f2e8', '#c4e0cc', '#9ccca8', '#7ac08a', '#4e9a62'], haze: '#eef6f0',
+    leaf: '#3a9a48', leafL: '#9ae68a', leafD: '#1a5e30', trunk: '#5e4430', trunkL: '#927252', light: '#ffffff', water: ['#e6f2ea', '#c4e0cc', '#a0ccb0'], ink: '#123a24', night: 0 },
+  3: { name: 'Le Temple perdu', levels: 'Niveaux 7 à 10', sky: [[0, '#0c2a30'], [.5, '#123c3c'], [1, '#164640']],
+    P: ['#1f4c4a', '#183e3c', '#11302e', '#0a2420', '#041210'], HI: ['#2c6660', '#2a5e56', '#246050', '#1e6a4a', '#2a8a5a'], haze: '#2a6a5e',
+    leaf: '#1e5a3e', leafL: '#4aa070', leafD: '#0a2a1e', trunk: '#2e2620', trunkL: '#4a3e30', light: '#c8ffe4', water: ['#1a4a48', '#0e3030', '#061c1c'], ink: '#eaffef', night: 1 },
 };
 const ZN = ZONES[Z];
 
@@ -141,6 +147,40 @@ function bromeliad(x, y, s, flower = '#ff4a8a') { c.save(); c.translate(x, y); c
   c.fillStyle = flower; c.beginPath(); c.moveTo(-4, -6); c.lineTo(0, -22); c.lineTo(4, -6); c.fill(); c.restore(); }
 /* mousse qui pend (barbe) */
 function moss(x, y, len, t) { c.strokeStyle = 'rgba(150,190,120,0.7)'; c.lineWidth = 1.2; for (let i = 0; i < 7; i++) { const dx = (i - 3) * 2.4, l = len * (.5 + h1(x + i) * .5), sw = Math.sin(t * .02 + i + x) * 3; c.beginPath(); c.moveTo(x + dx, y); c.quadraticCurveTo(x + dx + sw, y + l * .5, x + dx + sw * 1.5, y + l); c.stroke(); } }
+/* masse de feuillage à bord feuillu (pas des boules) : forme pleine + feuilles pointues sur le contour,
+   les feuilles côté lumière (haut-gauche) prennent la couleur claire */
+function bush(x, y, w, h, col, hi, seed, n = 26) {
+  c.fillStyle = col; c.beginPath(); c.ellipse(x, y, w, h, 0, Math.PI, TAU); c.lineTo(x + w, y + h * .6); c.lineTo(x - w, y + h * .6); c.fill();
+  for (let i = 0; i < n; i++) { const u = i / (n - 1), a = Math.PI + u * Math.PI + (h1(seed + i) - .5) * .2, px = x + Math.cos(a) * w * .96, py = y + Math.sin(a) * h * .96, lit = u < .55 && h1(seed * 3 + i) > .25;
+    leaf(px, py, h * (.32 + h1(seed + i * 5) * .22), h * .1, a + (h1(seed + i * 7) - .5) * .7, lit ? hi : col, lit ? hi : col, false); }
+  for (let i = 0; i < n * .4; i++) { const a = Math.PI + h1(seed + i * 9) * Math.PI * .6, r = .35 + h1(seed + i * 4) * .45; leaf(x + Math.cos(a) * w * r, y + Math.sin(a) * h * r, h * .26, h * .08, a, hi, hi, false); } }
+/* grand arbre émergent : tronc fin + couronne en parasol (3 masses) */
+function emergent(x, base, hgt, cw, col, hi, tr, seed) { const top = base - hgt;
+  c.strokeStyle = tr; c.lineWidth = Math.max(2, cw * .07); c.beginPath(); c.moveTo(x, base); c.quadraticCurveTo(x + cw * .08, (base + top) / 2, x, top + cw * .15); c.stroke();
+  c.lineWidth = Math.max(1.5, cw * .04); for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(x, top + cw * .3); c.quadraticCurveTo(x + sd * cw * .3, top + cw * .15, x + sd * cw * .5, top + cw * .05); c.stroke(); }
+  bush(x - cw * .45, top + cw * .08, cw * .42, cw * .26, col, hi, seed); bush(x + cw * .45, top + cw * .1, cw * .4, cw * .24, col, hi, seed + 5); bush(x, top - cw * .02, cw * .55, cw * .3, col, hi, seed + 9); }
+/* silhouette de palmier (une seule couleur, pour les plans lointains) */
+function palmSil(x, base, hgt, s, col, t) { c.save(); c.strokeStyle = col; c.lineWidth = 4 * s; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, base); c.quadraticCurveTo(x - hgt * .2, base - hgt * .5, x + hgt * .05, base - hgt); c.stroke();
+  c.translate(x + hgt * .05, base - hgt); for (let f = 0; f < 7; f++) banana(0, 0, .42 * s, -Math.PI * .95 + f * .5 + Math.sin(t * .01 + f) * .03, col, col); c.restore(); }
+/* plan de forêt : une rangée de masses feuillues, d'émergents et de palmiers, posée sur une bande pleine */
+function forestPlane(y, k, seed, t, opt = {}) { const col = ZN.P[k], hi = ZN.HI[k];
+  const n = opt.n || 6; for (let i = 0; i < n; i++) { const x = (i + .5) / n * (W + 80) - 40 + (h1(seed + i) - .5) * 30;
+    if (opt.emer && i % 3 === 1) emergent(x, y, opt.emer * (1 + h1(seed + i) * .4), opt.cw || 90, col, hi, mix(col, '#000000', .25), seed + i * 13);
+    else if (opt.palms && i % 4 === 2) palmSil(x, y + 4, opt.palms, opt.ps || 1, col, t);
+    bush(x, y, (opt.bw || 60) * (.8 + h1(seed + i * 3) * .5), (opt.bh || 40) * (.8 + h1(seed + i * 5) * .5), col, hi, seed + i * 17); }
+  c.fillStyle = col; c.fillRect(0, y, W, H - y); }
+function haze(y0, y1, a) { mist(y0, y1, ZN.haze, a); }
+/* rebord de canopée qui retombe des coins (premier plan haut), feuilles sombres + quelques feuilles éclairées */
+function cornerLeaves(t, col, hi) { for (const [x0, sd] of [[-10, 1], [W + 10, -1]]) { for (let i = 0; i < 90; i++) { const u = h1(i * 3 + (sd > 0 ? 0 : 99)), r = 30 + u * 150, a = (sd > 0 ? 0 : Math.PI) + sd * (h1(i * 7) * 1.3), px = x0 + Math.cos(a) * r * .9, py = -10 + Math.abs(Math.sin(a)) * r * .7 + h1(i) * 20 + Math.sin(t * .01 + i) * 1.5;
+  const lit = sd > 0 && h1(i * 11) > .55; leaf(px, py, 28 + h1(i * 5) * 22, 9, (sd > 0 ? .9 : 2.2) + (h1(i * 13) - .5) * 1.2, lit ? hi : col, lit ? hi : mix(col, hi, .3)); } } }
+/* oreille d'éléphant (grande feuille en cœur, saturée) */
+function elephantEar(x, y, s, a, col, hi) { c.save(); c.translate(x, y); c.rotate(a); c.scale(s, s);
+  c.strokeStyle = mix(col, '#000000', .3); c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(4, 30, -2, 70); c.stroke();
+  const g = c.createLinearGradient(-40, -80, 30, 0); g.addColorStop(0, hi); g.addColorStop(.6, col); g.addColorStop(1, mix(col, '#000000', .25)); c.fillStyle = g;
+  c.beginPath(); c.moveTo(0, -4); c.bezierCurveTo(-44, -8, -46, -70, 0, -96); c.bezierCurveTo(46, -70, 44, -8, 0, -4); c.fill();
+  c.strokeStyle = 'rgba(0,30,10,0.3)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, -4); c.lineTo(0, -90); c.stroke();
+  for (let k = 1; k < 6; k++) { const yy = -10 - k * 15; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(0, yy); c.quadraticCurveTo(sd * 16, yy - 6, sd * (34 - k * 4), yy - 14); c.stroke(); } }
+  c.fillStyle = 'rgba(255,255,255,0.16)'; c.beginPath(); c.ellipse(-14, -56, 8, 22, .3, 0, TAU); c.fill(); c.restore(); }
 /* ===== sol : rivière (zones 1 et 3) ou mer de nuages et de feuilles (zone 2) ===== */
 function river(t) { const [a, b, d] = ZN.water; c.fillStyle = lg(FL - 14, H, [[0, a], [.4, b], [1, d]]); c.beginPath(); c.moveTo(0, H); for (let x = 0; x <= W; x += 10) c.lineTo(x, FL - 6 + Math.sin(x * .035 + t * .05) * 3); c.lineTo(W, H); c.fill();
   c.strokeStyle = ZN.night ? 'rgba(160,255,220,0.35)' : 'rgba(255,255,255,0.8)'; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= W; x += 10) { const y = FL - 6 + Math.sin(x * .035 + t * .05) * 3; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
@@ -166,36 +206,6 @@ function post(x, top) { const bot = FL - 2, pw = 14;
   c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - w * .17, top + 3.5, w * .34, 4.5, 2.25); c.fill();
   /* touffe de feuilles au pied */ fern(x - 14, bot + 4, .5, ZN.leaf, ZN.leafL); fern(x + 16, bot + 6, .42, ZN.leaf, ZN.leafL, -1); }
 
-/* ===== zone 1 : la Lisière (très jungle) ===== */
-function zone1(t) {
-  c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H);
-  /* soleil derrière les feuilles, en haut à gauche */
-  { const g = c.createRadialGradient(70, 120, 10, 70, 120, 320); g.addColorStop(0, 'rgba(255,248,200,0.95)'); g.addColorStop(.3, 'rgba(255,236,160,0.45)'); g.addColorStop(1, 'rgba(255,236,160,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
-  treeline(470, ZN.far, mix(ZN.far, '#ffffff', .35), mix(ZN.far, ZN.mid, .3), 3, 9, 40); mist(380, 520, '#eef8dc', .6);
-  waterfall(296, 300, 560, 18, t); c.fillStyle = mix(ZN.far, ZN.mid, .45); c.beginPath(); c.moveTo(240, 330); c.quadraticCurveTo(262, 290, 282, 306); c.lineTo(282, 600); c.lineTo(240, 600); c.fill(); c.beginPath(); c.moveTo(310, 306); c.quadraticCurveTo(340, 284, 372, 300); c.lineTo(372, 600); c.lineTo(310, 600); c.fill();
-  for (const [x, y] of [[260, 300], [350, 296]]) for (let k = 0; k < 5; k++) leaf(x + k * 8 - 16, y, 18, 6, -1.2 + k * .6, mix(ZN.far, ZN.mid, .5), ZN.far);
-  treeline(590, ZN.mid, mix(ZN.mid, '#ffffff', .25), mix(ZN.mid, ZN.near, .5), 11, 7, 56); mist(540, 650, '#dff2c8', .45);
-  palm(150, 640, 230, .9, t, ZN.leaf, ZN.leafL, '#7a5a3a'); palm(250, 650, 190, .75, t + 50, mix(ZN.leaf, ZN.mid, .3), ZN.leaf, '#6a4e34');
-  treeline(720, ZN.near, mix(ZN.near, '#ffffff', .2), ZN.deep, 21, 6, 60);
-  trunk(54, 30, 0, 720, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .4)); trunk(350, 22, 0, 690, mix(ZN.trunk, ZN.mid, .2), mix(ZN.trunkL, ZN.mid, .2), mix(ZN.trunk, '#000000', .3));
-  bromeliad(40, 430, 1.1); bromeliad(70, 560, .9, '#ffb02a'); bromeliad(340, 470, .9); moss(360, 380, 40, t); moss(46, 250, 50, t);
-  rays(t, .55);
-  canopy(120, 120, ZN.leaf, ZN.leafL, ZN.leafD, 5, 1.4);
-  for (const [x, l] of [[24, 260], [90, 180], [130, 360], [212, 140], [262, 250], [318, 310], [372, 200]]) vine(x, 90, l, 10, t, ZN.leaf, ZN.leafL, 11);
-  for (const [x, y] of [[130, 450], [318, 400]]) { c.fillStyle = '#ff5a8a'; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(x + Math.sin(t * .015) * 4 + k * 3, y + k * 5, 2.4, 0, TAU); c.fill(); } }
-  /* branche où sont perchés les aras */ c.strokeStyle = ZN.trunk; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.moveTo(54, 322); c.quadraticCurveTo(110, 312, 160, 330); c.stroke(); c.lineCap = 'butt';
-  for (let i = 0; i < 5; i++) leaf(118 + i * 9, 322, 18, 6, .5 + i * .35, ZN.leaf, ZN.leafL);
-  macaw(84, 300, 1.25, t); macaw(102, 306, 1.05, t + 40, '#2a7aff', -1);
-  butterfly(170 + Math.sin(t * .02) * 30, 470 + Math.cos(t * .03) * 20, 1.2, t); butterfly(260 + Math.cos(t * .017) * 26, 600 + Math.sin(t * .02) * 14, .9, t + 30, '#ffb02a');
-  motes(t, 60, ZN.light, .8);
-  river(t);
-  /* premier plan : grandes feuilles qui encadrent, héliconias */
-  banana(-30, 620, 1.25, -.25, ZN.leaf, ZN.leafL); banana(420, 680, 1.15, Math.PI + .3, ZN.leafD, ZN.leaf);
-  heliconia(28, 720, 1.1, Math.sin(t * .01) * .04); heliconia(360, 740, 1, -.1 + Math.sin(t * .012) * .04);
-  monstera(-6, 790, 1.4, .5, ZN.leafD, ZN.leaf); monstera(402, 770, 1.25, -.55, ZN.leafD, ZN.leaf);
-  fern(26, 806, 1, ZN.leaf, ZN.leafL); fern(366, 812, .9, ZN.leaf, ZN.leafL, -1);
-}
-/* ===== zone 2 : la Canopée ===== */
 function bridge(x0, y0, x1, y1, sag) { c.strokeStyle = '#6a4a2a'; c.lineWidth = 1.6; for (const dy of [0, -14]) { c.beginPath(); c.moveTo(x0, y0 + dy); c.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + sag + dy * .6, x1, y1 + dy); c.stroke(); }
   for (let i = 1; i < 16; i++) { const u = i / 16, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u + Math.sin(u * Math.PI) * sag; c.fillStyle = i % 2 ? '#a07a4a' : '#8a6438'; c.fillRect(x - 3, y - 1, 6, 3); c.strokeStyle = 'rgba(80,50,20,0.6)'; c.lineWidth = .8; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - 14 + Math.sin(u * Math.PI) * sag * .4 * 0); c.stroke(); } }
 function hut(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
@@ -206,29 +216,12 @@ function hut(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
   c.strokeStyle = 'rgba(120,80,30,0.6)'; for (let i = 0; i < 8; i++) { c.beginPath(); c.moveTo(-40 + i * 11, -30); c.lineTo(0, -64); c.stroke(); } c.restore(); }
 function rainCurtain(t, a) { const x0 = ((t * .4) % (W + 300)) - 150; const g = c.createLinearGradient(x0, 0, x0 + 160, 0); g.addColorStop(0, 'rgba(220,235,240,0)'); g.addColorStop(.5, `rgba(220,235,240,${a})`); g.addColorStop(1, 'rgba(220,235,240,0)');
   c.fillStyle = g; c.fillRect(x0, 0, 160, H); c.strokeStyle = `rgba(255,255,255,${a})`; c.lineWidth = 1; for (let i = 0; i < 60; i++) { const x = x0 + h1(i) * 160, y = (h1(i * 3) * H + t * 9) % H; c.beginPath(); c.moveTo(x, y); c.lineTo(x - 2, y + 14); c.stroke(); } }
-function zone2(t) {
-  c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H);
-  { const g = c.createRadialGradient(80, 140, 10, 80, 140, 300); g.addColorStop(0, 'rgba(255,255,240,0.9)'); g.addColorStop(1, 'rgba(255,255,240,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
-  /* mer de cimes au loin */ for (const [y, col, s] of [[470, ZN.far, 2], [540, mix(ZN.far, ZN.mid, .5), 9], [610, ZN.mid, 17]]) { jungleLayer(y, 40, col, s, 10); mist(y - 40, y + 20, '#f0f8f0', .5); }
-  trunk(40, 26, 0, 900, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .4)); trunk(360, 30, 0, 900, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .4));
-  bridge(56, 430, 340, 420, 40); hut(320, 420, .9, t); hut(70, 432, .7, t);
-  rays(t, .3, 20);
-  canopy(70, 70, ZN.leaf, ZN.leafL, ZN.leafD, 31, .9);
-  for (const [x, l] of [[110, 160], [200, 110], [290, 200]]) vine(x, 50, l, 12, t, ZN.leaf, ZN.leafL, 7);
-  toucan(330, 375, 1.3, t, -1); macaw(66, 392, 1, t, '#e8302a');
-  rainCurtain(t, .35);
-  /* branches feuillues au premier plan */ banana(46, 300, 1, -.15, ZN.leaf, ZN.leafL); bromeliad(30, 520, 1.1); bromeliad(372, 470, 1, '#ffb02a'); moss(370, 600, 46, t); monstera(410, 560, 1.1, -.7, ZN.leafD, ZN.leaf);
-  motes(t, 30, '#ffffff', .6);
-  leafSea(t);
-}
-/* ===== zone 3 : le Temple perdu ===== */
 function temple(x, y, s, t) { c.save(); c.translate(x, y); c.scale(s, s);
   const st = (x0, y0, w, h, col) => { c.fillStyle = col; c.fillRect(x0, y0, w, h); c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 1; for (let yy = y0 + 10; yy < y0 + h; yy += 12) { c.beginPath(); c.moveTo(x0, yy); c.lineTo(x0 + w, yy); c.stroke(); } };
   /* étages en gradins */ st(-110, -60, 220, 60, '#3a4a40'); st(-86, -110, 172, 50, '#40524a'); st(-62, -150, 124, 40, '#465a50'); st(-36, -184, 72, 34, '#4c6256');
   c.fillStyle = 'rgba(180,255,220,0.08)'; c.fillRect(-110, -60, 60, 60); c.fillRect(-86, -110, 46, 50);
   /* porte et yeux de serpent gravés */ c.fillStyle = '#060e0c'; c.beginPath(); c.moveTo(-24, 0); c.lineTo(-24, -40); c.quadraticCurveTo(0, -56, 24, -40); c.lineTo(24, 0); c.fill();
-  const ea = .55 + .45 * Math.sin(t * .03); for (const sd of [-1, 1]) { const g = c.createRadialGradient(sd * 14, -72, 1, sd * 14, -72, 16); g.addColorStop(0, `rgba(255,214,90,${ea.toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,60,0)'); c.fillStyle = g; c.beginPath(); c.arc(sd * 14, -72, 16, 0, TAU); c.fill();
-    c.fillStyle = `rgba(255,230,140,${ea.toFixed(3)})`; c.beginPath(); c.ellipse(sd * 14, -72, 5, 3, 0, 0, TAU); c.fill(); c.fillStyle = '#1a0e04'; c.beginPath(); c.ellipse(sd * 14, -72, 1.2, 2.8, 0, 0, TAU); c.fill(); }
+  c.fillStyle = 'rgba(160,220,190,0.25)'; c.beginPath(); c.arc(0, -72, 9, 0, TAU); c.fill();
   c.strokeStyle = 'rgba(160,220,190,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(-30, -62); c.quadraticCurveTo(0, -92, 30, -62); c.stroke();
   /* racines qui l'étranglent */ c.strokeStyle = '#2a2018'; c.lineWidth = 6; c.lineCap = 'round'; for (const [a, b, d] of [[[-110, -150], [-60, -30], [-90, 0]], [[90, -170], [70, -80], [104, 0]], [[-20, -184], [-50, -130], [-70, -60]]]) { c.beginPath(); c.moveTo(...a); c.quadraticCurveTo(...b, ...d); c.stroke(); }
   c.lineCap = 'butt';
@@ -239,21 +232,81 @@ function mushroom(x, y, s, t) { const a = .6 + .4 * Math.sin(t * .03 + x); c.sav
   c.fillStyle = '#d8f8ff'; c.fillRect(-2, -10, 4, 10); c.fillStyle = `rgba(110,230,255,${(.7 + .3 * a).toFixed(3)})`; c.beginPath(); c.ellipse(0, -11, 10, 6, 0, Math.PI, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.arc(-3, -14, 1.5, 0, TAU); c.fill(); c.restore(); }
 function statue(x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = '#3a4a42'; c.fillRect(-12, -10, 24, 10); c.beginPath(); c.roundRect(-10, -50, 20, 40, 6); c.fill(); c.beginPath(); c.arc(0, -58, 11, 0, TAU); c.fill();
   c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(-6, -60, 4, 3); c.fillRect(2, -60, 4, 3); c.fillStyle = 'rgba(120,200,120,0.35)'; c.beginPath(); c.ellipse(-6, -66, 8, 4, -.3, 0, TAU); c.fill(); c.restore(); }
+/* ===== zone 1 : la Lisière — on regarde vers le soleil : les plans lointains virent au doré, le premier plan est sombre et saturé ===== */
+function sunGlow(x, y, r, a) { const g = c.createRadialGradient(x, y, 4, x, y, r); g.addColorStop(0, `rgba(255,252,220,${a})`); g.addColorStop(.25, `rgba(255,240,170,${a * .5})`); g.addColorStop(1, 'rgba(255,240,170,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+function zone1(t) {
+  c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H); sunGlow(96, 150, 360, .95);
+  forestPlane(420, 0, 3, t, { n: 7, emer: 150, cw: 100, bw: 46, bh: 30 }); haze(330, 470, .7);
+  /* la cascade tombe d'une falaise de verdure (plan 2) */
+  c.fillStyle = ZN.P[1]; c.beginPath(); c.moveTo(232, 560); c.lineTo(236, 330); c.quadraticCurveTo(268, 300, 290, 318); c.lineTo(290, 560); c.fill(); c.beginPath(); c.moveTo(318, 560); c.lineTo(318, 318); c.quadraticCurveTo(350, 296, 392, 310); c.lineTo(392, 560); c.fill();
+  bush(262, 326, 34, 22, ZN.P[1], ZN.HI[1], 41); bush(354, 312, 44, 24, ZN.P[1], ZN.HI[1], 47);
+  waterfall(304, 320, 560, 16, t);
+  forestPlane(520, 1, 11, t, { n: 6, palms: 150, ps: .9, emer: 120, cw: 80, bw: 54, bh: 36 }); haze(470, 580, .55);
+  forestPlane(610, 2, 21, t, { n: 5, palms: 170, ps: 1.1, bw: 64, bh: 44 }); haze(570, 660, .35);
+  rays(t, .5, 60);
+  /* deux gros troncs (plan 3) qui cadrent, avec broméliacées et mousse */
+  trunk(40, 30, 0, 760, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .45)); trunk(362, 24, 0, 740, mix(ZN.trunk, '#000000', .1), mix(ZN.trunkL, '#000000', .1), mix(ZN.trunk, '#000000', .5));
+  bromeliad(30, 420, 1.1); bromeliad(56, 560, .9, '#ffb02a'); bromeliad(354, 480, .9); moss(372, 380, 44, t); moss(28, 270, 50, t);
+  forestPlane(720, 3, 31, t, { n: 4, bw: 80, bh: 54 });
+  elephantEar(70, 760, 1.05, -.35, ZN.P[3], ZN.HI[3]); elephantEar(108, 770, .85, .15, mix(ZN.P[3], ZN.P[2], .3), ZN.HI[2]); elephantEar(318, 764, 1, .3, ZN.P[3], ZN.HI[3]); elephantEar(282, 776, .8, -.1, mix(ZN.P[3], ZN.P[2], .3), ZN.HI[2]);
+  /* branche des aras, qui sort du tronc de gauche */
+  c.strokeStyle = mix(ZN.trunk, '#000000', .2); c.lineWidth = 8; c.lineCap = 'round'; c.beginPath(); c.moveTo(56, 330); c.quadraticCurveTo(112, 318, 164, 334); c.stroke(); c.lineCap = 'butt';
+  for (let i = 0; i < 6; i++) leaf(120 + i * 8, 326, 20, 6, .5 + i * .35, ZN.P[3], ZN.HI[3]);
+  macaw(86, 306, 1.3, t); macaw(106, 312, 1.1, t + 40, '#2a7aff', -1);
+  /* lianes qui tombent de la canopée (plan 3) */
+  for (const [x, l] of [[22, 300], [120, 220], [262, 180], [334, 300], [376, 220]]) vine(x, 40, l, 10, t, ZN.P[3], ZN.HI[3], 10);
+  cornerLeaves(t, ZN.P[4], ZN.HI[4]);
+  butterfly(180 + Math.sin(t * .02) * 30, 480 + Math.cos(t * .03) * 20, 1.2, t); butterfly(250 + Math.cos(t * .017) * 26, 600 + Math.sin(t * .02) * 14, .9, t + 30, '#ffb02a');
+  motes(t, 70, ZN.light, .9);
+  river(t);
+  /* premier plan sombre, liseré de lumière */
+  banana(-40, 640, 1.3, -.3, ZN.P[4], ZN.HI[4]); banana(430, 690, 1.2, Math.PI + .3, ZN.P[4], mix(ZN.P[4], ZN.HI[4], .5));
+  heliconia(26, 726, 1.15, Math.sin(t * .01) * .04); heliconia(364, 744, 1, -.1 + Math.sin(t * .012) * .04);
+  monstera(-4, 800, 1.45, .5, ZN.P[4], ZN.HI[4]); monstera(400, 784, 1.3, -.55, ZN.P[4], mix(ZN.P[4], ZN.HI[4], .6));
+  fern(30, 812, 1, ZN.P[4], ZN.HI[4]); fern(362, 816, .9, ZN.P[4], ZN.HI[4], -1);
+}
+/* ===== zone 2 : la Canopée — on est dans les cimes : mer d'arbres et de brume en dessous ===== */
+function zone2(t) {
+  c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H); sunGlow(90, 130, 300, .8);
+  forestPlane(470, 0, 2, t, { n: 8, emer: 70, cw: 70, bw: 40, bh: 24 }); haze(420, 520, .8);
+  forestPlane(560, 1, 9, t, { n: 7, emer: 90, cw: 80, bw: 50, bh: 30 }); haze(500, 600, .7);
+  forestPlane(660, 2, 17, t, { n: 6, palms: 120, ps: .8, bw: 60, bh: 38 }); haze(610, 700, .6);
+  rays(t, .3, 20);
+  trunk(36, 28, 0, 900, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .45)); trunk(362, 32, 0, 900, ZN.trunk, ZN.trunkL, mix(ZN.trunk, '#000000', .45));
+  bromeliad(28, 520, 1.1); bromeliad(372, 470, 1, '#ffb02a'); moss(370, 600, 46, t); moss(30, 300, 44, t);
+  bridge(60, 440, 336, 430, 40); hut(326, 430, .9, t); hut(72, 442, .72, t);
+  toucan(326, 385, 1.3, t, -1); macaw(64, 400, 1, t, '#e8302a');
+  for (const [x, l] of [[110, 160], [200, 110], [290, 200]]) vine(x, 30, l, 12, t, ZN.P[3], ZN.HI[3], 8);
+  cornerLeaves(t, ZN.P[4], ZN.HI[4]);
+  rainCurtain(t, .35);
+  monstera(410, 580, 1.1, -.7, ZN.P[4], ZN.HI[4]); banana(-40, 560, 1.1, -.2, ZN.P[4], ZN.HI[4]);
+  motes(t, 30, '#ffffff', .6);
+  leafSea(t);
+}
+/* ===== zone 3 : le Temple perdu — nuit sous les arbres ; au loin, dans la jungle noire, deux yeux de serpent ===== */
+function snakeEyes(x, y, s, t) { const blink = (t % 260) < 8 ? .15 : 1, a = .75 + .25 * Math.sin(t * .03);
+  for (const sd of [-1, 1]) { const ex = x + sd * 13 * s; const g = c.createRadialGradient(ex, y, 1, ex, y, 22 * s); g.addColorStop(0, `rgba(255,214,90,${(.7 * a).toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,60,0)'); c.fillStyle = g; c.beginPath(); c.arc(ex, y, 22 * s, 0, TAU); c.fill();
+    c.fillStyle = `rgba(255,232,140,${a.toFixed(3)})`; c.beginPath(); c.ellipse(ex, y, 6.5 * s, 3.6 * s * blink, sd * -.25, 0, TAU); c.fill();
+    if (blink > .5) { c.fillStyle = '#1a0e04'; c.beginPath(); c.ellipse(ex, y, 1.3 * s, 3.2 * s, 0, 0, TAU); c.fill(); } } }
 function zone3(t) {
   c.fillStyle = lg(0, H, ZN.sky); c.fillRect(0, 0, W, H);
-  /* lune à travers la canopée */ { const g = c.createRadialGradient(80, 130, 4, 80, 130, 220); g.addColorStop(0, 'rgba(200,255,230,0.5)'); g.addColorStop(1, 'rgba(200,255,230,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
-  jungleLayer(470, 60, ZN.far, 5, 8); mist(420, 560, '#3a7a68', .4);
-  temple(230, 600, 1, t); moss(150, 470, 40, t); moss(310, 450, 50, t);
-  jungleLayer(620, 40, ZN.mid, 13, 7); mist(580, 680, '#2a6a58', .45);
-  trunk(36, 28, 0, 720, ZN.trunk, ZN.trunkL, '#0a0806'); trunk(372, 24, 0, 700, ZN.trunk, ZN.trunkL, '#0a0806');
-  statue(110, 700, .9); statue(352, 700, .8);
-  rays(t, .16, 30);
-  canopy(120, 120, ZN.leaf, ZN.leafL, ZN.leafD, 41, 1.2);
-  for (const [x, l] of [[30, 300], [100, 200], [170, 340], [300, 260], [356, 220]]) vine(x, 90, l, 8, t, ZN.leaf, ZN.leafL);
-  for (const [x, y, s] of [[70, 760, 1], [150, 776, .7], [330, 766, .9], [290, 780, .6]]) mushroom(x, y, s, t);
+  { const g = c.createRadialGradient(84, 120, 4, 84, 120, 240); g.addColorStop(0, 'rgba(210,255,235,0.55)'); g.addColorStop(1, 'rgba(210,255,235,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.fillStyle = '#eafff4'; c.beginPath(); c.arc(84, 120, 18, 0, TAU); c.fill(); }
+  forestPlane(430, 0, 5, t, { n: 7, emer: 140, cw: 96, bw: 46, bh: 30 }); haze(360, 470, .45);
+  snakeEyes(300, 452, 1, t);
+  forestPlane(520, 1, 13, t, { n: 6, emer: 110, cw: 80, bw: 52, bh: 34 }); haze(480, 560, .4);
+  temple(200, 640, .95, t);
+  forestPlane(680, 2, 23, t, { n: 5, bw: 60, bh: 40 }); haze(640, 720, .35);
+  elephantEar(76, 770, .95, -.35, ZN.P[3], ZN.HI[3]); elephantEar(316, 774, .9, .3, ZN.P[3], ZN.HI[3]);
+  rays(t, .14, 30);
+  trunk(34, 28, 0, 760, ZN.trunk, ZN.trunkL, '#0a0806'); trunk(370, 24, 0, 740, ZN.trunk, ZN.trunkL, '#0a0806');
+  moss(150, 470, 40, t); moss(372, 420, 50, t);
+  statue(110, 712, .9); statue(352, 716, .8);
+  for (const [x, l] of [[22, 300], [96, 200], [300, 260], [356, 220]]) vine(x, 40, l, 8, t, ZN.P[3], ZN.HI[3]);
+  cornerLeaves(t, ZN.P[4], ZN.HI[4]);
+  for (const [x, y, s] of [[70, 770, 1], [150, 780, .7], [330, 772, .9], [290, 786, .6]]) mushroom(x, y, s, t);
   fireflies(t, 26, [0, 300, W, 460]);
   river(t);
-  monstera(-10, 790, 1.3, .5, ZN.leafD, ZN.leaf); monstera(404, 770, 1.2, -.55, ZN.leafD, ZN.leaf); fern(30, 812, .9, ZN.leaf, ZN.leafL); fern(364, 816, .8, ZN.leaf, ZN.leafL, -1);
+  monstera(-10, 800, 1.35, .5, ZN.P[4], ZN.HI[4]); monstera(404, 784, 1.2, -.55, ZN.P[4], ZN.HI[4]); fern(30, 816, .9, ZN.P[4], ZN.HI[4]); fern(364, 818, .8, ZN.P[4], ZN.HI[4], -1);
 }
 
 /* jouables + HUD */
