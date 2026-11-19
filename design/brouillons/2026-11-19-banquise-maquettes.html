@@ -492,13 +492,29 @@ function yetiScene(t) {
     if (T >= 52) { cracks(X, GY + 2, Math.min(1, (T - 52) / 18)); iciclesFall(t, (T - 52) / 168); yTxt('GRRAAA !', X, GY - 200, (T - 52) / 80, '#bff4ff', 32); }
     if (T >= 52 && T < 64) { c.fillStyle = `rgba(255,255,255,${((64 - T) / 12 * .5).toFixed(3)})`; c.fillRect(0, 0, W, H); } }
   if (YS === 5) { const T = t % 360;
-    if (T < 70) { /* il glisse sur sa propre glace */ const q = T / 70, rot = -Math.sin(q * Math.PI * .5) * 1.4; c.save(); c.translate(X - q * 40, GY - Math.sin(q * Math.PI) * 50); c.rotate(rot); yeti(0, 0, .82, t, { arms: 1, armsL: .9, mouth: 1 }); c.restore();
-      if (q > .2) yTxt('Oups…', X, GY - 190, (q - .2) / .8, '#ffffff', 28); }
-    else if (T < 110) { /* BADABOUM, sur le dos */ const q = (T - 70) / 40; c.save(); c.translate(X - 40, GY - 20); c.rotate(-1.4); c.scale(1, 1 - Math.sin(q * Math.PI) * .12); yeti(0, 0, .82, t, { sad: 1, arms: .4 }); c.restore();
-      cracks(X - 40, GY + 2, Math.min(1, q * 2)); yTxt('BADABOUM !', X - 40, GY - 160, q, '#ffffff', 30); for (let i = 0; i < 4; i++) { const a = T * .15 + i * Math.PI / 2; c.fillStyle = '#ffe46a'; c.beginPath(); c.arc(X - 60 + Math.cos(a) * 30, GY - 110 + Math.sin(a) * 8, 4, 0, TAU); c.fill(); } }
-    else if (T < 200) { /* il fond : la fourrure se change en neige et il rapetisse en bonhomme de neige */ const q = (T - 110) / 90, k = q * q * (3 - 2 * q);
-      c.fillStyle = 'rgba(160,215,255,0.6)'; c.beginPath(); c.ellipse(X - 40, GY + 3, 40 + q * 30, 7 + q * 3, 0, 0, TAU); c.fill(); /* flaque */
-      c.save(); c.globalAlpha = 1 - k; yeti(X - 40, GY, .82 - k * .4, t, { sad: 1, arms: .2 }); c.restore();
+    /* chute cartoon : il glisse, bascule en arrière, s'écrase sur le dos les pieds en l'air, rebondit, gigote, sonné */
+    const SC = .82, CY = 49, px0 = X - 90, lie = -1.62;
+    const body = (px, py, rot, o2) => { c.save(); c.translate(px, py); c.rotate(rot); yeti(0, CY, SC, t, o2); c.restore(); };
+    if (T < 46) { /* il patine : les pieds partent devant, les bras moulinent */ const q = T / 46, e = q * q;
+      const slide = Math.sin(q * 9) * 6 * (1 - q); body(px0 + e * 50 + slide, GY - CY - e * 18, -e * .55, { arms: .6 + Math.sin(T * .5) * .5, armsL: .6 + Math.cos(T * .5) * .5, mouth: .8 });
+      for (let k = 0; k < 3; k++) { const qq = ((T * .08 + k / 3) % 1); c.fillStyle = `rgba(230,245,255,${(.7 * (1 - qq)).toFixed(3)})`; c.beginPath(); c.arc(px0 + e * 50 - 10 - qq * 30, GY - 4 - qq * 10, 3 + qq * 4, 0, TAU); c.fill(); }
+      yTxt('Oups…', px0 + 40, GY - 190, q, '#ffffff', 28); }
+    else if (T < 60) { /* il bascule en arrière, vite */ const q = (T - 46) / 14, e = q * q;
+      body(px0 + 50 + e * 10, GY - CY - 18 + e * 6, -.55 + (lie + .55) * e, { arms: 1, armsL: 1, mouth: 1 }); }
+    else if (T < 120) { /* BADABOUM : écrasé sur le dos, rebond, pieds qui gigotent, étoiles */
+      const q = (T - 60) / 60, bounce = Math.abs(Math.sin(q * Math.PI * 3)) * Math.exp(-q * 4) * 22, sqz = T < 66 ? 1 - (66 - T) / 6 * .0 : 1;
+      const wig = Math.sin(T * .7) * .07 * (1 - q * .5), lx = px0 + 60, ly = GY - 46 - bounce;
+      c.save(); c.translate(lx, GY - 6); c.scale(1 + (T < 68 ? (68 - T) / 8 * .18 : 0), 1 - (T < 68 ? (68 - T) / 8 * .16 : 0)); c.translate(-lx, -(GY - 6));
+      body(lx, ly, lie + wig, { sad: 1, arms: .3, armsL: .5, mouth: .5 }); c.restore();
+      if (T < 86) { const k = (T - 60) / 26; for (let n = 0; n < 14; n++) { const a = Math.PI + n / 13 * Math.PI, d = 20 + k * 80; c.fillStyle = `rgba(240,250,255,${(1 - k).toFixed(3)})`; c.beginPath(); c.arc(lx + Math.cos(a) * d * 1.3, GY - 4 + Math.sin(a) * d * .45, 5 + k * 6, 0, TAU); c.fill(); } }
+      cracks(lx, GY + 2, Math.min(1, (T - 60) / 14));
+      const hx = lx - 82, hy = ly - 4; for (let n = 0; n < 4; n++) { const a = T * .16 + n * Math.PI / 2, sx = hx + Math.cos(a) * 26, sy = hy - 38 + Math.sin(a) * 8; c.fillStyle = '#ffe46a'; c.save(); c.translate(sx, sy); c.rotate(a); c.beginPath(); for (let m = 0; m < 10; m++) { const rr = m % 2 ? 2.6 : 6, an = -Math.PI / 2 + m * Math.PI / 5; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } c.closePath(); c.fill(); c.restore(); }
+      yTxt('BADABOUM !', lx - 10, GY - 170, q * 1.2, '#ffffff', 32);
+      if (T < 64) { c.fillStyle = `rgba(255,255,255,${((64 - T) / 4 * .35).toFixed(3)})`; c.fillRect(0, 0, W, H); }
+      c.translate((Math.random() - .5) * (T < 76 ? (76 - T) * .5 : 0), 0); }
+    else if (T < 200) { /* il fond : la fourrure se change en neige et il rapetisse en bonhomme de neige */ const q = (T - 120) / 80, k = q * q * (3 - 2 * q);
+      c.fillStyle = 'rgba(160,215,255,0.6)'; c.beginPath(); c.ellipse(X - 40, GY + 3, 50 + q * 30, 8 + q * 3, 0, 0, TAU); c.fill(); /* flaque */
+      c.save(); c.globalAlpha = 1 - k; c.translate(X - 30 - k * 10, GY - 46 + k * 30); c.rotate(-1.62 * (1 - k)); yeti(0, 49 * (1 - k), .82 - k * .4, t, { sad: 1, arms: .3 }); c.restore();
       c.save(); c.globalAlpha = k; snowman(X - 40, GY, .5 + (1 - k) * .3, t, {}); c.restore();
       for (let i = 0; i < 7; i++) { const qq = ((t * .03 + i / 7) % 1); c.fillStyle = `rgba(255,255,255,${(.6 * (1 - qq) * (1 - k * .6)).toFixed(3)})`; c.beginPath(); c.arc(X - 76 + i * 12, GY - 90 - qq * 50, 3 + qq * 5, 0, TAU); c.fill(); }
       yTxt('Pschhh…', X - 40, GY - 170, q, '#d8f0ff', 26); }
@@ -509,7 +525,46 @@ function yetiScene(t) {
   }
 }
 
-function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0); [zone1, zone2, zone3][Z - 1](t); water(t); if (YS) { c.save(); icePlat(100, 672); yetiScene(t); c.restore(); } else { icePlat(140 + Math.sin(t * .01) * 30 * (Z > 1), 672); balloon(220, 330, 40, '#e23a6e', t); } hud(); }
+
+/* ===== démo : la glace qui fond (?m=1) — sans bonus : plus tu attends, plus le sommet fond et rétrécit ===== */
+const MM = +(Q.get('m') || 0);
+if (MM) { ZN.name = 'La glace qui fond'; ZN.levels = 'Plus tu attends, plus elle rétrécit'; }
+function meltPlat(x, y, k, t) { /* k : 0 = intacte, 1 = fondue au maximum */
+  const w = 86 - k * 52, top = y + k * 10, bot = ICE - 6;
+  platBase(x, 40);
+  /* le pic se creuse en sablier, le sommet s'amincit */
+  const nw = 22 - k * 9;
+  c.fillStyle = iceGrad(x - 40, x + 40); c.beginPath(); c.moveTo(x - w / 2 + 6, top + 2); c.quadraticCurveTo(x - nw, top + 50, x - 22, (top + bot) / 2); c.quadraticCurveTo(x - 44, bot - 20, x - 46, bot); c.lineTo(x + 46, bot); c.quadraticCurveTo(x + 40, bot - 24, x + 20, (top + bot) / 2); c.quadraticCurveTo(x + nw, top + 50, x + w / 2 - 6, top + 2); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(x - w / 2 + 8, top + 4); c.quadraticCurveTo(x - nw + 4, top + 50, x - 16, (top + bot) / 2); c.lineTo(x - 22, (top + bot) / 2); c.quadraticCurveTo(x - nw, top + 50, x - w / 2 + 6, top + 4); c.fill();
+  /* surface mouillée qui brille de plus en plus */
+  c.fillStyle = `rgba(190,235,255,${(.25 + k * .5).toFixed(3)})`; c.fillRect(x - w / 2 + 8, top + 6, w - 16, 40 + k * 30);
+  platBase(x, 50, 1);
+  /* plateau : la neige fond (de moins en moins de neige, la glace apparaît) */
+  c.fillStyle = '#d8f2ff'; c.beginPath(); c.roundRect(x - w / 2, top - 8, w, 11, 5); c.fill();
+  c.fillStyle = `rgba(255,255,255,${(1 - k * .85).toFixed(3)})`; c.beginPath(); c.roundRect(x - w / 2, top - 9, w, 9, 5); c.fill();
+  for (const [dx, h] of [[-w * .3, 8], [w * .25, 11]]) { c.fillStyle = `rgba(255,255,255,${(1 - k).toFixed(3)})`; c.beginPath(); c.ellipse(x + dx, top + 2, 4, h * (1 - k * .6), 0, 0, TAU); c.fill(); }
+  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 12, top - 8, 24, 4, 2); c.fill();
+  /* gouttes qui tombent, de plus en plus nombreuses */
+  const n = 1 + Math.floor(k * 5); for (let i = 0; i < n; i++) { const q = ((t * .03 + i / n) % 1), dx = (h1(i * 7) - .5) * (w - 10); c.fillStyle = 'rgba(170,225,255,0.9)'; c.beginPath(); c.ellipse(x + dx, top + 6 + q * (bot - top - 10), 2, 3.5, 0, 0, TAU); c.fill(); }
+  /* flaque au pied qui s'étale */
+  c.fillStyle = `rgba(150,215,255,${(.2 + k * .45).toFixed(3)})`; c.beginPath(); c.ellipse(x, bot + 8, 50 + k * 34, 7 + k * 4, 0, 0, TAU); c.fill();
+  return { top, w }; }
+function meltBall(x, y, r, t, o = {}) { const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r * 1.05); g.addColorStop(0, '#ff8ab0'); g.addColorStop(.6, '#e23a6e'); g.addColorStop(1, '#6a1030');
+  c.fillStyle = g; c.beginPath(); c.ellipse(x, y, r * (o.sq || 1), r / (o.sq || 1), 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(x - r * .38, y - r * .4, r * .16, r * .26, -.6, 0, TAU); c.fill(); }
+function meltScene(t) { /* cycle 440 : lâcher tôt (réussi) puis lâcher tard (raté) */
+  const T = t % 440, first = T < 200, U = first ? T : T - 200, PX0 = 170, r = 28;
+  const wait = first ? 20 : 140, k = Math.min(1, U / 160);
+  const P = meltPlat(PX0, 672, k, t);
+  /* jauge de fonte au-dessus de la plateforme (pas de bonus : juste le temps qui presse) */
+  c.save(); c.translate(PX0, P.top - 26); c.fillStyle = 'rgba(10,30,70,0.35)'; c.beginPath(); c.roundRect(-30, -4, 60, 8, 4); c.fill(); c.fillStyle = k > .7 ? '#ff7a5a' : '#7ad8ff'; c.beginPath(); c.roundRect(-30, -4, 60 * (1 - k), 8, 4); c.fill(); c.restore();
+  const bx = first ? PX0 : PX0 + 34; let by = 300;
+  if (U < wait) { c.save(); c.globalAlpha = .9; c.fillStyle = '#fff'; c.beginPath(); c.roundRect(bx - 7, by + r + 30, 14, 30, 7); c.fill(); c.restore(); meltBall(bx, by + Math.sin(t * .05) * 2, r, t); }
+  else { const q = (U - wait) / 30, landY = P.top - 8 - r;
+    if (first) { const yy = q < 1 ? by + (landY - by) * q * q : landY; meltBall(bx, yy, r, t, { sq: q >= 1 && q < 1.2 ? 1.15 : 1 }); yTxt('+1', bx + 40, landY - 20, (q - 1) / 1.5, '#ffd23f', 32); }
+    else { const yy = by + (ICE + 40 - by) * Math.min(1, q * q * .9); if (q < 1.6) meltBall(bx + q * 14, yy, r, t); yTxt('Trop tard, ça a fondu !', W / 2, 560, (q - .8) / 2.2, '#ffffff', 22); } }
+  yTxt(first ? 'Vite, tant que c’est large' : 'Il a trop attendu…', W / 2, 250, first ? U / 120 : (U - 20) / 120, '#d8f0ff', 20);
+}
+function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0); [zone1, zone2, zone3][Z - 1](t); water(t); if (MM) meltScene(t); else if (YS) { c.save(); icePlat(100, 672); yetiScene(t); c.restore(); } else { icePlat(140 + Math.sin(t * .01) * 30 * (Z > 1), 672); balloon(220, 330, 40, '#e23a6e', t); } hud(); }
 Promise.all([document.fonts.load('44px "Lilita One"'), document.fonts.load('800 13px Nunito')]).then(() => {
   if (FIX != null) { frame(+FIX); window.__READY = 1; return; }
   let t = 0; (function loop() { frame(t++); requestAnimationFrame(loop); })();
