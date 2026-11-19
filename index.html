@@ -15779,6 +15779,7 @@ function eatBall(b) {
   if (G.shield) { G.shield = false; b.immune = 24; floatText('Bouclier', b.x, b.y - b.r - 20, 24, 'ink'); sfx.shield(); buzz(30); updateHud(); return false; }
   b.state = 'popped'; b.popped = true; b.eaten = true; dragging = false; hideHint();
   for (let i = 0; i < 10; i++) FX.particles.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 4, vy: -Math.random() * 3, g: .2, drag: .97, life: 30, size: 3, color: '#6fbf4a', rot: Math.random() * 3, vr: .2, shape: 'feather' });
+  if (R.plant) R.plant.gulp = { x: b.x, y: b.y, r: b.r, t: 0 };
   floatText('Miam !', b.x, b.y - 30, 30, 'ink'); sfx.pop(); buzz([20, 30, 60]); shake = reduceMotion ? 0 : 6;
   G.combo = 0; updateHud(); afterLoss(b); return true;
 }
@@ -15795,7 +15796,7 @@ function updatePlant() {
       if (b && b.state === 'fall' && Math.hypot(b.x - m.x, b.y - m.y) < b.r + 26 * PL_S && eatBall(b)) { Pl.st = 'chew'; Pl.t = 0; Pl.chew = 1; }
       else { Pl.st = 'miss'; Pl.t = 0; floatText('Raté !', m.x, m.y - 36, 20, 'ink'); } } }
   else if (Pl.st === 'miss') { Pl.lunge *= .85; Pl.open += (.6 - Pl.open) * .2; if (Pl.t > 30) { Pl.st = 'awake'; Pl.t = Math.max(0, Pl.awake - 70); } }
-  else if (Pl.st === 'chew') { Pl.lunge *= .9; Pl.open = Math.abs(Math.sin(Pl.t * .25)) * .12; if (Pl.t > 70) { Pl.st = 'sleep'; Pl.t = 0; Pl.chew = 0; } }
+  else if (Pl.st === 'chew') { if (Pl.gulp && ++Pl.gulp.t > 16) Pl.gulp = null; Pl.lunge *= .9; Pl.open = Pl.gulp ? .55 * (1 - Pl.gulp.t / 16) : Math.abs(Math.sin(Pl.t * .25)) * .12; if (Pl.t > 70) { Pl.st = 'sleep'; Pl.t = 0; Pl.chew = 0; } }
   else if (Pl.st === 'yawn') { /* avertissement : elle bâille, tremble, puis se referme */ Pl.open = 1 + Math.sin(Math.min(1, Pl.t / 30) * Math.PI) * .25; if (Pl.t > 34) { Pl.st = 'sleep'; Pl.t = 0; sfx.tap && sfx.tap(0); } }
   else if (Pl.st === 'sleep') { Pl.open += (0 - Pl.open) * .3; Pl.lift += (0 - Pl.lift) * .06; Pl.lunge *= .8; if (Pl.t > Pl.sleep) { Pl.st = 'wake'; Pl.t = 0; } }
   else if (Pl.st === 'wake') { Pl.lift += (1 - Pl.lift) * .14; if (Pl.t > 24) { Pl.st = 'awake'; Pl.t = 0; } }
@@ -15816,7 +15817,12 @@ function drawPlant() {
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(8, up ? -17 : 15, 9, 3, 0, 0, TAU); ctx.fill();
     ctx.restore(); };
   if (op > .15) { ctx.fillStyle = '#7a1030'; ctx.beginPath(); ctx.ellipse(13, 0, 19 * op, 12 * op, 0, 0, TAU); ctx.fill(); }
-  jaw(false); jaw(true);
+  jaw(false);
+  if (Pl.gulp) { /* le ballon aspiré, entre les deux mâchoires */ const g = Pl.gulp, k = Math.min(1, g.t / 16), e = k * k, sk = skinById(S.skin);
+    ctx.save(); ctx.scale(1 / PL_S, 1 / PL_S); ctx.rotate(-h.ang); ctx.translate(-hx, -hy);
+    const m = plantMouth(Pl), gx = g.x + (m.x - g.x) * e, gy = g.y + (m.y - g.y) * e, rr = g.r * (1 - e * .92);
+    ctx.translate(gx, gy); ctx.rotate(k * 4); ctx.scale(1 - k * .25, 1 + k * .2); paintSkin(ctx, sk, rr, G.frame); ctx.restore(); }
+  jaw(true);
   /* deux yeux, sur le côté de la tête (toujours lisibles), fermés quand elle dort */
   ctx.rotate(-h.ang); for (const ex of [-9, 9]) { const px = ex - 2, py = 10; ctx.fillStyle = '#4caf3c'; ctx.beginPath(); ctx.arc(px, py, 5.2, 0, TAU); ctx.fill();
     if (Pl.st === 'sleep' || Pl.st === 'chew') { ctx.strokeStyle = '#1a3a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, py, 2.6, .2, Math.PI - .2); ctx.stroke(); }
