@@ -7709,7 +7709,7 @@ function bossDamage(dmg, b) {
   const ph = bossPhaseOf(B), up = B.hp > 0 && ph > B.phase;
   if (up) B.phase = ph;
   FX.shots.push({ x: b.x, y: b.y - b.r, t: 0, dmg, phase: up ? ph : 0, kill: B.hp === 0 });
-  if (B.hp === 0) { G.ending = true; schedule(B.type === 'crow' ? 200 : B.type === 'storm' ? 190 : B.type === 'dragon' ? 175 : B.type === 'kraken' ? 220 : B.type === 'yeti' ? 320 : B.type === 'snake' ? 300 : 150, () => endRun(true)); }
+  if (B.hp === 0) { G.ending = true; schedule(B.type === 'crow' ? 200 : B.type === 'storm' ? 190 : B.type === 'dragon' ? 175 : B.type === 'kraken' ? 220 : B.type === 'yeti' ? 320 : B.type === 'snake' ? 360 : 150, () => endRun(true)); }
 }
 function updateShots() {
   const B = G.boss;
@@ -15858,14 +15858,14 @@ function snHead(B) { const tx = snTrunkX(B), t = B.t, gy = groundY(); return { x
 /* mélange de deux couleurs #rrggbb, résultat en #rrggbb (réutilisable pour d'autres mélanges) */
 const snMix = (a, b, k) => { const A = parseInt(a.slice(1), 16), B2 = parseInt(b.slice(1), 16), m = sh => Math.round((A >> sh & 255) + ((B2 >> sh & 255) - (A >> sh & 255)) * k); return '#' + [16, 8, 0].map(sh => m(sh).toString(16).padStart(2, '0')).join(''); };
 function snPalette(B) { const r = B.rage || 0; return { g0: snMix(SN.g0, SN.rage0, r), g1: snMix(SN.g1, SN.rage1, r), g2: snMix(SN.g2, SN.rage2, r) }; }
-function drawTrunk(B) { const x = snTrunkX(B), y0 = hudBottom() - 30, y1 = lavaY() + 10;
+function drawTrunk(B, side) { const x = (side || B.side) > 0 ? PW - 30 : 30, y0 = hudBottom() - 30, y1 = lavaY() + 10;
   const g = ctx.createLinearGradient(x - 14, 0, x + 14, 0); g.addColorStop(0, '#5fae3c'); g.addColorStop(.5, '#3f8a2a'); g.addColorStop(1, '#245a1a'); ctx.fillStyle = g;
   ctx.beginPath(); ctx.moveTo(x - 11, y0); for (let y = y0; y <= y1; y += 20) ctx.lineTo(x - 11 + Math.sin(y * .02) * 3, y); ctx.lineTo(x + 11, y1); for (let y = y1; y >= y0; y -= 20) ctx.lineTo(x + 11 + Math.sin(y * .02) * 3, y); ctx.closePath(); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(x - 8, y0, 3, y1 - y0);
   ctx.fillStyle = '#4caf3c'; for (let y = y0 + 30; y < y1; y += 52) { const sd = (y / 52 | 0) % 2 ? 1 : -1; ctx.save(); ctx.translate(x + sd * 8, y); ctx.rotate(sd > 0 ? .5 : 2.6); ctx.beginPath(); ctx.ellipse(11, 0, 13, 4.6, 0, 0, TAU); ctx.fill(); ctx.restore(); } }
 /* la courbe du corps : la queue s'enroule 3 fois autour de la liane en descendant, puis le cou se détache vers le centre */
 function snPath(B) { const tx = snTrunkX(B), s = B.side, h = snHead(B), pts = [], top = hudBottom() + 60 + (B.oy || 0), bot = h.y + 40, R0 = 17;
-  const N = 150, turns = 3; for (let i = 0; i <= N; i++) { const u = i / N, a = u * turns * TAU + B.t * .012, y = top + (bot - top) * u; pts.push({ x: tx + Math.sin(a) * R0, y: y + Math.cos(a) * 4, z: Math.cos(a), r: 4 + u * 9 }); }
+  const N = 150, turns = 3; for (let i = 0; i <= N; i++) { const u = i / N, a = u * turns * TAU + B.t * .012 + (B.spin || 0), y = top + (bot - top) * u; pts.push({ x: tx + Math.sin(a) * R0, y: y + Math.cos(a) * 4, z: Math.cos(a), r: 4 + u * 9 }); }
   const e = pts[pts.length - 1], sw = Math.sin(B.t * .03) * 10;
   for (let i = 1; i <= 60; i++) { const u = i / 60, c1x = e.x - s * 30, c1y = e.y + 40 + sw, c2x = h.x + s * 40, c2y = h.y + 50 - sw;
     const x = (1 - u) ** 3 * e.x + 3 * (1 - u) ** 2 * u * c1x + 3 * (1 - u) * u * u * c2x + u ** 3 * (h.x + s * 14), y = (1 - u) ** 3 * e.y + 3 * (1 - u) ** 2 * u * c1y + 3 * (1 - u) * u * u * c2y + u ** 3 * (h.y + 12);
@@ -15898,11 +15898,12 @@ function snHeadDraw(B, h, P) { const ab = R && (R.balls.find(b => b.state === 'f
   const tq = t % 120; if (tq < 22 && mo < .3) { const k = Math.sin(tq / 22 * Math.PI), wig = Math.sin(t * 1.2) * 3; ctx.strokeStyle = '#e8304a'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(wig * .5, 16 + 14 * k); ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(wig * .5, 16 + 14 * k); ctx.lineTo(wig - 4, 16 + 20 * k); ctx.moveTo(wig * .5, 16 + 14 * k); ctx.lineTo(wig + 4, 16 + 20 * k); ctx.stroke(); }
   ctx.restore(); }
-function drawSnake2(B) { let P = snPalette(B); const pts = snPath(B), h = snHead(B);
-  if (B.mol && B.mol < 34) { const k = B.mol / 34; P = { g0: snMix(P.g0, '#c8c0a0', k * .6), g1: snMix(P.g1, '#a8a080', k * .6), g2: snMix(P.g2, '#7a7460', k * .6) }; ctx.save(); ctx.translate((Math.random() - .5) * 3 * k, (Math.random() - .5) * 2 * k); }
-  snSegs(pts, P, false); drawTrunk(B); snSegs(pts, P, true); snHeadDraw(B, h, P); ctx.globalAlpha = 1;
-  if (B.mol && B.mol < 34) ctx.restore();
-  if (B.mol >= 34 && B.mol < 60) { const k = 1 - (B.mol - 34) / 26; for (let i = 0; i < pts.length; i += 9) { const p = pts[i]; ctx.fillStyle = `rgba(255,255,220,${(.7 * k).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.x + (h1(i) - .5) * 14, p.y + (h1(i * 3) - .5) * 14, 2 + h1(i) * 2, 0, TAU); ctx.fill(); } } }
+function drawSnake2(B) { let P = snPalette(B); const pts = snPath(B), h = snHead(B), d = B.dull || 0, sv = B.shiv || 0;
+  if (d > 0) P = { g0: snMix(P.g0, '#c8c0a0', d * .6), g1: snMix(P.g1, '#a8a080', d * .6), g2: snMix(P.g2, '#7a7460', d * .6) };
+  if (sv > 0) { const t = G.frame; for (let i = 0; i < pts.length; i++) { pts[i].x += Math.sin(i * .45 + t * .9) * sv; pts[i].y += Math.cos(i * .3 + t * .7) * sv * .5; } }
+  drawTrunk(B, -B.side); snSegs(pts, P, false); drawTrunk(B); snSegs(pts, P, true);
+  ctx.save(); if (sv > 0) ctx.translate(Math.sin(G.frame * .9) * sv * .6, 0); snHeadDraw(B, h, P); ctx.restore(); ctx.globalAlpha = 1;
+  if (B.spark > 0) { const k = B.spark; for (let i = 0; i < pts.length; i += 9) { const p = pts[i], q = h1s(i * 7); ctx.fillStyle = `rgba(255,255,220,${(.75 * k * (.5 + .5 * Math.sin(G.frame * .3 + i))).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.x + (q - .5) * 14, p.y + (h1s(i * 3) - .5) * 14 - (1 - k) * 10, 1.6 + q * 2, 0, TAU); ctx.fill(); } } }
 /* étape 1 : on place la tête (cible des tirs) ; les attaques actuelles restent en attendant l'étape 2 */
 const _updateBossSN = updateBoss;
 updateBoss = function () { _updateBossSN(); const B = G.boss; if (B && B.type === 'snake' && !B.dead) { const h = snHead(B); B.x = h.x; B.y = h.y; } };
@@ -16008,26 +16009,40 @@ drawBoss = (prev => function (th) { const B = G.boss; if (B && B.type === 'snake
 
 /* ===== Serpent v2, étape 3 : la mue entre les phases, et la défaite (nœud, plouf, il repart à la nage) ===== */
 const h1s = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const snSS = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+const SN_UP = 600;
 function updateSnakeFx(B) {
-  if (B.lastP == null) { B.lastP = B.phase; B.mol = 0; B.oy = 0; }
-  if (B.dead) { const T = B.deadT;
-    if (T === 1) { B.att = null; B.hypno = 1; B.pull = 0; B.warnS = 0; B.striking = false; B.ho = { x: 0, y: 0 }; B.mol = 0; B.oy = 0; B.vy0 = 0; floatText('Gloups…', snHead(B).x, snHead(B).y - 60, 26, 'ink'); sfx.hiss && sfx.hiss(); }
-    B.knot = Math.min(1, T / 34); B.mouth = .6;
-    if (T > 50 && T <= 96) { B.vy0 += .55; B.oy += B.vy0; }
-    if (T === 96) { const h = snHead(B); B.swimX = clamp(h.x, 40, PW - 40); B.swimDir = B.swimX > PW / 2 ? -1 : 1; splash(B.swimX, lavaY(), 1); floatText('Plouf !', B.swimX, lavaY() - 80, 28, 'ink'); shake = reduceMotion ? 0 : 8; buzz([30, 30, 60]); }
+  if (B.lastP == null) { B.lastP = B.phase; B.mol = 0; B.oy = 0; B.spin = 0; }
+  if (B.dead) { const T = B.deadT, ho = B.ho || (B.ho = { x: 0, y: 0 });
+    if (T === 1) { B.att = null; B.pull = 0; B.warnS = 0; B.striking = false; B.mol = 0; B.dull = 0; B.shiv = 0; B.straight = 0; B.splashT = null; }
+    /* 1. il encaisse : la tête recule en douceur, grands yeux */ let tx = B.side * 14, ty = -8;
+    if (T === 12) floatText('Gloups…', snHead(B).x, snHead(B).y - 64, 26, 'ink');
+    B.hypno = snSS((T - 10) / 24);
+    /* 2. panique : la tête balance de plus en plus fort et le cou se noue */ const env = snSS((T - 18) / 20) * (1 - snSS((T - 70) / 14)); tx += Math.sin((T - 18) * .22) * 20 * env;
+    B.knot = snSS((T - 20) / 50); B.mouth = .5 + .3 * env;
+    /* 3. petite pause comique : il regarde son nœud */ if (T > 80 && T < 98) ty += 8 * snSS((T - 80) / 10);
+    ho.x += (tx - ho.x) * .12; ho.y += (ty - ho.y) * .12;
+    /* 4. il glisse le long de sa liane en vissant, de plus en plus vite, jusqu'à la rivière */ if (T >= 98) { const k = (T - 98) / 54; B.oy = k * k * 700; B.spin += .02 + k * .06; }
+    if (B.splashT == null && T >= 98 && snHead(B).y >= lavaY() - 6) { B.splashT = T; const x = clamp(snHead(B).x, 40, PW - 40); B.swimX = x; B.swimXc = x; B.swimV = 0; B.swimDir = x > PW / 2 ? -1 : 1; splash(x, lavaY(), 1); floatText('Plouf !', x, lavaY() - 80, 28, 'ink'); shake = reduceMotion ? 0 : 6; buzz([30, 30, 60]); }
+    /* 5. il ressort la tête, s'ébroue, puis repart à la nage (vitesse qui monte doucement) */ if (B.splashT != null) { const E = T - B.splashT;
+      if (E === 50 && !reduceMotion) for (let i = 0; i < 10; i++) { const a = -Math.PI * (.15 + .7 * i / 9); FX.particles.push({ x: B.swimXc, y: lavaY() - 20, vx: Math.cos(a) * 2.2, vy: Math.sin(a) * 2.2, g: .14, drag: .98, life: 26, size: 2.6, color: '#bfefff', rot: 0, vr: 0, shape: 'dot' }); }
+      if (E > 62) { B.swimV = Math.min(2.6, B.swimV + .05); B.swimXc += B.swimDir * B.swimV; } }
     return; }
-  if (B.phase !== B.lastP) { /* la mue : on reste du côté actuel le temps de muer, puis il change de liane */
-    B.lastP = B.phase; B.newSide = B.side; B.side = -B.side; B.mol = 1; B.att = null; B.ho = { x: 0, y: 0 }; B.hypno = 0; B.pull = 0; B.warnS = 0; B.striking = false; B.straight = 0;
-    floatText('SSSSS !', snHead(B).x, snHead(B).y - 60, 28, 'ink'); sfx.hiss && sfx.hiss(); }
+  if (B.phase !== B.lastP) { /* la mue : on reste du côté actuel le temps de muer, puis il change de liane par la canopée */
+    B.lastP = B.phase; B.newSide = B.side; B.side = -B.side; B.mol = 1; B.att = null; B.hypno = 0; B.pull = 0; B.warnS = 0; B.striking = false;
+    floatText('SSSSS !', snHead(B).x, snHead(B).y - 64, 28, 'ink'); sfx.hiss && sfx.hiss(); }
   if (B.mol) { const T = B.mol++;
     B.fireT = Math.max(B.fireT, 70); B.strikeT = Math.max(B.strikeT, 100); B.emerge = 1;
-    if (T === 34) { B.shell = snPath(B).map(p => ({ x: p.x, y: p.y, r: p.r, z: p.z })); B.shellT = 0; B.shellSplash = 0; sfx.pop && sfx.pop(); shake = reduceMotion ? 0 : 4; if (B.phase >= 3) floatText('Il rougit de colère !', PW / 2, H * .36, 24, 'ink'); }
-    if (T >= 34 && B.phase >= 3) B.rage = Math.min(1, (T - 34) / 26);
-    if (T > 70 && T <= 100) B.oy = -Math.pow((T - 70) / 30, 2) * 560;
-    if (T === 100) B.side = B.newSide;
-    if (T > 100 && T <= 132) B.oy = -Math.pow(1 - (T - 100) / 32, 2) * 560;
-    if (T > 132) { B.mol = 0; B.oy = 0; } }
-  if (B.shell) { B.shellT++; if (B.shellT > 110) B.shell = null; }
+    /* 1. il frissonne, sa peau se ternit (tout en douceur) */ B.shiv = T <= 42 ? snSS(T / 36) * 2.4 : 2.4 * (1 - snSS((T - 42) / 12));
+    B.dull = T <= 42 ? snSS(T / 40) : 1 - snSS((T - 46) / 34);
+    /* 2. la vieille peau se détache et glisse le long de la liane ; dessous, la peau neuve brille */ if (T === 42) { B.shell = snPath(B).map(p => ({ x: p.x, y: p.y, r: p.r, z: p.z })); B.shellT = 0; B.shellSplash = 0; sfx.pop && sfx.pop(); if (B.phase >= 3) floatText('Il rougit de colère !', PW / 2, H * .36, 24, 'ink'); }
+    B.spark = T < 42 ? 0 : 1 - snSS((T - 42) / 30);
+    if (B.phase >= 3) B.rage = Math.max(B.rage || 0, snSS((T - 50) / 36));
+    /* 3. il remonte sa liane, passe par la canopée et redescend sur celle d'en face */ if (T > 88 && T <= 132) { const k = (T - 88) / 44; B.oy = -k * k * SN_UP; B.spin += .04 * k; } /* il accélère en montant */
+    if (T === 132) B.side = B.newSide;
+    if (T > 132 && T <= 180) { const k = (T - 132) / 48; B.oy = -(1 - k) * (1 - k) * SN_UP; B.spin += .04 * (1 - k); } /* ... et ralentit en se posant */
+    if (T > 180) { B.mol = 0; B.oy = 0; B.dull = 0; B.shiv = 0; B.spark = 0; } }
+  if (B.shell) { B.shellT++; if (B.shellT > 120) B.shell = null; }
 }
 const _updateBossSF = updateBoss;
 updateBoss = function () { _updateBossSF(); const B = G.boss; if (B && B.type === 'snake') { updateSnakeFx(B); if (!B.dead) { const h = snHead(B); B.x = h.x; B.y = h.y; } } };
@@ -16037,26 +16052,26 @@ snPath = function (B) { const pts = _snPathKnot(B); if (!B.knot) return pts; con
   for (let i = 0; i <= n; i++) { const u = i / n, q = pts[pts.length - 1 - n + i]; if (u < .3 || u > .8) continue; const a = (u - .3) / .5 * TAU; q.x += -s * Math.sin(a) * Rr; q.y += -(1 - Math.cos(a)) * Rr; q.z = Math.cos(a / 2) > 0 ? 1 : -1; }
   return pts; };
 /* la vieille peau : un tube pâle et translucide qui tombe dans la rivière */
-function drawShell(B) { const S2 = B.shell, k = B.shellT, a = Math.max(0, 1 - k / 110), dy = k * k * .05, wl = lavaY();
-  ctx.save(); ctx.globalAlpha = .7 * a;
-  for (let i = 0; i < S2.length; i += 2) { const p = S2[i], y = Math.min(p.y + dy, wl + 10); ctx.fillStyle = '#efe4c0'; ctx.beginPath(); ctx.arc(p.x + Math.sin(k * .05 + i * .1) * k * .2, y, p.r * 1.04, 0, TAU); ctx.fill(); }
-  ctx.globalAlpha = .45 * a; ctx.strokeStyle = '#c8b888'; ctx.lineWidth = 1; for (let i = 0; i < S2.length; i += 6) { const p = S2[i], y = Math.min(p.y + dy, wl + 10); ctx.beginPath(); ctx.arc(p.x, y, p.r * .7, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+function drawShell(B) { const S2 = B.shell, k = B.shellT, a = k < 24 ? .75 : .75 * (1 - snSS((k - 24) / 90)), q = k / 80, dy = q * q * 360, wl = lavaY();
+  ctx.save(); ctx.globalAlpha = a;
+  for (let i = 0; i < S2.length; i += 2) { const p = S2[i], x = p.x + Math.sin(k * .08 + i * .15) * Math.min(1, k / 40) * 6, y = p.y + dy * (.85 + .15 * (i / S2.length)); if (y > wl + 6) continue; ctx.fillStyle = '#efe4c0'; ctx.beginPath(); ctx.arc(x, y, p.r * 1.04, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = a * .6; ctx.strokeStyle = '#c8b888'; ctx.lineWidth = 1; for (let i = 0; i < S2.length; i += 6) { const p = S2[i], y = p.y + dy; if (y > wl + 6) continue; ctx.beginPath(); ctx.arc(p.x, y, p.r * .7, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
   ctx.restore();
-  if (!B.shellSplash && S2[0].y + dy > wl) { B.shellSplash = 1; splash(S2[Math.floor(S2.length / 2)].x, wl, 0); } }
-/* la défaite, après le plouf : sa petite tête penaude repart à la nage */
-function drawSnakeSwim(B) { const T = B.deadT - 96, wl = lavaY(), u = Math.min(1, T / 190), x = B.swimX + B.swimDir * u * (PW + 120), y = wl - 13 + Math.sin(T * .15) * 2, d = B.swimDir, P = snPalette(B);
-  if (u >= 1) return;
-  for (let i = 0; i < 3; i++) { const q = ((T * .03 + i / 3) % 1); ctx.strokeStyle = `rgba(255,255,255,${(.6 * (1 - q)).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - d * (10 + q * 40), y + 4 - q * 2); ctx.lineTo(x - d * 4, y + 6); ctx.lineTo(x - d * (10 + q * 40), y + 10 + q * 4); ctx.stroke(); }
-  /* le bout de la queue qui frétille derrière */ const tx = x - d * 46; ctx.strokeStyle = P.g1; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx, y + 6); ctx.quadraticCurveTo(tx - d * 6, y - 8, tx - d * 2 + Math.sin(T * .4) * 5, y - 14); ctx.stroke();
-  ctx.save(); ctx.translate(x, y); ctx.scale(.8 * -d, .8);
+  if (!B.shellSplash && S2[S2.length - 1].y + dy > wl) { B.shellSplash = 1; splash(S2[S2.length - 1].x, wl, 0); } }
+/* la défaite, après le plouf : sa petite tête penaude ressort de l'eau, s'ébroue, puis repart à la nage */
+function drawSnakeSwim(B) { const E = B.deadT - B.splashT, wl = lavaY(), d = B.swimDir, P = snPalette(B), x = B.swimXc;
+  if (x < -80 || x > PW + 80) return;
+  const rise = snSS((E - 16) / 30), shake2 = E > 46 && E < 62 ? Math.sin((E - 46) * .9) * 4 * (1 - (E - 46) / 16) : 0, y = wl + 30 - rise * 43 + Math.sin(E * .12) * 1.6 * rise;
+  if (rise > .3 && B.swimV > .2) for (let i = 0; i < 3; i++) { const q = ((E * .03 + i / 3) % 1); ctx.strokeStyle = `rgba(255,255,255,${(.6 * (1 - q) * Math.min(1, B.swimV)).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - d * (10 + q * 40), y + 4 - q * 2); ctx.lineTo(x - d * 4, y + 6); ctx.lineTo(x - d * (10 + q * 40), y + 10 + q * 4); ctx.stroke(); }
+  if (rise > .5) { const tx = x - d * 46, ty = wl - 4; ctx.strokeStyle = P.g1; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx, ty + 8); ctx.quadraticCurveTo(tx - d * 6, ty - 6 * rise, tx - d * 2 + Math.sin(E * .3) * 5, ty - 12 * rise); ctx.stroke(); }
+  ctx.save(); ctx.translate(x + shake2, y); ctx.rotate(shake2 * .02); ctx.scale(.8 * -d, .8);
   ctx.fillStyle = P.g1; ctx.beginPath(); ctx.ellipse(0, 0, 30, 22, 0, Math.PI * 1.02, TAU * .99); ctx.fill(); ctx.fillStyle = P.g0; ctx.beginPath(); ctx.ellipse(-3, -4, 25, 16, 0, Math.PI, TAU); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.ellipse(-12, -13, 9, 4, -.4, 0, TAU); ctx.fill();
-  for (const ex of [-11, 11]) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, -6, 8, 7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#1a1208'; ctx.beginPath(); ctx.ellipse(ex + d * 2, -4, 2.6, 4, 0, 0, TAU); ctx.fill();
+  const blink = (E % 90) < 5; for (const ex of [-11, 11]) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(ex, -6, 8, blink ? 1 : 7, 0, 0, TAU); ctx.fill(); if (!blink) { ctx.fillStyle = '#1a1208'; ctx.beginPath(); ctx.ellipse(ex - 2, -4, 2.6, 4, 0, 0, TAU); ctx.fill(); }
     ctx.fillStyle = P.g1; ctx.beginPath(); ctx.ellipse(ex, -11, 9, 4.4, ex < 0 ? -.35 : .35, Math.PI, TAU); ctx.fill(); }
-  ctx.fillStyle = 'rgba(160,220,255,0.9)'; ctx.beginPath(); ctx.moveTo(22, -16); ctx.quadraticCurveTo(26, -9, 22, -7); ctx.quadraticCurveTo(18, -9, 22, -16); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle = 'rgba(60,170,170,0.5)'; ctx.fillRect(x - 24, y + 1, 48, 3); }
-drawBoss = (prev => function (th) { const B = G.boss; if (B && B.type === 'snake') { if (B.shell) drawShell(B); if (B.dead && B.deadT >= 96) { drawSnakeSwim(B); return; } return prev(th); } return prev(th); })(drawBoss);
+  if (E > 30) { ctx.fillStyle = `rgba(160,220,255,${(.9 * snSS((E - 30) / 20)).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(22, -16); ctx.quadraticCurveTo(26, -9, 22, -7); ctx.quadraticCurveTo(18, -9, 22, -16); ctx.fill(); }
+  ctx.restore(); }
+drawBoss = (prev => function (th) { const B = G.boss; if (B && B.type === 'snake') { let r; if (B.dead && B.splashT != null && B.deadT - B.splashT > 24) { drawTrunk(B, 1); drawTrunk(B, -1); drawSnakeSwim(B); } else { r = prev(th); if (B.dead && B.splashT != null) drawSnakeSwim(B); } if (B.shell) drawShell(B); return r; } return prev(th); })(drawBoss);
 
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
 if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
