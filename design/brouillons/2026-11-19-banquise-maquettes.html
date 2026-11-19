@@ -211,12 +211,49 @@ function zone3(t) {
 }
 
 /* jouables + HUD */
+const PV = +(Q.get('p') || 1);
+/* base commune : le pied sort d'une congère, avec son reflet dans la glace */
+function platBase(x, w, front) { const y = ICE - 6;
+  if (front) { /* petit bourrelet de neige devant le pied */
+    c.fillStyle = lg(y - 8, y + 4, [[0, ZN.snow], [1, mix(ZN.snow, ZN.snowSh, .5)]]); c.beginPath(); c.ellipse(x, y + 4, w, 8, 0, Math.PI, TAU); c.fill();
+    c.strokeStyle = ZN.night ? 'rgba(160,210,255,0.5)' : 'rgba(255,255,255,0.95)'; c.lineWidth = 1.6; c.beginPath(); c.ellipse(x, y + 4, w - 2, 6.5, 0, Math.PI * 1.1, Math.PI * 1.6); c.stroke(); return; }
+  c.save(); c.globalAlpha = ZN.night ? .35 : .45; c.fillStyle = lg(y, y + 50, [[0, ZN.night ? '#6ac8ff' : '#ffffff'], [1, 'rgba(255,255,255,0)']]); c.beginPath(); c.ellipse(x, y + 14, w * 1.1, 26, 0, 0, TAU); c.fill(); c.restore();
+  c.fillStyle = ZN.snowSh; c.beginPath(); c.ellipse(x + 5, y + 4, w * 1.25, 16, 0, Math.PI, TAU); c.fill();
+  c.fillStyle = lg(y - 16, y + 2, [[0, ZN.snow], [1, mix(ZN.snow, ZN.snowSh, .45)]]); c.beginPath(); c.ellipse(x, y + 2, w * 1.2, 18, 0, Math.PI, TAU); c.fill();
+  c.strokeStyle = ZN.night ? 'rgba(160,210,255,0.5)' : 'rgba(255,255,255,0.95)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y + 2, w * 1.2 - 3, 15, 0, Math.PI * 1.08, Math.PI * 1.5); c.stroke(); }
+function snowCap(x, y, w) { /* neige sur le dessus, qui déborde et coule */
+  c.fillStyle = ZN.night ? '#c8d8f8' : '#ffffff'; c.beginPath(); c.roundRect(x - w / 2, y - 9, w, 12, 6); c.fill();
+  for (const [dx, h] of [[-w * .32, 9], [-w * .05, 6], [w * .26, 11]]) { c.beginPath(); c.ellipse(x + dx, y + 2, 5, h, 0, 0, TAU); c.fill(); }
+  c.fillStyle = ZN.night ? 'rgba(120,160,230,0.4)' : 'rgba(150,185,225,0.45)'; c.beginPath(); c.roundRect(x - w / 2 + 3, y - 1, w - 6, 3, 2); c.fill();
+  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 8, 26, 4, 2); c.fill(); }
+function iceGrad(x0, x1) { const g = c.createLinearGradient(x0, 0, x1, 0);
+  if (ZN.night) { g.addColorStop(0, '#9ad8ff'); g.addColorStop(.35, '#5aa0e0'); g.addColorStop(1, '#1e4a8a'); } else { g.addColorStop(0, '#ffffff'); g.addColorStop(.35, '#cfeafc'); g.addColorStop(1, '#7ab4e0'); } return g; }
 function icePlat(x, y) {
-  c.fillStyle = 'rgba(40,70,120,0.25)'; c.beginPath(); c.ellipse(x + 6, ICE + 4, 30, 6, 0, 0, TAU); c.fill();
-  const g = c.createLinearGradient(x - 14, 0, x + 14, 0); g.addColorStop(0, '#bfe6fa'); g.addColorStop(.5, '#ffffff'); g.addColorStop(1, '#8cc8ea'); c.fillStyle = g; c.fillRect(x - 14, y, 28, ICE - y);
-  c.fillStyle = 'rgba(255,255,255,0.8)'; c.fillRect(x - 10, y + 6, 3, ICE - y - 6);
-  c.fillStyle = '#e8f6ff'; c.beginPath(); c.roundRect(x - 40, y - 8, 80, 14, 6); c.fill(); c.strokeStyle = 'rgba(80,140,200,0.5)'; c.lineWidth = 1.5; c.stroke();
-  c.fillStyle = '#f2b705'; c.beginPath(); c.roundRect(x - 13, y - 5, 26, 4.5, 2.25); c.fill(); }
+  const top = y, bot = ICE - 6;
+  if (PV === 1) { /* A : pilier de glace facetté, évasé à la base, qui sort d'une congère */
+    platBase(x, 34);
+    c.fillStyle = iceGrad(x - 30, x + 30); c.beginPath(); c.moveTo(x - 17, top); c.lineTo(x + 17, top); c.lineTo(x + 22, bot - 30); c.lineTo(x + 34, bot); c.lineTo(x - 34, bot); c.lineTo(x - 22, bot - 30); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.moveTo(x - 17, top); c.lineTo(x - 6, top); c.lineTo(x - 9, bot - 30); c.lineTo(x - 22, bot - 30); c.closePath(); c.fill();
+    c.fillStyle = ZN.night ? 'rgba(6,20,60,0.3)' : 'rgba(40,90,150,0.18)'; c.beginPath(); c.moveTo(x + 8, top); c.lineTo(x + 17, top); c.lineTo(x + 22, bot - 30); c.lineTo(x + 34, bot); c.lineTo(x + 14, bot); c.lineTo(x + 11, bot - 30); c.closePath(); c.fill();
+    c.strokeStyle = ZN.night ? 'rgba(200,240,255,0.5)' : 'rgba(255,255,255,0.8)'; c.lineWidth = 1.2; for (const yy of [top + 40, top + 82]) { c.beginPath(); c.moveTo(x - 18, yy); c.lineTo(x - 4, yy + 6); c.lineTo(x + 6, yy + 1); c.stroke(); }
+    if (ZN.night) { const g = c.createRadialGradient(x, (top + bot) / 2, 4, x, (top + bot) / 2, 60); g.addColorStop(0, 'rgba(120,230,255,0.35)'); g.addColorStop(1, 'rgba(120,230,255,0)'); c.fillStyle = g; c.fillRect(x - 60, top, 120, bot - top); }
+    platBase(x, 40, 1); snowCap(x, top, 82);
+  } else if (PV === 2) { /* B : colonne de blocs de glace taillés (comme les igloos) */
+    platBase(x, 30);
+    const bh = 22; let k = 0; for (let yy = bot; yy > top + 4; yy -= bh, k++) { const w = 30 - Math.min(k, 3) * 2, off = (k % 2 ? 3 : -3);
+      c.fillStyle = iceGrad(x - w, x + w); c.beginPath(); c.roundRect(x - w + off, yy - bh + 1, w * 2, bh - 2, 4); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillRect(x - w + off + 2, yy - bh + 2, w * 2 - 4, 2.5);
+      c.fillStyle = ZN.night ? 'rgba(4,16,50,0.35)' : 'rgba(40,90,150,0.2)'; c.fillRect(x - w + off + 2, yy - 4, w * 2 - 4, 2.5); }
+    platBase(x, 36, 1); snowCap(x, top, 84);
+  } else { /* C : pic de glace naturel, plateau de neige au sommet */
+    platBase(x, 40);
+    c.fillStyle = iceGrad(x - 40, x + 40); c.beginPath(); c.moveTo(x - 30, top + 2); c.quadraticCurveTo(x - 14, top + 60, x - 22, (top + bot) / 2); c.quadraticCurveTo(x - 44, bot - 20, x - 46, bot); c.lineTo(x + 46, bot); c.quadraticCurveTo(x + 40, bot - 24, x + 20, (top + bot) / 2); c.quadraticCurveTo(x + 14, top + 60, x + 30, top + 2); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(x - 26, top + 4); c.quadraticCurveTo(x - 10, top + 60, x - 16, (top + bot) / 2); c.quadraticCurveTo(x - 30, bot - 22, x - 32, bot); c.lineTo(x - 42, bot); c.quadraticCurveTo(x - 40, bot - 20, x - 20, (top + bot) / 2); c.quadraticCurveTo(x - 12, top + 60, x - 28, top + 4); c.fill();
+    for (const [dx, h] of [[-46, 30], [40, 22], [-30, 18]]) { c.fillStyle = iceGrad(x + dx - 8, x + dx + 8); c.beginPath(); c.moveTo(x + dx - 8, bot); c.lineTo(x + dx + (dx < 0 ? -3 : 3), bot - h); c.lineTo(x + dx + 8, bot); c.fill(); }
+    if (ZN.night) { const g = c.createRadialGradient(x, (top + bot) / 2, 4, x, (top + bot) / 2, 70); g.addColorStop(0, 'rgba(120,230,255,0.35)'); g.addColorStop(1, 'rgba(120,230,255,0)'); c.fillStyle = g; c.fillRect(x - 70, top, 140, bot - top); }
+    platBase(x, 50, 1); snowCap(x, top, 86);
+  }
+}
 function water(t) { /* plus d'eau : la banquise continue jusqu'en bas (glace épaisse, givre, petites congères) */
   c.fillStyle = lg(ICE - 30, H, [[0, 'rgba(0,0,0,0)'], [1, ZN.night ? 'rgba(4,10,30,0.35)' : 'rgba(90,130,190,0.18)']]); c.fillRect(0, ICE - 30, W, H - ICE + 30);
   c.strokeStyle = ZN.night ? 'rgba(140,210,255,0.22)' : 'rgba(255,255,255,0.7)'; c.lineWidth = 1.2;
