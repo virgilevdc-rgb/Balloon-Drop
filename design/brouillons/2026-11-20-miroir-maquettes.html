@@ -25,37 +25,69 @@ function house(x, y, s, wall, roof) { c.save(); c.translate(x, y); c.scale(s, s)
   c.fillStyle = '#8a6a8a'; c.fillRect(8, -50, 6, 12); c.restore(); }
 function tree(x, y, s, col, hi) { c.save(); c.translate(x, y); c.scale(s, s); c.fillStyle = '#7a4a5a'; c.fillRect(-3, -24, 6, 24);
   for (const [dx, dy, r] of [[0, -40, 18], [-12, -30, 13], [12, -30, 13]]) { const g = c.createRadialGradient(dx - r * .3, dy + r * .4, 1, dx, dy, r); g.addColorStop(0, hi); g.addColorStop(1, col); c.fillStyle = g; c.beginPath(); c.arc(dx, dy, r, 0, TAU); c.fill(); } c.restore(); }
+/* ================= Le Village renversé (v2) =================
+   Tout est dessiné directement à l'envers (pas de retournement), pour garder la lumière du jeu en haut à gauche.
+   Le sol est au plafond ; les montagnes pendent, pointes en bas (la neige est au bout) ; la cascade REMONTE ;
+   le ciel est en dessous : nuages et soleil en bas. Le milieu reste calme pour le ballon. */
+const GY = 112; /* bord du sol-plafond */
+function skyV() { c.fillStyle = lg(GY, H, [[0, '#ffe4d6'], [.22, '#f6d2f0'], [.55, '#c8b4f6'], [.85, '#9a86ea'], [1, '#8a76e0']]); c.fillRect(0, 0, W, H);
+  const g = c.createRadialGradient(292, 770, 10, 292, 770, 260); g.addColorStop(0, 'rgba(255,244,214,0.95)'); g.addColorStop(.25, 'rgba(255,220,236,0.45)'); g.addColorStop(1, 'rgba(255,220,236,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#fff6dc'; c.beginPath(); c.arc(292, 770, 36, 0, TAU); c.fill(); }
+/* une chaîne de montagnes qui pend du plafond : pointes vers le bas, neige au bout, face éclairée à gauche */
+function mountainsV(y0, col, sh, snow, seed, n, hmin, hmax, haze) {
+  for (let i = 0; i < n; i++) { const cx = (i + .5 + (h1(seed + i) - .5) * .4) / n * (W + 60) - 30, hw = (W / n) * (.75 + h1(seed * 2 + i) * .35), tip = y0 + hmin + h1(seed * 3 + i) * (hmax - hmin), tx = cx + (h1(seed * 5 + i) - .5) * hw * .3;
+    /* massif (ombre) : flancs légèrement creusés */
+    c.fillStyle = sh; c.beginPath(); c.moveTo(cx - hw, y0); c.quadraticCurveTo(cx - hw * .45, y0 + (tip - y0) * .3, tx, tip); c.quadraticCurveTo(cx + hw * .45, y0 + (tip - y0) * .3, cx + hw, y0); c.closePath(); c.fill();
+    /* face éclairée, à gauche (lumière en haut à gauche) */
+    c.fillStyle = col; c.beginPath(); c.moveTo(cx - hw, y0); c.quadraticCurveTo(cx - hw * .45, y0 + (tip - y0) * .3, tx, tip); c.quadraticCurveTo(tx - hw * .05, y0 + (tip - y0) * .55, cx - hw * .15, y0); c.closePath(); c.fill();
+    /* petite calotte de neige au bout (le sommet est en bas) */
+    const sk = .2, sy = tip - (tip - y0) * sk; c.fillStyle = snow; c.beginPath(); c.moveTo(tx, tip);
+    c.quadraticCurveTo(tx - hw * .12, sy + (tip - sy) * .3, tx - hw * .16, sy); c.lineTo(tx - hw * .08, sy + 6); c.lineTo(tx - hw * .02, sy - 3); c.lineTo(tx + hw * .05, sy + 7); c.lineTo(tx + hw * .13, sy); c.quadraticCurveTo(tx + hw * .1, sy + (tip - sy) * .3, tx, tip); c.fill();
+    c.fillStyle = 'rgba(180,160,230,0.45)'; c.beginPath(); c.moveTo(tx, tip); c.lineTo(tx + hw * .13, sy); c.lineTo(tx + hw * .05, sy + 7); c.closePath(); c.fill(); }
+  if (haze) { c.fillStyle = lg(y0, y0 + hmax + 260, [[0, 'rgba(255,228,214,0)'], [.45, `rgba(246,214,240,${haze})`], [.7, `rgba(236,208,244,${haze * .45})`], [1, 'rgba(230,206,246,0)']]); c.fillRect(0, y0, W, hmax + 260); } }
+/* nuage renversé : base plate en haut, volutes en bas (lumière en haut à gauche) */
+function cloudV(x, y, s, a, t) { c.save(); c.globalAlpha = a; const P = [[-46, 6, 18], [-22, 14, 26], [6, 18, 30], [34, 12, 22], [54, 4, 15]];
+  c.fillStyle = 'rgba(150,120,220,0.35)'; for (const [dx, dy, r] of P) { c.beginPath(); c.arc(x + dx * s + 3 * s, y + dy * s + 5 * s, r * s, 0, TAU); c.fill(); }
+  c.fillStyle = '#ffffff'; for (const [dx, dy, r] of P) { c.beginPath(); c.arc(x + dx * s, y + dy * s, r * s, 0, TAU); c.fill(); } c.beginPath(); c.roundRect(x - 60 * s, y - 6 * s, 128 * s, 16 * s, 8 * s); c.fill();
+  c.fillStyle = 'rgba(210,190,250,0.55)'; for (const [dx, dy, r] of P) { c.beginPath(); c.arc(x + dx * s + r * s * .25, y + dy * s + r * s * .3, r * s * .7, 0, Math.PI); c.fill(); } c.restore(); }
+/* maison accrochée au plafond (toit vers le bas) */
+function houseV(x, s, wall, roof, t, light) { c.save(); c.translate(x, GY); c.scale(s, s);
+  c.fillStyle = 'rgba(80,40,120,0.18)'; c.fillRect(-18, 0, 40, 4);
+  c.fillStyle = wall; c.beginPath(); c.roundRect(-20, 0, 40, 32, 3); c.fill(); c.fillStyle = 'rgba(255,255,255,0.28)'; c.fillRect(-20, 0, 9, 32);
+  c.fillStyle = roof; c.beginPath(); c.moveTo(-27, 30); c.lineTo(0, 56); c.lineTo(27, 30); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.moveTo(-27, 30); c.lineTo(0, 56); c.lineTo(-7, 32); c.fill();
+  c.fillStyle = light ? '#ffe08a' : '#f6e6ff'; c.beginPath(); c.roundRect(-13, 9, 9, 10, 2); c.fill(); c.beginPath(); c.roundRect(4, 9, 9, 10, 2); c.fill();
+  c.fillStyle = '#7a4a8a'; c.beginPath(); c.roundRect(-4, 0, 9, 13, [0, 0, 4, 4]); c.fill();
+  /* cheminée et fumée qui « tombe » */ c.fillStyle = '#a07aa0'; c.fillRect(10, 36, 6, 14); for (let i = 0; i < 4; i++) { const q = ((t * .008 + i / 4) % 1); c.fillStyle = `rgba(255,255,255,${(.55 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(13 + Math.sin(q * 6) * 4, 52 + q * 40, 3 + q * 7, 0, TAU); c.fill(); }
+  c.restore(); }
+function treeV(x, s, col, hi) { c.save(); c.translate(x, GY); c.scale(s, s); c.fillStyle = '#8a5a6a'; c.fillRect(-2.5, 0, 5, 18);
+  for (const [dx, dy, r] of [[0, 34, 16], [-11, 24, 12], [11, 24, 12]]) { const g = c.createRadialGradient(dx - r * .4, dy - r * .4, 1, dx, dy, r); g.addColorStop(0, hi); g.addColorStop(1, col); c.fillStyle = g; c.beginPath(); c.arc(dx, dy, r, 0, TAU); c.fill(); } c.restore(); }
+function birdV(x, y, s, t, ph) { const f = Math.sin(t * .22 + ph) * 4; c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = 'rgba(90,60,150,0.75)'; c.lineWidth = 2.2; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(-9, -f); c.quadraticCurveTo(-4, 4, 0, 1); c.quadraticCurveTo(4, 4, 9, -f); c.stroke(); c.restore(); }
 function zoneA(t) {
-  /* le ciel normal (dessiné à l'endroit) : ici le haut deviendra le bas */
-  c.save(); c.translate(0, H); c.scale(1, -1);
-  c.fillStyle = lg(0, H, [[0, '#ffd8f0'], [.35, '#e8c4ff'], [.7, '#a890f0'], [1, '#7a68d8']]); c.fillRect(0, 0, W, H);
-  /* soleil (en bas une fois retourné) */ const g = c.createRadialGradient(300, 150, 10, 300, 150, 220); g.addColorStop(0, 'rgba(255,240,200,0.9)'); g.addColorStop(1, 'rgba(255,220,240,0)'); c.fillStyle = g; c.fillRect(0, 0, W, 400);
-  c.fillStyle = '#fff4d8'; c.beginPath(); c.arc(300, 150, 34, 0, TAU); c.fill();
-  for (const [x, y, s, a] of [[90, 120, 1.1, .95], [250, 270, .8, .85], [60, 330, .6, .7], [330, 400, .7, .8]]) cloud(x + Math.sin(t * .01 + x) * 6, y, s, a);
-  /* collines lointaines */ c.fillStyle = '#b8a0e8'; c.beginPath(); c.moveTo(0, 640); for (let x = 0; x <= W; x += 10) c.lineTo(x, 640 - 40 * Math.sin(x * .012 + 1) - 20 * Math.sin(x * .03)); c.lineTo(W, H); c.lineTo(0, H); c.fill();
-  /* deuxième plan de collines, plus proche (avec arbres en silhouette) */ c.fillStyle = '#9a80e0'; c.beginPath(); c.moveTo(0, 700); for (let x = 0; x <= W; x += 10) c.lineTo(x, 690 - 26 * Math.sin(x * .02 + 3) - 10 * Math.sin(x * .05)); c.lineTo(W, H); c.lineTo(0, H); c.fill();
-  for (let i = 0; i < 9; i++) { const x = 20 + i * 44 + h1(i) * 10, y = 690 - 26 * Math.sin(x * .02 + 3) - 10 * Math.sin(x * .05); c.fillStyle = '#8a70d4'; c.beginPath(); c.arc(x, y - 12, 12, 0, TAU); c.fill(); c.fillRect(x - 2, y - 4, 4, 8); }
-  /* oiseaux qui volent sur le dos */ c.strokeStyle = 'rgba(80,50,140,0.7)'; c.lineWidth = 2; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { const x = (h1(i * 4) * W + t * .5 * (i + 1)) % (W + 40) - 20, y = 470 + i * 34, f = Math.sin(t * .2 + i) * 4; c.beginPath(); c.moveTo(x - 8, y + f); c.quadraticCurveTo(x - 3, y - 4, x, y); c.quadraticCurveTo(x + 3, y - 4, x + 8, y + f); c.stroke(); }
-  /* la falaise et la cascade (elle tombe ici… elle remontera une fois retourné) */
-  c.fillStyle = '#9a7ad8'; c.beginPath(); c.moveTo(250, H); c.lineTo(255, 600); c.quadraticCurveTo(290, 570, 330, 590); c.lineTo(340, H); c.fill();
-  const wx = 300, wtop = 590, wbot = 740; const wg = c.createLinearGradient(wx - 16, 0, wx + 16, 0); wg.addColorStop(0, 'rgba(200,240,255,0.85)'); wg.addColorStop(.5, '#ffffff'); wg.addColorStop(1, 'rgba(170,220,255,0.85)');
-  c.fillStyle = wg; c.beginPath(); c.moveTo(wx - 10, wtop); c.lineTo(wx + 10, wtop); c.lineTo(wx + 16, wbot); c.lineTo(wx - 16, wbot); c.fill();
-  c.strokeStyle = 'rgba(140,200,240,0.6)'; c.lineWidth = 1.5; for (let i = 0; i < 5; i++) { const xx = wx - 8 + i * 4, o = (t * 2 + i * 13) % 30; for (let y = wtop - 30 + o; y < wbot; y += 30) { c.beginPath(); c.moveTo(xx, Math.max(wtop, y)); c.lineTo(xx, Math.min(wbot, y + 14)); c.stroke(); } }
-  /* le sol (au plafond une fois retourné) : un vrai bloc de terre, couches, cailloux, racines qui pendent (vers le bas une fois retourné) */
-  c.fillStyle = lg(745, H, [[0, '#a86a5a'], [.4, '#8a4a5a'], [1, '#5a2a4a']]); c.beginPath(); c.moveTo(0, H); c.lineTo(0, 752); for (let x = 0; x <= W; x += 10) c.lineTo(x, 752 + Math.sin(x * .03) * 5); c.lineTo(W, H); c.fill();
-  c.fillStyle = 'rgba(255,220,200,0.25)'; for (let i = 0; i < 14; i++) { c.beginPath(); c.ellipse(h1(i * 3) * W, 780 + h1(i * 5) * 50, 6 + h1(i) * 8, 3 + h1(i) * 3, 0, 0, TAU); c.fill(); }
-  c.strokeStyle = '#7a3a4a'; c.lineWidth = 2.4; for (let i = 0; i < 10; i++) { const x = 20 + i * 38 + h1(i) * 12, l = 30 + h1(i * 7) * 40, sw = Math.sin(t * .02 + i) * 3; c.beginPath(); c.moveTo(x, 752); c.quadraticCurveTo(x + sw, 752 - l * .5, x + sw * 2, 752 - l); c.stroke(); }
-  /* le sol (au plafond une fois retourné) : herbe, lac où tombe la cascade */
-  c.fillStyle = lg(730, H, [[0, '#8ae07a'], [1, '#3a9a5a']]); c.beginPath(); c.moveTo(0, H); c.lineTo(0, 740); for (let x = 0; x <= W; x += 10) c.lineTo(x, 740 + Math.sin(x * .03) * 5); c.lineTo(W, H); c.fill();
-  c.fillStyle = '#7ad0f0'; c.beginPath(); c.ellipse(300, 748, 60, 9, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.ellipse(286, 746, 26, 2.5, 0, 0, TAU); c.fill();
-  for (let i = 0; i < 6; i++) { const q = ((t * .02 + i / 6) % 1); c.fillStyle = `rgba(255,255,255,${(.7 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(300 + (h1(i) - .5) * 50, 742 - q * 16, 3 + q * 4, 0, TAU); c.fill(); }
-  house(70, 742, 1.15, '#ffb4c8', '#a04a8a'); house(140, 744, .9, '#ffe2a0', '#6a5ad8'); tree(200, 744, 1, '#5ac06a', '#a8f08a'); tree(28, 742, .8, '#4aa860', '#9ae07a'); tree(370, 744, .9, '#5ac06a', '#a8f08a');
-  /* petit bonhomme qui marche la tête en bas (un clin d'œil) */ { const x = 236 + Math.sin(t * .01) * 10; c.fillStyle = '#ff7a8a'; c.beginPath(); c.roundRect(x - 4, 726, 8, 12, 3); c.fill(); c.fillStyle = '#ffd8b0'; c.beginPath(); c.arc(x, 721, 5, 0, TAU); c.fill(); c.fillStyle = '#3a2a5a'; c.fillRect(x - 3, 738, 2, 5); c.fillRect(x + 1, 738, 2, 5); }
-  /* gouttes de la cascade qui s'échappent vers le haut (vers le bas avant retournement) */ for (let i = 0; i < 10; i++) { const q = ((t * .01 + i / 10) % 1); c.fillStyle = `rgba(220,245,255,${(.8 * (1 - q)).toFixed(3)})`; c.beginPath(); c.ellipse(300 + (h1(i) - .5) * 40, 590 - q * 160, 2, 3.5, 0, 0, TAU); c.fill(); }
-  c.restore();
-  /* la plateforme pend du sol-plafond, sur une corde */
-  const px = 150; c.strokeStyle = '#7a4a5a'; c.lineWidth = 2; c.beginPath(); c.moveTo(px - 16, 104); c.lineTo(px - 16, 172); c.moveTo(px + 16, 104); c.lineTo(px + 16, 172); c.stroke();
-  plat(px, 178); }
+  skyV();
+  /* les montagnes renversées au fond (deux plans), très douces */
+  mountainsV(GY - 4, '#eee2fc', '#dccaf6', '#ffffff', 7, 3, 230, 300, .45);
+  mountainsV(GY - 4, '#d8c6f8', '#bfa8ee', '#fbf6ff', 21, 4, 110, 170, 0);
+  /* falaise qui pend à droite, cascade qui remonte de son bord jusqu'au lac du plafond */
+  const cx = 316; c.fillStyle = '#a890e0'; c.beginPath(); c.moveTo(cx - 44, GY); c.lineTo(cx - 40, 270); c.quadraticCurveTo(cx - 4, 300, cx + 46, 282); c.lineTo(cx + 54, GY); c.fill();
+  c.fillStyle = '#c0aaf0'; c.beginPath(); c.moveTo(cx - 44, GY); c.lineTo(cx - 40, 270); c.quadraticCurveTo(cx - 26, 282, cx - 14, 286); c.lineTo(cx - 20, GY); c.fill();
+  for (const [x, y] of [[cx - 30, 280], [cx + 30, 284]]) { c.fillStyle = '#7ad07a'; for (let k = 0; k < 4; k++) { c.beginPath(); c.ellipse(x + (k - 1.5) * 7, y + 3, 4, 7, (k - 1.5) * .3, 0, TAU); c.fill(); } }
+  const wtop = GY + 2, wbot = 286, wx = cx + 4; const wg = c.createLinearGradient(wx - 14, 0, wx + 14, 0); wg.addColorStop(0, 'rgba(205,240,255,0.9)'); wg.addColorStop(.45, '#ffffff'); wg.addColorStop(1, 'rgba(170,220,255,0.9)');
+  c.fillStyle = wg; c.beginPath(); c.moveTo(wx - 15, wtop); c.lineTo(wx + 15, wtop); c.lineTo(wx + 10, wbot); c.lineTo(wx - 10, wbot); c.fill();
+  c.strokeStyle = 'rgba(140,200,240,0.55)'; c.lineWidth = 1.6; c.lineCap = 'round'; for (let i = 0; i < 5; i++) { const xx = wx - 7 + i * 3.5, o = (t * 2.2 + i * 11) % 34; for (let y = wbot + 34 - o; y > wtop; y -= 34) { c.beginPath(); c.moveTo(xx, Math.min(wbot, y)); c.lineTo(xx, Math.max(wtop, y - 15)); c.stroke(); } } /* les traits montent */
+  for (let i = 0; i < 8; i++) { const q = ((t * .012 + i / 8) % 1); c.fillStyle = `rgba(230,248,255,${(.85 * (1 - q)).toFixed(3)})`; c.beginPath(); c.ellipse(wx + (h1(i) - .5) * 24, wbot - 6 - q * 70, 1.8, 3.2, 0, 0, TAU); c.fill(); } /* gouttes qui s'échappent vers le haut */
+  for (let i = 0; i < 6; i++) { const q = ((t * .02 + i / 6) % 1); c.fillStyle = `rgba(255,255,255,${(.7 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(wx + (h1(i * 3) - .5) * 44, GY + 6 + q * 18, 3 + q * 5, 0, TAU); c.fill(); } /* écume au lac */
+  /* le sol-plafond : herbe qui pend, lac, bord lumineux */
+  c.fillStyle = lg(0, GY + 10, [[0, '#3a7a5a'], [.6, '#5ab86a'], [1, '#8ae47e']]); c.beginPath(); c.moveTo(0, 0); c.lineTo(W, 0); c.lineTo(W, GY); for (let x = W; x >= 0; x -= 8) c.lineTo(x, GY + Math.sin(x * .05) * 2.5 + (x % 16 ? 4 : 0)); c.lineTo(0, GY); c.closePath(); c.fill();
+  /* petites fleurs qui pendent au bord */ for (let i = 0; i < 12; i++) { const x = 12 + i * 33 + h1(i) * 10; if (Math.abs(x - 320) < 50) continue; c.fillStyle = ['#ff8ab0', '#ffffff', '#ffd86a'][i % 3]; c.beginPath(); c.arc(x, GY + 6, 2.6, 0, TAU); c.fill(); }
+  c.fillStyle = '#9af08a'; c.fillRect(0, GY - 6, W, 3);
+  c.fillStyle = '#8ad8f4'; c.beginPath(); c.ellipse(wx, GY - 1, 46, 6, 0, 0, Math.PI); c.fill();
+  /* les maisons et les arbres pendent */
+  treeV(24, .9, '#4aa860', '#a6ec8a'); houseV(70, 1.12, '#ffc4d4', '#a04a8a', t, true); treeV(118, .75, '#58b86a', '#b4f29a'); houseV(160, .92, '#fff0b8', '#6a5ad8', t + 60, false); treeV(206, 1, '#4aa860', '#a6ec8a'); treeV(372, .8, '#58b86a', '#b4f29a');
+  /* un habitant qui se promène la tête en bas */ { const x = 238 + Math.sin(t * .008) * 14, sw = Math.sin(t * .2) * 2; c.fillStyle = '#ff7a8a'; c.beginPath(); c.roundRect(x - 4, GY + 6, 8, 11, 3); c.fill(); c.fillStyle = '#ffd8b8'; c.beginPath(); c.arc(x, GY + 21, 4.6, 0, TAU); c.fill(); c.fillStyle = '#4a2a6a'; c.fillRect(x - 3 + sw * .5, GY, 2, 6); c.fillRect(x + 1 - sw * .5, GY, 2, 6); }
+  /* oiseaux qui volent sur le dos, au milieu */ for (let i = 0; i < 3; i++) { const x = ((h1(i * 4) * W + t * .45 * (1 + i * .3)) % (W + 60)) - 30; birdV(x, 400 + i * 30 + Math.sin(t * .02 + i) * 6, 1 - i * .12, t, i); }
+  /* les nuages en bas (le ciel est sous nos pieds) */ for (const [x, y, s, a] of [[60, 690, 1.05, .95], [230, 724, .9, .9], [350, 668, .6, .85], [150, 784, 1.25, 1], [330, 806, 1.1, 1]]) cloudV(x + Math.sin(t * .006 + x) * 8, y, s, a, t);
+  /* la plateforme pend sous les maisons, au bout de deux cordes */ const px = 150; c.strokeStyle = '#8a5a6a'; c.lineWidth = 2; c.beginPath(); c.moveTo(px - 16, GY + 52); c.lineTo(px - 16, 190); c.moveTo(px + 16, GY + 52); c.lineTo(px + 16, 190); c.stroke(); plat(px, 192); }
 
 /* ================= B : le palais des glaces ================= */
 function arch(x, y, w, h, frame, glass, a = 1) { c.save(); c.globalAlpha = a;
@@ -96,8 +128,8 @@ function chip(x, y, txt) { c.font = '800 13px Nunito'; const w = c.measureText(t
 function hud(name, levels) { c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(14, 14, 44, 44, 14); c.fill(); c.fillStyle = '#3a1a6a'; c.fillRect(30, 28, 4, 16); c.fillRect(38, 28, 4, 16);
   c.font = '44px "Lilita One"'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#ffffff'; c.strokeStyle = 'rgba(40,20,80,0.4)'; c.lineWidth = 4; c.strokeText('3', W / 2, 58); c.fillText('3', W / 2, 58); c.textAlign = 'left';
   c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.roundRect(W - 100, 16, 86, 36, 18); c.fill(); c.fillStyle = '#f2b705'; c.beginPath(); c.arc(W - 80, 34, 8, 0, TAU); c.fill(); c.font = '800 16px Nunito'; c.fillStyle = '#3a1a6a'; c.textBaseline = 'middle'; c.fillText('480', W - 66, 35);
-  let x = 96; x += chip(x, 760, 'Manche 2/7') + 8; chip(x, 760, '★★ à 17 pts');
-  c.font = '18px "Lilita One"'; c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.strokeStyle = 'rgba(40,20,80,0.45)'; c.lineWidth = 4; c.strokeText(name, W / 2, 810); c.fillText(name, W / 2, 810); c.font = '800 11px Nunito'; c.globalAlpha = .85; c.fillText(levels, W / 2, 828); c.globalAlpha = 1; c.textAlign = 'left'; }
+  let x = 96; x += chip(x, 70, 'Manche 2/7') + 8; chip(x, 70, '★★ à 17 pts');
+  c.font = '18px "Lilita One"'; c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.strokeStyle = 'rgba(40,20,80,0.45)'; c.lineWidth = 4; c.strokeText(name, W / 2, 560); c.fillText(name, W / 2, 560); c.font = '800 11px Nunito'; c.globalAlpha = .85; c.fillText(levels, W / 2, 578); c.globalAlpha = 1; c.textAlign = 'left'; }
 function frame(t) { c.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (V === 'A') { zoneA(t); balloon(196, 640, 42, t); hud('Le Village renversé', 'A · LE MONDE À L’ENVERS'); }
   else { zoneB(t); balloon(196, 640, 42, t); hud('Le Hall des miroirs', 'B · LE PALAIS DES GLACES'); } }
