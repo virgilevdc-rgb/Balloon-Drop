@@ -4343,7 +4343,7 @@ const MECAS = [
 SKINS.push(...ARTS, ...FETES, ...MECAS);
 
 /* Ballon secret du Monde 3 : l'Œuf de lave (toucher 5 fois l'œuf du milieu dans le nid du dragon, zone Éruption) */
-const OEUF_LAVE = { id: 'oeuflave', name: 'Œuf de lave', secret: true, dust: '#ff8a3a', paint: (c, r, t = 0) => {
+const OEUF_LAVE = { id: 'oeuflave', theme: 'secrets', name: 'Œuf de lave', secret: true, dust: '#ff8a3a', paint: (c, r, t = 0) => {
     /* Bébé dragon qui sort de l'œuf (design B validé le 17/11/2026).
        Toutes les ~4 s : il gonfle les joues… et ne crache qu'une flammèche qui finit en petit nuage. */
     const shellG = () => { const g = c.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r * 1.05); g.addColorStop(0, '#6a4a8a'); g.addColorStop(.5, '#3a2a5a'); g.addColorStop(1, '#160c26'); return g; };
@@ -14914,7 +14914,7 @@ renderStory = function (focus, reveal) {
     b.addEventListener('click', () => { sfx.tap && sfx.tap(1); showLevelIntro(4, 't'); }); } catch (e) {}
 };
 /* ballon secret : le Perroquet (coucher de soleil de l'Île au trésor, ara au tricorne perché puis en vol) */
-const PERROQUET_SKIN = { id: 'perroquet', name: 'Le Perroquet', secret: true, dust: '#ff7a5a', paint: (c, r, t = 0) => {
+const PERROQUET_SKIN = { id: 'perroquet', theme: 'secrets', name: 'Le Perroquet', secret: true, dust: '#ff7a5a', paint: (c, r, t = 0) => {
   function ara(s, flap, blink, fly) { c.save(); c.scale(s, s);
     c.fillStyle = '#2a7aff'; c.beginPath(); c.moveTo(-r * .1, r * .08); c.lineTo(-r * .5, r * (fly ? .2 : .55)); c.lineTo(-r * .38, r * (fly ? .26 : .58)); c.lineTo(-r * .02, r * .16); c.fill();
     c.fillStyle = '#e0302a'; c.beginPath(); c.moveTo(-r * .08, r * .06); c.lineTo(-r * .44, r * (fly ? .12 : .5)); c.lineTo(-r * .32, r * (fly ? .18 : .52)); c.lineTo(0, r * .14); c.fill();
@@ -15004,7 +15004,7 @@ const BEBE_SERPENT_SKIN = (() => {
     /* la langue fourchue sort de temps en temps */ const tq = t % 120; if (tq < 24) { const q = Math.sin(tq / 24 * Math.PI), w = Math.sin(t * 1.3) * hs * .05, ty = hs * .44; c.strokeStyle = '#ff4a6a'; c.lineWidth = Math.max(.7, hs * .06);
       c.beginPath(); c.moveTo(0, ty); c.lineTo(w, ty + hs * .32 * q); c.moveTo(w, ty + hs * .32 * q); c.lineTo(w - hs * .1, ty + hs * .46 * q); c.moveTo(w, ty + hs * .32 * q); c.lineTo(w + hs * .1, ty + hs * .46 * q); c.stroke(); }
     c.restore(); };
-  return { id: 'bebe_serpent', name: 'Le Bébé serpent', secret: true, dust: '#7ae08a', gloss: .45, paint, after };
+  return { id: 'bebe_serpent', theme: 'secrets', name: 'Le Bébé serpent', secret: true, dust: '#7ae08a', gloss: .45, paint, after };
 })();
 
 SKINS.push(BEBE_SERPENT_SKIN);
@@ -15797,7 +15797,7 @@ function seated(c, x, y, s, t, st) {
 function frontFlipper(c, x, y, s, st) { c.save(); c.translate(x, y); c.scale(s, s); c.rotate(-.08);
   c.translate(12, -30); c.rotate(-1.15 + st.sleep * .45 + st.startle * -.3); c.fillStyle = '#1a2240'; c.beginPath(); c.ellipse(0, 12, 5.5, 13, 0, 0, TAU); c.fill(); c.strokeStyle = '#060a1a'; c.lineWidth = 1.8; c.stroke(); c.restore(); }
 
-const PECHEUR = { id: 'pingu_peche', name: 'Le Pêcheur endormi', secret: true, dust: '#7affc8', paint: (c, r, t = 0) => {
+const PECHEUR = { id: 'pingu_peche', theme: 'secrets', name: 'Le Pêcheur endormi', secret: true, dust: '#7affc8', paint: (c, r, t = 0) => {
   const R = r, HZN = R * .12, st = story(t);
   c.save(); c.beginPath(); c.arc(0, 0, R, 0, TAU); c.clip();
   const sky = c.createLinearGradient(0, -R, 0, HZN); sky.addColorStop(0, '#040a20'); sky.addColorStop(.6, '#0a1c48'); sky.addColorStop(1, '#16386c'); c.fillStyle = sky; c.fillRect(-R, -R, R * 2, R * 2);
