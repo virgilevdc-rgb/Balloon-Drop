@@ -3586,10 +3586,10 @@ const DIX = [PHENIX, VIVANT, MINIMONDE, CAMELEON];
 
 /* Ballon secret TITI (code « TITI ») : le Pilote de l'espace.
    Galaxie étoilée + bande kaki au pochoir. Un chasseur gris traverse le ciel, un pigeon le rattrape,
-   l'avion passe en vitesse lumière… et revient avec le pigeon casqué sur le cockpit, qui fait le salut. 360 images. */
+   l'avion passe en vitesse lumière… et revient avec le pigeon casqué sur le cockpit, qui fait le salut. 720 images (12 s). */
 const TITI_SKIN = { id: 'titi', theme: 'secrets', name: 'Titi', secret: true, string: false, gloss: .55, dust: '#6b7a4a',
   paint: (c, r, t) => {
-    const f = t % 360, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }, mix = (a, b, k) => a + (b - a) * k, lw = k => Math.max(.6, r * k);
+    const f = (t % 720) / 2, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }, mix = (a, b, k) => a + (b - a) * k, lw = k => Math.max(.6, r * k);
     const g = c.createRadialGradient(-r * .3, -r * .4, r * .05, 0, 0, r); g.addColorStop(0, '#3a3f8a'); g.addColorStop(.55, '#161a48'); g.addColorStop(1, '#05061a');
     c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
     c.save(); clipCircle(c, r);
@@ -3660,7 +3660,7 @@ const TITI_SKIN = { id: 'titi', theme: 'secrets', name: 'Titi', secret: true, st
       c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(u * 1.1, -u * .7, u * .25, u * .07, -.3, 0, TAU); c.fill();
       c.restore();
       /* pigeon casqué assis sur le cockpit, qui fait le salut */
-      if (f >= 215) pigeon(jx + u * 1.3, jy - u * 1.25 + Math.sin(t * .3) * u * .05, .9, { helmet: true, salute: (f % 90) < 45 }); }
+      if (f >= 215) pigeon(jx + u * 1.3, jy - u * 1.25 + Math.sin(t * .3) * u * .05, .9, { helmet: true, salute: (f % 60) < 40 }); }
     c.restore();
   } };
 SKINS.push(JULES_SKIN, THOMAS_SKIN, TITI_SKIN, ...NEW_SKINS, ...PROFONDEURS, ...MERVEILLES, RETRO_SKIN, ...DIX);
