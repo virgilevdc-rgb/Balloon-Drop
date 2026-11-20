@@ -3584,7 +3584,92 @@ function shadeHexDark(hex, k) { const n = parseInt(hex.slice(1), 16), f = v => M
 
 const DIX = [PHENIX, VIVANT, MINIMONDE, CAMELEON];
 
-SKINS.push(JULES_SKIN, THOMAS_SKIN, ...NEW_SKINS, ...PROFONDEURS, ...MERVEILLES, RETRO_SKIN, ...DIX);
+/* Ballon secret TITI (code « TITI ») : le Pilote de l'espace.
+   Galaxie étoilée + bande kaki au pochoir. Un chasseur gris traverse le ciel, un pigeon le rattrape,
+   l'avion passe en vitesse lumière… et le pigeon, pris dans le souffle, reste tout cramé. 720 images (12 s). */
+const TITI_SKIN = { id: 'titi', theme: 'secrets', name: 'Titi', secret: true, string: false, gloss: .55, dust: '#6b7a4a',
+  paint: (c, r, t) => {
+    const f = (t % 720) / 2, sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }, mix = (a, b, k) => a + (b - a) * k, lw = k => Math.max(.6, r * k);
+    const g = c.createRadialGradient(-r * .3, -r * .4, r * .05, 0, 0, r); g.addColorStop(0, '#3a3f8a'); g.addColorStop(.55, '#161a48'); g.addColorStop(1, '#05061a');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+    c.save(); clipCircle(c, r);
+    /* nébuleuse */
+    for (const [x, y, s, col] of [[-.35, -.25, .55, 'rgba(160,90,220,0.22)'], [.4, .05, .45, 'rgba(60,170,220,0.18)'], [-.1, .25, .4, 'rgba(230,90,150,0.12)']]) { const ng = c.createRadialGradient(x * r, y * r, 0, x * r, y * r, s * r); ng.addColorStop(0, col); ng.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = ng; c.beginPath(); c.arc(x * r, y * r, s * r, 0, TAU); c.fill(); }
+    /* étoiles (et traits en vitesse lumière) */
+    const warp = f >= 150 && f < 200 ? Math.sin((f - 150) / 50 * Math.PI) : 0;
+    for (let i = 0; i < 46; i++) { const x = (h1(i + 7100) - .5) * 2 * r, y = (h1(i + 7200) - .5) * 1.5 * r - r * .1, tw = .45 + .55 * Math.abs(Math.sin(t * .04 + i)), sz = r * (.008 + h1(i + 7300) * .014);
+      c.globalAlpha = tw; c.fillStyle = '#ffffff';
+      if (warp > .05) { c.strokeStyle = '#dff0ff'; c.lineWidth = Math.max(.5, sz * 1.2); c.beginPath(); c.moveTo(x, y); c.lineTo(x - warp * r * (.25 + h1(i + 7400) * .4), y); c.stroke(); }
+      else { c.beginPath(); c.arc(x, y, sz, 0, TAU); c.fill(); } }
+    c.globalAlpha = 1;
+    /* petite planète à anneaux */
+    { const px = r * .55, py = -r * .5, pr = r * .13; const pg = c.createRadialGradient(px - pr * .4, py - pr * .4, pr * .1, px, py, pr); pg.addColorStop(0, '#ffd9a0'); pg.addColorStop(1, '#c46a2a');
+      c.strokeStyle = 'rgba(255,220,170,0.55)'; c.lineWidth = lw(.02); c.beginPath(); c.ellipse(px, py, pr * 1.8, pr * .45, -.3, Math.PI, TAU); c.stroke();
+      c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(px, py, pr * 1.8, pr * .45, -.3, 0, Math.PI); c.stroke(); }
+    /* bande kaki au pochoir « ★ TITI ★ » */
+    const by = r * .58;
+    c.fillStyle = '#5a6a3a'; c.beginPath(); c.ellipse(0, by - r * .1, r * 1.1, r * .2, 0, 0, Math.PI); c.ellipse(0, by + r * .14, r * 1.1, r * .2, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(40,50,25,0.45)'; for (let i = 0; i < 9; i++) { c.beginPath(); c.ellipse((h1(i + 7500) - .5) * 2 * r, by + (h1(i + 7600) - .3) * r * .2, r * (.08 + h1(i + 7700) * .07), r * .04, h1(i) * 3, 0, TAU); c.fill(); }
+    c.strokeStyle = '#2e3a1c'; c.lineWidth = lw(.02); for (const dy of [-.1, .14]) { c.beginPath(); c.ellipse(0, by + dy * r, r * 1.1, r * .2, 0, .05, Math.PI - .05); c.stroke(); }
+    { const ecx = by + r * .02, erx = r * 1.1, ery = r * .2, yAt = x => ecx + ery * Math.sqrt(Math.max(0, 1 - (x / erx) ** 2));
+      c.font = `${Math.max(6, Math.round(r * .2))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const word = '★ TITI ★', gap = r * .03, ws = [...word].map(ch => c.measureText(ch).width); let x = -(ws.reduce((a, b) => a + b, 0) + gap * (word.length - 1)) / 2;
+      [...word].forEach((ch, i) => { const cx = x + ws[i] / 2, d = r * .01, rot = Math.atan2(yAt(cx + d) - yAt(cx - d), 2 * d); c.save(); c.translate(cx, yAt(cx)); c.rotate(rot); c.fillStyle = ch === '★' ? '#ffd23f' : '#efe6c8'; c.fillText(ch, 0, 0);
+        if (ch !== '★' && ch !== ' ') { c.fillStyle = '#5a6a3a'; c.fillRect(-r * .1, -r * .005, r * .2, r * .012); } c.restore(); x += ws[i] + gap; }); }
+    /* ---------- l'avion, le pigeon ---------- */
+    let jx, jy, ja = 0, stretch = 1, show = true;
+    if (f < 150) { const k = f / 150; jx = mix(-r * 1.3, r * .2, sm(k)); jy = -r * .02 + Math.sin(f * .05) * r * .06; ja = Math.cos(f * .05) * .08; }
+    else if (f < 170) { const k = (f - 150) / 20; jx = mix(r * .35, r * 1.6, k * k); jy = -r * .05; stretch = 1 + k * 1.6; }
+    else if (f < 215) { show = false; jx = -r * 2; jy = 0; }
+    else { const k = (f - 215) / 145; jx = mix(-r * 1.4, r * 1.4, k); jy = -r * .05 + Math.sin(f * .05) * r * .05; ja = Math.cos(f * .05) * .07; }
+    const u = r * .14;
+    if (f >= 150 && f < 168) { c.save(); c.globalAlpha = 1 - (f - 150) / 18; const fg = c.createRadialGradient(r * .5, -r * .05, 0, r * .5, -r * .05, r * .6); fg.addColorStop(0, '#ffffff'); fg.addColorStop(1, 'rgba(180,220,255,0)'); c.fillStyle = fg; c.beginPath(); c.arc(r * .5, -r * .05, r * .6, 0, TAU); c.fill(); c.restore(); }
+    const pigeon = (x, y, s, o = {}) => { c.save(); c.translate(x, y); c.scale(s, s); const fl = o.fly ? Math.sin(t * 1.2) : 0;
+      const B = o.burnt; c.fillStyle = B ? '#2a2628' : '#9aa3b8'; c.strokeStyle = '#2a2a44'; c.lineWidth = Math.max(.6, u * .08);
+      c.beginPath(); c.ellipse(0, 0, u * .7, u * .5, 0, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = B ? '#1a1618' : '#7a85a0'; c.beginPath(); c.ellipse(-u * .1, -u * .15 - fl * u * .3, u * .45, u * .2, -.4 - fl * .7, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = B ? '#3a3436' : '#6fa88a'; c.beginPath(); c.ellipse(u * .45, -u * .3, u * .25, u * .2, 0, 0, TAU); c.fill();
+      if (B) { c.strokeStyle = '#1a1618'; c.lineWidth = Math.max(.6, u * .09); c.lineCap = 'round'; for (const [x0, y0, a] of [[.45, -.75, -1.9], [.62, -.82, -1.5], [.8, -.74, -1.1], [-.55, -.2, -2.6], [-.6, .05, 2.9], [0, .45, 1.7]]) { c.beginPath(); c.moveTo(x0 * u, y0 * u); c.lineTo(x0 * u + Math.cos(a) * u * .35, y0 * u + Math.sin(a) * u * .35); c.stroke(); } c.strokeStyle = '#2a2a44'; }
+      c.fillStyle = B ? '#2a2628' : '#b3bccf'; c.beginPath(); c.arc(u * .62, -u * .5, u * .32, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = '#ffb000'; c.beginPath(); c.moveTo(u * .9, -u * .52); c.lineTo(u * 1.15, -u * .45); c.lineTo(u * .9, -u * .38); c.closePath(); c.fill();
+      if (B && o.blink) { c.strokeStyle = '#ffffff'; c.lineWidth = Math.max(.5, u * .05); c.beginPath(); c.moveTo(u * .6, -u * .58); c.lineTo(u * .8, -u * .58); c.stroke(); }
+      else { c.fillStyle = '#fff'; c.beginPath(); c.arc(u * .7, -u * .58, u * (B ? .13 : .1), 0, TAU); c.fill(); c.fillStyle = '#2a2a44'; c.beginPath(); c.arc(u * .73, -u * .58, u * (B ? .04 : .05), 0, TAU); c.fill(); }
+      if (o.helmet) { c.fillStyle = '#5a6a3a'; c.beginPath(); c.arc(u * .6, -u * .58, u * .35, Math.PI, 0); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#9fd3ff'; c.beginPath(); c.ellipse(u * .7, -u * .72, u * .14, u * .08, 0, 0, TAU); c.fill(); }
+      if (o.salute) { c.strokeStyle = '#7a85a0'; c.lineWidth = u * .18; c.lineCap = 'round'; c.beginPath(); c.moveTo(u * .2, -u * .1); c.lineTo(u * .45, -u * .75); c.stroke(); }
+      c.restore(); };
+    /* pigeon qui rattrape l'avion */
+    if (f >= 40 && f < 150) { const k = (f - 40) / 110; pigeon(mix(-r * 1.1, jx - u * 3.4, sm(k)), jy - u * .5 + Math.sin(t * .4) * u * .3, 1, { fly: true });
+      if (f > 120) { c.fillStyle = '#fff'; c.font = `${Math.max(6, Math.round(u * 1.1))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.fillText('?!', jx + u * .5, jy - u * 2.2); } }
+    /* le pigeon, cramé par la vitesse lumière : il fume, cligne, tousse, perd une plume, puis dégringole */
+    if (f >= 152 && f < 330) { const px = r * .2 - u * 3.4, py0 = -r * .02 - u * .5, fall = f < 290 ? 0 : (f - 290) / 40, py = py0 + fall * fall * r * 1.2 + Math.sin(f * .2) * u * .1 * (1 - fall), k = f - 152;
+      c.save(); c.translate(px, py); c.rotate(fall * 2.2); pigeon(0, 0, 1.05, { burnt: true, blink: (k % 40) > 34, fly: k < 8 }); c.restore();
+      for (let i = 0; i < 4; i++) { const q = ((k * .012 + i / 4) % 1); c.fillStyle = `rgba(90,90,100,${(.55 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(px + Math.sin(q * 6 + i) * u * .4, py - u * .9 - q * u * 2.4, u * (.18 + q * .35), 0, TAU); c.fill(); }
+      if (k < 14) { c.fillStyle = '#ffd23f'; for (let i = 0; i < 6; i++) { const a = i * TAU / 6; c.beginPath(); c.arc(px + Math.cos(a) * u * (1 + k * .08), py + Math.sin(a) * u * (1 + k * .08), u * .08, 0, TAU); c.fill(); } }
+      if (k > 60 && k < 90) { const q = (k - 60) / 30; c.fillStyle = `rgba(70,70,80,${(.8 * (1 - q)).toFixed(3)})`; c.beginPath(); c.arc(px + u * 1.2 + q * u * 1.2, py - u * .55 - q * u * .4, u * (.15 + q * .4), 0, TAU); c.fill();
+        c.fillStyle = '#fff'; c.font = `${Math.max(6, Math.round(u * .8))}px "Lilita One", sans-serif`; c.textAlign = 'center'; c.globalAlpha = 1 - q; c.fillText('kof !', px + u * 1.6, py - u * 1.6); c.globalAlpha = 1; }
+      if (k > 95) { const q = Math.min(1, (k - 95) / 110); c.save(); c.translate(px - u * .2 + Math.sin(q * 12) * u * .5, py + u * .3 + q * r * .5); c.rotate(Math.sin(q * 12) * .6); c.fillStyle = '#2a2628'; c.beginPath(); c.ellipse(0, 0, u * .12, u * .35, 0, 0, TAU); c.fill(); c.restore(); } }
+    if (show) { c.save(); c.translate(jx, jy); c.rotate(ja); c.scale(stretch, 1);
+      /* flamme de post-combustion */
+      const fl = 1 + Math.sin(t * 1.3) * .15 + (f >= 140 && f < 170 ? .8 : 0); const pg2 = c.createLinearGradient(-u * 2.6, 0, -u * 2.6 - u * 1.6 * fl, 0); pg2.addColorStop(0, '#fff6c8'); pg2.addColorStop(.4, '#7fd0ff'); pg2.addColorStop(1, 'rgba(80,150,255,0)');
+      c.fillStyle = pg2; c.beginPath(); c.moveTo(-u * 2.5, -u * .25); c.lineTo(-u * 2.6 - u * 1.6 * fl, 0); c.lineTo(-u * 2.5, u * .25); c.closePath(); c.fill();
+      const jg = c.createLinearGradient(0, -u, 0, u); jg.addColorStop(0, '#d9dee8'); jg.addColorStop(.5, '#9aa3b4'); jg.addColorStop(1, '#5c6474'); c.fillStyle = jg; c.strokeStyle = '#1e2230'; c.lineWidth = Math.max(.6, u * .1);
+      /* aile arrière, fuselage, aile, dérive */
+      c.beginPath(); c.moveTo(-u * .6, u * .1); c.lineTo(-u * 1.9, u * 1.4); c.lineTo(-u * 1.1, u * 1.4); c.lineTo(u * .6, u * .1); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(-u * 2.6, -u * .35); c.lineTo(u * 1.4, -u * .4); c.quadraticCurveTo(u * 2.5, -u * .25, u * 3.1, 0); c.quadraticCurveTo(u * 2.5, u * .3, u * 1.4, u * .4); c.lineTo(-u * 2.6, u * .35); c.closePath(); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(-u * 1.6, -u * .35); c.lineTo(-u * 2.4, -u * 1.5); c.lineTo(-u * 1.9, -u * 1.5); c.lineTo(-u * .7, -u * .35); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(70,80,60,0.35)'; for (const [x, y] of [[-1.2, 0], [.3, -.1], [-.5, .15]]) { c.beginPath(); c.ellipse(x * u, y * u, u * .4, u * .15, .3, 0, TAU); c.fill(); }
+      c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(-u * .2, u * .02, u * .12, 0, TAU); c.fill();
+      /* cockpit avec le pilote */
+      const cg2 = c.createLinearGradient(0, -u * .9, 0, -u * .3); cg2.addColorStop(0, '#cfeaff'); cg2.addColorStop(1, '#3a7ac0'); c.fillStyle = cg2;
+      c.beginPath(); c.moveTo(u * .6, -u * .38); c.quadraticCurveTo(u * 1.4, -u * 1.05, u * 2.1, -u * .32); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#5a6a3a'; c.beginPath(); c.arc(u * 1.3, -u * .55, u * .22, Math.PI, 0); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(u * 1.1, -u * .7, u * .25, u * .07, -.3, 0, TAU); c.fill();
+      c.restore();
+    }
+    c.restore();
+  } };
+SKINS.push(JULES_SKIN, THOMAS_SKIN, TITI_SKIN, ...NEW_SKINS, ...PROFONDEURS, ...MERVEILLES, RETRO_SKIN, ...DIX);
 
 /* =========================================================
    Légendes v2 : Globe de la mort, Le Grand Œil, Fusée, Petit astronaute
@@ -5023,10 +5108,11 @@ const SECRETS = [
   { id: 'hippo', name: 'Le code Hippo', desc: 'Le ballon bleu marine au H arc-en-ciel, débloqué par code.', hint: 'Un autre code secret, un animal qui aime l\'eau.' },
   { id: 'grenier', name: 'Le Grenier de Bouli', desc: 'Tu as trouvé le grenier secret de Bouli, à Bouliland.', hint: 'À Bouliland, quelqu\'un te fait signe en haut de la carte.' },
   { id: 'jules', name: 'Le code de Jules', desc: 'Le ballon bleu marine au canon doré qui tire un ballon de foot, débloqué par code.', hint: 'Un ami du créateur, fan des Gunners.' },
+  { id: 'titi', name: 'Le code de Titi', desc: 'Le ballon galaxie où un chasseur passe en vitesse lumière… au nez d\'un pigeon.', hint: 'Un frère pilote dans l\'âme, la tête dans les étoiles.' },
   { id: 'thomas', name: 'Le code de Thomas', desc: 'Le ballon rouge où une petite voiture marque au boost, débloqué par code.', hint: 'Un ami du créateur, as du volant… et du ballon.' },
   { id: 'foudre', name: 'Nuage de foudre', desc: 'Scénario unique accompli. Ballon Foudre débloqué.', hint: "Le niveau secret n'est pas la fin du voyage." },
 ];
-const CODES = { VIRGILE: { skin: 'virgile', secret: 'virgile' }, HIPPO: { skin: 'hippo', secret: 'hippo' }, JULES: { skin: 'jules', secret: 'jules' }, THOMAS: { skin: 'thomas', secret: 'thomas' } };
+const CODES = { VIRGILE: { skin: 'virgile', secret: 'virgile' }, HIPPO: { skin: 'hippo', secret: 'hippo' }, JULES: { skin: 'jules', secret: 'jules' }, THOMAS: { skin: 'thomas', secret: 'thomas' }, TITI: { skin: 'titi', secret: 'titi' } };
 const foundCount = () => SECRETS.filter(x => S.secrets[x.id]).length;
 function findSecret(id) {
   if (S.secrets[id]) return false;
