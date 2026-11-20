@@ -16415,12 +16415,12 @@ function elephantEar(x, y, s, a, col, hi) { c.save(); c.translate(x, y); c.rotat
   c.fillStyle = 'rgba(255,255,255,0.16)'; c.beginPath(); c.ellipse(-14, -56, 8, 22, .3, 0, TAU); c.fill(); c.restore(); }
 /* ===== animaux v2 : contour doux, grands yeux, formes rondes, lumière en haut à gauche ===== */
 const AOUT = '#1a1224';
-const aln = (w) => { c.strokeStyle = AOUT; c.lineWidth = w; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(); };
+const aln = (w) => { return; /* ADN du jeu : pas de contour (validé le 20/11/2026) */ c.strokeStyle = AOUT; c.lineWidth = w; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(); };
 const rg = (x, y, r, a, b) => { const g = c.createRadialGradient(x - r * .45, y - r * .5, r * .1, x, y, r * 1.1); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
 /* oeil mignon : grand, reflet ; k = ouverture (1 ouvert, 0 fermé) */
 function cuteEye(x, y, r, k, iris = '#141a2c', ring) { if (ring) { c.fillStyle = ring; c.beginPath(); c.ellipse(x, y, r * 1.45, r * 1.35, 0, 0, TAU); c.fill(); }
   if (k < .2) { c.strokeStyle = AOUT; c.lineWidth = Math.max(1, r * .35); c.beginPath(); c.arc(x, y - r * .2, r * .8, .3, Math.PI - .3); c.stroke(); return; }
-  c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x, y, r, r * 1.08 * k, 0, 0, TAU); c.fill(); c.strokeStyle = AOUT; c.lineWidth = Math.max(.8, r * .18); c.stroke();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x, y, r, r * 1.08 * k, 0, 0, TAU); c.fill();
   c.fillStyle = iris; c.beginPath(); c.ellipse(x + r * .15, y + r * .08, r * .66, r * .74 * k, 0, 0, TAU); c.fill();
   c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x - r * .1, y - r * .28, r * .3, 0, TAU); c.fill(); c.beginPath(); c.arc(x + r * .4, y + r * .35, r * .13, 0, TAU); c.fill(); }
 const blinkK = (t, ph, per = 200) => { const q = (t + ph * 37) % per; return q < 4 ? 1 - q / 4 : q < 8 ? (q - 4) / 4 : 1; };
