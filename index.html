@@ -5331,14 +5331,14 @@ const WORLDS = [
   ] },
   { id: 7, name: 'Le Miroir', of: 'du Miroir', mirror: true, sw: ['#f7c6ff', '#6a3fd6'], sky: 'w7', desc: 'Le monde à l\'envers : le ballon monte vers une plateforme au plafond.', levels: [
     { name: "À l'envers", goal: 7, plat: 1.1, intro: "Ici tout est à l'envers : le ballon part d'en bas et monte jusqu'à la plateforme du plafond.", stars: [11, 18] },
-    { name: 'Ventilateurs', goal: 8, fans: 1, intro: 'Des ventilateurs soufflent contre le ballon. Lâche quand ils se reposent.', stars: [12, 20] },
     { name: 'Les pics', goal: 8, spikes: 1, intro: 'Des pics entourent la plateforme : un ballon qui arrive trop au bord éclate.', stars: [12, 20] },
     { name: 'Bascule', goal: 8, flip: 1, intro: 'En plein vol, la gravité bascule un instant : le ballon ralentit et recule.', stars: [13, 21] },
-    { name: 'Miroir mouvant', goal: 8, move: [.8, .08], spikes: 1, intro: 'Une plateforme mobile, entourée de pics.', stars: [13, 21] },
-    { name: 'Oiseaux sur le dos', goal: 9, birds: 190, fans: 1, intro: 'Même les oiseaux volent à l\'envers.', stars: [14, 23] },
-    { name: 'Doublé miroir', goal: 8, dbl: .7, plat: 1.05, intro: 'Empile deux ballons au plafond.', stars: [15, 24] },
-    { name: 'Palais des glaces', goal: 9, spikes: 1, flip: 1, wind: .045, windChance: .5, bonus: .35, intro: 'Pics, bascule et vent.', stars: [15, 24] },
-    { name: 'De l\'autre côté', goal: 10, move: [.7, .07], flip: 1, spikes: 1, birds: 230, bonus: .35, intro: 'Tout le Miroir à la fois.', stars: [16, 26] },
+    { name: 'Les lanternes', goal: 8, m7lant: 1, intro: 'Une lanterne se balance devant la plateforme. Si tu la touches, le ballon rebondit : lâche au bon moment.', stars: [13, 21] },
+    { name: 'Lanternes mouvantes', goal: 8, m7lant: 1, m7mov: 1, move: [.55, .05], intro: 'La lanterne se balance et la plateforme bouge.', stars: [13, 21] },
+    { name: 'Deux lanternes', goal: 9, m7lant: 2, intro: 'Deux lanternes qui se balancent chacune à son rythme.', stars: [14, 23] },
+    { name: 'Nuit noire', goal: 8, m7night: 1, plat: 1.15, intro: 'La nuit tombe. Retiens où est la plateforme : seuls les lucioles et la lune l\'éclairent.', stars: [14, 23] },
+    { name: 'Étoiles filantes', goal: 9, m7night: 1, m7star: 1, plat: 1.12, intro: 'Des étoiles filantes montent dans la nuit. Une petite lueur annonce leur arrivée.', stars: [15, 24] },
+    { name: 'De l\'autre côté', goal: 10, m7night: 1, m7lant: 1, flip: 1, plat: 1.1, bonus: .35, intro: 'La nuit, une lanterne et la bascule : tout le Miroir à la fois.', stars: [16, 26] },
     { name: 'Le Reflet', boss: 'mirror', hp: 15, shrink: .93, bonus: .3, intro: "Ton double maléfique. Il se met en travers du chemin et renvoie le ballon. Plus tard, il copie tes gestes : déplace-toi vite, puis lâche.", stars: [9, 14] },
   ] },
   { id: 8, name: "L'Espace", of: "de l'Espace", grav: .62, sw: ['#b28cff', '#1a1046'], sky: 'w8', desc: 'Apesanteur, astéroïdes, trous noirs et gravité folle. Le grand final.', levels: [
@@ -16735,11 +16735,9 @@ updateGame = function () { _updateGameJE(); try { if (G.jeyes) updateJungleEyes(
 if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
 
 /* =========================================================
-   Monde 7, Le Miroir : mécaniques (prototype du 23/11/2026)
+   Monde 7, Le Miroir : mécaniques (validées le 23/11/2026 : lanternes et nuit noire)
    Le monde est dessiné retourné (MIR) : en coordonnées du jeu, le ballon « tombe » vers la plateforme (y croît),
    à l'écran il monte vers le plafond. Tout est calculé en coordonnées du jeu.
-   - m7ref   : le Reflet, un double symétrique ; les éclats du miroir ne touchent que lui, et s'il casse, les deux éclatent
-   - m7casc  : la cascade qui remonte, un courant qui aspire le ballon et l'accélère
    - m7lant  : les lanternes pendues au plafond, qui se balancent et font rebondir le ballon
    - m7night : la nuit noire, la plateforme n'est éclairée que par moments ; m7star : étoiles filantes qui montent
    ========================================================= */
@@ -16750,22 +16748,12 @@ const M7 = (() => {
     const P = R.plat, rng = R.rng || Math.random;
     R.m7 = null; if (!p) return;
     const m = {};
-    if (p.m7ref) {
-      const mx = PW - P.x, sh = [];
-      sh.push({ x0: clamp(mx + (rng() - .5) * P.w * .5, 30, PW - 30), y: groundY() - H * (.13 + rng() * .08), amp: 22 + rng() * 14, w: .018 + rng() * .008, ph: rng() * TAU2, rot: rng() * TAU2 });
-      if (p.m7ref > 1) sh.push({ x0: clamp(mx + (rng() < .5 ? -1 : 1) * (50 + rng() * 40), 30, PW - 30), y: groundY() - H * (.27 + rng() * .06), amp: 26 + rng() * 14, w: .02 + rng() * .008, ph: rng() * TAU2, rot: rng() * TAU2 });
-      m.ref = { sh, broke: 0 };
-    }
-    if (p.m7casc) {
-      const sd = P.x > PW / 2 ? -1 : 1;
-      m.casc = { cx0: clamp(P.x + sd * (P.w / 2 + 50), 40, PW - 40), amp: 24, w: 54, sp: .011, ph: rng() * TAU2, hit: 0 };
-    }
     if (p.m7lant) {
       const n = p.m7lant, L = [], ay = ceilY();
       for (let k = 0; k < n; k++) {
         const sd = (k === 0 ? (rng() < .5 ? -1 : 1) : -L[0].sd);
-        const ax = clamp(P.x + sd * (P.w * .3 + 46 + k * 10), 30, PW - 30), len = ay - (groundY() - H * (.12 + k * .1));
-        const d = Math.abs(ax - P.x) + 26, A = Math.asin(Math.min(.85, d / len));
+        const mov = P.speed > 0, ax = clamp((mov ? PW / 2 : P.x) + sd * (10 + k * 14), 30, PW - 30), len = ay - (groundY() - H * (.12 + k * .1));
+        const A = Math.asin(Math.min(.8, (mov ? PW * .36 : P.w / 2 + 100) / len));
         L.push({ sd, ax, ay, len, A, w: .027 + k * .004, ph: rng() * TAU2, th: 0, bx: ax, by: ay - len, hitT: 0 });
       }
       m.lant = L;
@@ -16773,8 +16761,6 @@ const M7 = (() => {
     if (p.m7night) m.night = { t: 0, flies: [0, 1, 2].map(i => ({ ph: rng() * TAU2, a: .006 + rng() * .004, b: .009 + rng() * .004 })), moon: 150 + Math.floor(rng() * 120), stars: p.m7star ? 1 : 0, st: [], stT: 120 };
     R.m7 = m;
   }
-  const shardPos = s => ({ x: s.x0 + Math.sin(s.ph + G.frame * s.w) * s.amp, y: s.y + Math.sin(s.ph * 1.7 + G.frame * s.w * 1.3) * 6 });
-  const cascX = c => c.cx0 + Math.sin(c.ph + G.frame * c.sp) * c.amp;
   function update() {
     const m = R.m7; if (!m) return;
     if (m.lant) for (const l of m.lant) { l.th = l.A * Math.sin(l.ph + G.frame * l.w); l.bx = l.ax + l.len * Math.sin(l.th); l.by = l.ay - l.len * Math.cos(l.th); if (l.hitT > 0) l.hitT--; }
@@ -16784,14 +16770,7 @@ const M7 = (() => {
         N.st = N.st.filter(s => s.y < mirA() + 40 && !s.dead); } }
     for (const b of R.balls) {
       if (b.state !== 'fall') continue;
-      if (m.ref && !m.ref.broke) { const rx = PW - b.x;
-        for (const s of m.ref.sh) { const q = shardPos(s); if (Math.hypot(rx - q.x, b.y - q.y) < b.r * .78 + 17) { m.ref.broke = 1; shards(rx, b.y); shards(q.x, q.y); sfx.glass && sfx.glass(); if (burstBall(b, 'Reflet brisé !')) return; } } }
-      if (m.casc) { const c = m.casc, cx = cascX(c);
-        if (Math.abs(b.x - cx) < c.w / 2 + b.r * .5 && b.y > H * .34 && b.y < groundY() - 6) {
-          b.vx += (cx - b.x) * .014; b.vx *= .93; b.vy = Math.min(b.vy + .34, 12.5);
-          if (G.frame % 3 === 0) FX.particles.push({ x: b.x + (Math.random() - .5) * b.r, y: b.y - b.r * .6, vx: (Math.random() - .5) * 1.6, vy: -1.5 - Math.random() * 1.5, g: .08, drag: .97, life: 22, size: 2.5 + Math.random() * 3, color: 'rgba(214,240,255,0.95)', rot: 0 });
-          if (!b.casc) { b.casc = 1; floatText('Splash !', b.x, b.y - b.r - 16, 22, 'ink'); sfx.blub && sfx.blub(); buzz(12); } } }
-      if (m.lant) for (const l of m.lant) { const dx = b.x - l.bx, dy = b.y - l.by, d = Math.hypot(dx, dy) || 1, rr = b.r * .78 + 28;
+      if (m.lant) for (const l of m.lant) { const dx = b.x - l.bx, dy = b.y - l.by, d = Math.hypot(dx, dy) || 1, rr = b.r * .72 + 24;
         if (d < rr && !l.hitT) { const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny;
           const lvx = l.len * Math.cos(l.th) * l.A * l.w * Math.cos(l.ph + G.frame * l.w);
           if (dot < 0) { b.vx -= 1.8 * dot * nx; b.vy -= 1.8 * dot * ny; }
@@ -16801,52 +16780,6 @@ const M7 = (() => {
     }
   }
   /* ---------- dessins (en coordonnées du jeu, dans le repère retourné) ---------- */
-  function drawShard(c, x, y, s, t) {
-    c.save(); c.translate(x, y); c.rotate(Math.sin(t * .02 + s.rot) * .3 + s.rot * .2); c.scale(1.45, 1.45);
-    const pu = .5 + Math.sin(t * .12 + s.ph) * .5;
-    const glow = c.createRadialGradient(0, 0, 4, 0, 0, 30); glow.addColorStop(0, `rgba(170,235,255,${(.35 + pu * .3).toFixed(3)})`); glow.addColorStop(1, 'rgba(170,235,255,0)');
-    c.fillStyle = glow; c.beginPath(); c.arc(0, 0, 30, 0, TAU2); c.fill();
-    const g = c.createLinearGradient(-12, -18, 12, 18); g.addColorStop(0, '#ffffff'); g.addColorStop(.4, '#bfeaff'); g.addColorStop(1, '#4f86d8');
-    c.fillStyle = g; c.beginPath(); c.moveTo(0, -20); c.lineTo(12, -4); c.lineTo(6, 18); c.lineTo(-3, 9); c.lineTo(-11, 12); c.lineTo(-9, -7); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(30,60,140,0.38)'; c.beginPath(); c.moveTo(0, -20); c.lineTo(12, -4); c.lineTo(6, 18); c.lineTo(1, 1); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.95)'; c.beginPath(); c.moveTo(-2, -16); c.lineTo(-7, -6); c.lineTo(-6, 4); c.lineTo(-1, -6); c.closePath(); c.fill();
-    const tw = (Math.sin(t * .09 + s.ph * 3) + 1) / 2; if (tw > .6) { const k = (tw - .6) / .4 * 8; c.fillStyle = '#fff'; c.beginPath(); c.moveTo(7, -13 - k); c.lineTo(8, -13); c.lineTo(7 + k, -12); c.lineTo(8, -11); c.lineTo(7, -11 + k); c.lineTo(6, -11); c.lineTo(7 - k, -12); c.lineTo(6, -13); c.closePath(); c.fill(); }
-    c.restore();
-  }
-  function drawReflet(c, m) {
-    const t = G.frame, top = ceilY();
-    /* la ligne du miroir, au centre : un fin reflet qui scintille */
-    c.save(); const lg = c.createLinearGradient(0, top, 0, groundY() - H * .7); lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(.3, 'rgba(255,255,255,0.28)'); lg.addColorStop(1, 'rgba(255,255,255,0)');
-    c.fillStyle = lg; c.fillRect(PW / 2 - 1, groundY() - H * .7, 2, top - groundY() + H * .7);
-    const sy = groundY() - H * .7 + ((t * 2.2) % (top - groundY() + H * .7)); c.fillStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.ellipse(PW / 2, sy, 2.2, 16, 0, 0, TAU2); c.fill(); c.restore();
-    for (const s of m.ref.sh) { const q = shardPos(s); drawShard(c, q.x, q.y, s, t); }
-    if (m.ref.broke) return;
-    const skin = skinById(S.skin);
-    for (const b of R.balls) { if (b.state !== 'aim' && b.state !== 'fall') continue;
-      const rx = PW - b.x; c.save(); c.translate(rx, b.y); c.scale(-1, -1); c.globalAlpha = .5; paintSkin(c, skin, b.r, t); c.globalAlpha = 1;
-      /* verre argenté : un voile lilas et un grand reflet en biais */
-      c.globalAlpha = .35; c.fillStyle = '#e7dcff'; c.beginPath(); c.arc(0, 0, b.r, 0, TAU2); c.fill(); c.globalAlpha = 1;
-      c.save(); c.beginPath(); c.arc(0, 0, b.r, 0, TAU2); c.clip(); const sw = ((t * 1.6) % (b.r * 5)) - b.r * 2.5; c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.moveTo(sw - b.r * .3, -b.r); c.lineTo(sw + b.r * .05, -b.r); c.lineTo(sw - b.r * .45, b.r); c.lineTo(sw - b.r * .8, b.r); c.closePath(); c.fill(); c.restore();
-      c.restore(); }
-  }
-  function drawCascade(c, m) {
-    const C = m.casc, cx = cascX(C), top = ceilY() + 10, bot = mirA() - H - 20, t = G.frame, w = C.w;
-    c.save();
-    const g = c.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0); g.addColorStop(0, 'rgba(120,200,255,0.55)'); g.addColorStop(.3, 'rgba(200,240,255,0.8)'); g.addColorStop(.6, 'rgba(150,215,255,0.7)'); g.addColorStop(1, 'rgba(90,170,240,0.55)');
-    c.fillStyle = g; c.beginPath();
-    const N = 26; for (let i = 0; i <= N; i++) { const y = bot + (top - bot) * i / N, wob = Math.sin(y * .03 - t * .12) * 3; c.lineTo(cx - w / 2 + wob, y); }
-    for (let i = N; i >= 0; i--) { const y = bot + (top - bot) * i / N, wob = Math.sin(y * .03 - t * .12 + 1.4) * 3; c.lineTo(cx + w / 2 + wob, y); }
-    c.closePath(); c.fill();
-    /* filets d'eau qui montent (y croît = vers le plafond à l'écran) */
-    c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineCap = 'round';
-    for (let k = 0; k < 7; k++) { const lx = cx - w / 2 + 6 + k * (w - 12) / 6, len = 26 + (k * 13) % 22, sp = 4.2 + (k % 3) * .9, span = top - bot;
-      for (let j = 0; j < 3; j++) { const y = bot + ((t * sp + k * 57 + j * span / 3) % span); c.lineWidth = 2 + (k % 2); c.globalAlpha = .55 + (k % 3) * .12; c.beginPath(); c.moveTo(lx + Math.sin(y * .04) * 2, y); c.lineTo(lx + Math.sin((y + len) * .04) * 2, Math.min(top, y + len)); c.stroke(); } }
-    c.globalAlpha = 1;
-    /* écume en bas (là où l'eau « jaillit ») et embruns au plafond */
-    for (let k = 0; k < 9; k++) { const a = k / 9 * TAU2 + t * .05, rr = 7 + (k % 3) * 3; c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.arc(cx + Math.cos(a) * w * .42, bot + 30 + Math.abs(Math.sin(a * 2 + t * .1)) * 10, rr, 0, TAU2); c.fill(); }
-    for (let k = 0; k < 6; k++) { const ph = (t * .03 + k / 6) % 1; c.fillStyle = `rgba(255,255,255,${(.8 * (1 - ph)).toFixed(3)})`; c.beginPath(); c.arc(cx + (k - 2.5) * 9 + Math.sin(k * 5 + t * .05) * 4, top - 6 + ph * 22, 3 + ph * 5, 0, TAU2); c.fill(); }
-    c.restore();
-  }
   function drawLantern(c, l, t) {
     c.save(); c.strokeStyle = 'rgba(90,60,120,0.75)'; c.lineWidth = 2; c.beginPath(); c.moveTo(l.ax, l.ay + 20); c.lineTo(l.bx, l.by); c.stroke();
     c.fillStyle = '#7a5aa8'; c.beginPath(); c.arc(l.ax, l.ay, 5, 0, TAU2); c.fill();
@@ -16898,19 +16831,17 @@ const M7 = (() => {
   }
   function draw(c) {
     const m = R && R.m7; if (!m) return;
-    if (m.casc) drawCascade(c, m);
-    if (m.lant) for (const l of m.lant) drawLantern(c, l, G.frame);
-    if (m.ref) drawReflet(c, m);
+    if (m.lant && !m.night) for (const l of m.lant) drawLantern(c, l, G.frame);
   }
-  function drawOver(c) { const m = R && R.m7; if (m && m.night) drawNight(c, m); }
+  function drawOver(c) { const m = R && R.m7; if (m && m.night) { drawNight(c, m); if (m.lant) for (const l of m.lant) drawLantern(c, l, G.frame); } }
   return { setup, update, draw, drawOver };
 })();
 if (window.__BOT) window.__M7api = M7;
 const _storyRoundM7 = storyRound;
 storyRound = function (lv, L, rng) {
   const p = _storyRoundM7(lv, L, rng);
-  try { const F = window.__M7 || {}; for (const k of ['m7ref', 'm7casc', 'm7lant', 'm7night', 'm7star']) { const v = F[k] != null ? F[k] : lv[k]; if (v) p[k] = v; }
-    if (p.m7casc || p.m7lant) p.fans = 0; } catch (e) {}
+  try { const F = window.__M7 || {}; for (const k of ['m7lant', 'm7night', 'm7star']) { const v = F[k] != null ? F[k] : lv[k]; if (v) p[k] = v; }
+    if (p.m7lant) { p.fans = 0; if (!lv.m7mov) p.speed = 0; } } catch (e) {}
   return p;
 };
 const _newRoundM7 = newRound;
