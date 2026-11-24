@@ -5339,7 +5339,7 @@ const WORLDS = [
     { name: 'Nuit noire', goal: 8, m7night: 1, plat: 1.15, intro: 'La nuit tombe. Retiens où est la plateforme : seuls les lucioles et la lune l\'éclairent.', stars: [14, 23] },
     { name: 'Étoiles filantes', goal: 9, m7night: 1, m7star: 1, plat: 1.12, intro: 'Des étoiles filantes montent dans la nuit. Une petite lueur annonce leur arrivée.', stars: [15, 24] },
     { name: 'De l\'autre côté', goal: 10, m7night: 1, m7lant: 1, flip: 1, plat: 1.1, bonus: .35, intro: 'La nuit, une lanterne et la bascule : tout le Miroir à la fois.', stars: [16, 26] },
-    { name: 'Le Reflet', boss: 'mirror', hp: 15, shrink: .93, bonus: .3, intro: "Ton double maléfique. Il se met en travers du chemin et renvoie le ballon. Plus tard, il copie tes gestes : déplace-toi vite, puis lâche.", stars: [9, 14] },
+    { name: 'Le Reflet', boss: 'mirror', hp: 15, shrink: .93, bonus: .3, intro: "Ton propre ballon, en verre. Il se place toujours à l'opposé de toi : feinte d'un côté, reviens vite, puis lâche avant qu'il arrive.", stars: [9, 14] },
   ] },
   { id: 8, name: "L'Espace", of: "de l'Espace", grav: .62, sw: ['#b28cff', '#1a1046'], sky: 'w8', desc: 'Apesanteur, astéroïdes, trous noirs et gravité folle. Le grand final.', levels: [
     { name: 'Apesanteur', goal: 7, wind: .03, windChance: .5, plat: 1.05, intro: 'En apesanteur, le ballon tombe tout doucement. Le moindre souffle le fait dériver.', stars: [11, 18] },
@@ -6718,12 +6718,7 @@ function drawReflet(c, x, y, s, t, hurt, alpha = 1) {
   c.restore();
 }
 function refletPos(B) { return { x: B.x, y: B.y }; }
-function updateReflet(B) {
-  const ab = aimBall(), band = groundY() - H * .27;
-  if (B.phase >= 2 && ab && ab.enter >= 1) { const dx = clamp(ab.x, 50, PW - 50) - B.x, mx = B.phase === 3 ? 1.1 : .8; B.x += clamp(dx * .03, -mx, mx); }
-  else { B.ph = (B.ph || 0) + .009 * (B.phase === 3 ? 1.3 : 1); const tx = PW / 2 + Math.sin(B.ph) * PW * .34; B.x += (tx - B.x) * .08; }
-  B.y = band + Math.sin(B.t * .03) * 14;
-}
+function updateReflet(B) { reflectGlassUpdate(B); }
 
 /* =========================================================
    v11 : l'Espace (apesanteur, astéroïdes, trous noirs, ovni)
@@ -7650,7 +7645,7 @@ function hazardHit(b) {
     if (B.type === 'storm' && B.bolt > 0 && Math.abs(b.x - B.boltX) < b.r * .8 + 16) { if (burstBall(b, 'Foudroyé !')) return true; }
     if (strikerHits(B, b)) { if (burstBall(b, B.type === 'ogre' ? 'Croqué !' : B.type === 'wizard' ? 'Foudroyé !' : 'Ensablé !')) return true; }
     if (B.type === 'mantis' && B.slash > 0 && Math.abs(b.x - B.tx) < b.r + 20 && b.y > hudBottom()) { if (burstBall(b, 'Fauché !')) return true; }
-    if (B.type === 'mirror' && !b.crowHit && Math.hypot(B.x - b.x, B.y - b.y) < b.r * .8 + 34) {
+    if (B.type === 'mirror' && !b.crowHit && !(B.shatT != null && B.shatT < 56) && Math.hypot(B.x - b.x, B.y - b.y) < b.r * .8 + 34) {
       b.crowHit = true; const dx = b.x - B.x || 1; b.vx += Math.sign(dx) * 1.25; b.vy *= .6;
       shards(B.x, B.y); sfx.glass(); buzz(25); floatText('Reflet !', B.x, B.y - 60, 26, 'ink');
     }
@@ -7674,7 +7669,7 @@ const BOSSES = {
   wizard: { name: 'Le Sorcier', p2: 'Il ouvre des portails', p3: 'Double foudre et vent magique', reward: 280 },
   nightmare: { name: 'Le Marchand de cauchemars', p2: 'La nuit tombe autour du ballon', p3: 'Double sable noir, gravité de cauchemar', reward: 300 },
   mantis: { name: 'La Mante religieuse', p2: 'Les abeilles arrivent', p3: 'La rosée tombe, elle fauche plus vite', reward: 260 },
-  mirror: { name: 'Le Reflet', p2: 'Il copie tes gestes', p3: 'La gravité bascule', reward: 200 },
+  mirror: { name: 'Le Reflet', p2: "L'éclipse : il avale la lune", p3: 'Ses éclats rebondissent sur les bords', reward: 200 },
   ufo: { name: "L'Ovni", p2: 'Il largue des mines', p3: 'Un trou noir apparaît', reward: 250 },
   yeti: { name: 'Le Yéti', p2: 'Il saute : la banquise tremble', p3: 'Les stalactites tombent', reward: 160 },
   snake: { name: 'Le Serpent géant', p2: 'Il fonce à travers la jungle', p3: 'Il crache deux fois plus', reward: 180 },
@@ -7705,8 +7700,9 @@ function bossRound(B, p, rng) {
     if (B.phase >= 2) p.birdEvery = B.phase === 2 ? 240 : 210;
     if (B.phase >= 3) p.dew = 220;
   } else if (B.type === 'mirror') {
-    p.wind = B.phase >= 2 ? .03 * sign : 0; p.spikes = B.phase >= 2; p.flip = B.phase >= 3;
-    if (B.phase >= 2) p.speed = Math.max(p.speed, .6);
+    /* 1 : il copie (à l'opposé)  2 : l'éclipse (nuit + lanterne)  3 : les éclats */
+    p.wind = B.phase === 3 ? .02 * sign : 0; p.spikes = false; p.flip = false; p.fans = 0;
+    if (B.phase === 2) { p.m7night = 1; p.m7eclipse = 1; p.m7lant = 1; p.speed = 0; }
   } else if (B.type === 'ufo') {
     p.wind = (.02 + B.phase * .008) * sign; p.holes = B.phase >= 3 ? 1 : 0;
     if (B.phase >= 2) p.speed = Math.max(p.speed, .7);
@@ -7811,6 +7807,7 @@ function updateShots() {
       if (sh.phase) {
         banner('Phase ' + sh.phase, B['p' + sh.phase]); sfx.roar(); shake = reduceMotion ? 0 : 12;
         if (B.type === 'storm' && sh.phase === 3) FX.fog = makeFog();
+        if (B.type === 'mirror') { B.shatT = 0; B.sh = []; shards(B.x, B.y); sfx.glass(); }
         if (B.type === 'dragon' || B.type === 'kraken' || B.type === 'yeti' || B.type === 'snake' || B.type === 'mantis' || !!STRIKERS[B.type]) { B.side = -B.side; B.emerge = 0; FX.fire = []; FX.venom = []; B.warn = 0; B.slam = 0; B.lunge = 0; B.crouch = 0; }
       }
       if (sh.kill) bossDefeat();
@@ -7824,7 +7821,7 @@ function bossDefeat() {
   B.dead = 1; B.deadT = 0; B.shownHp = 0;
   FX.fire = []; FX.embers = []; FX.inkShots = []; FX.venom = []; B.bolt = 0; B.warn = 0; B.slam = 0; B.lunge = 0;
   if (B.type === 'kraken') splash(B.x, lavaY(), 1);
-  if (B.type === 'mirror') { shards(B.x, B.y); shards(B.x, B.y); }
+  if (B.type === 'mirror') { shards(B.x, B.y); B.sh = []; sfx.glass(); }
   B.beam = 0; B.slash = 0; B.warn = 0; FX.critters = FX.critters.filter(c => c.kind !== 'mine' && c.kind !== 'dew'); B.tx2 = null;
   if (B.type === 'crow') paperBits(B.x, B.y, 12);
   confetti(B.x, B.y, 50); goldRain();
@@ -7989,7 +7986,7 @@ function drawBoss(th) {
     const dy = B.dead ? Math.min(280, B.deadT * 2.6) : 0;
     drawMantis(ctx, B.x, B.y + dy, .9, B.t, B.side, B.raise || 0, B.hurt % 4 > 1);
   } else if (B.type === 'mirror') {
-    if (!B.dead || B.deadT < 60) { ctx.save(); ctx.translate(B.x, B.y); if (MIR()) ctx.scale(1, -1); drawReflet(ctx, 0, 0, B.dead ? 1 + B.deadT * .02 : 1, B.t, B.hurt % 4 > 1, B.dead ? Math.max(0, 1 - B.deadT / 60) : 1); ctx.restore(); }
+    drawMirrorBossG(ctx, B);
   } else if (B.type === 'ufo') {
     const dy = B.dead ? -B.deadT * 3 : 0;
     drawUfo(ctx, B.x, B.y + dy, 1, B.t, B.hurt % 4 > 1, B.beam, B.dead ? Math.max(0, 1 - B.deadT / 80) : 1);
@@ -16732,7 +16729,7 @@ const _updateGameJE = updateGame;
 updateGame = function () { _updateGameJE(); try { if (G.jeyes) updateJungleEyes(); } catch (e) {} };
 
 /* accès de test (uniquement si window.__BOT est défini avant le chargement) */
-if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o) };
+if (window.__BOT) window.__DBG = { get FX() { return FX; }, get R() { return R; }, get G() { return G; }, get PX() { return PX; }, get S() { return S; }, SKINS, paintSkin, WORLDS, THEMES, start: (m, o) => startGame(m, o), newRound: () => newRound() };
 
 /* =========================================================
    Monde 7, Le Miroir : mécaniques (validées le 23/11/2026 : lanternes et nuit noire)
@@ -16758,7 +16755,7 @@ const M7 = (() => {
       }
       m.lant = L;
     }
-    if (p.m7night) m.night = { t: 0, flies: [0, 1, 2].map(i => ({ ph: rng() * TAU2, a: .006 + rng() * .004, b: .009 + rng() * .004 })), moon: 150 + Math.floor(rng() * 120), stars: p.m7star ? 1 : 0, st: [], stT: 120 };
+    if (p.m7night) m.night = { t: 0, flies: [0, 1, 2].map(i => ({ ph: rng() * TAU2, a: .006 + rng() * .004, b: .009 + rng() * .004 })), moon: p.m7eclipse ? null : 150 + Math.floor(rng() * 120), eclipse: !!p.m7eclipse, stars: p.m7star ? 1 : 0, st: [], stT: 120 };
     R.m7 = m;
   }
   function update() {
@@ -16806,7 +16803,7 @@ const M7 = (() => {
     const N = m.night, cv = drawNight.cv || (drawNight.cv = document.createElement('canvas'));
     if (cv.width !== c.canvas.width || cv.height !== c.canvas.height) { cv.width = c.canvas.width; cv.height = c.canvas.height; }
     const o = cv.getContext('2d'), M = c.getTransform(); o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, cv.width, cv.height); o.setTransform(M);
-    const intro = N.t < 70 ? 0 : Math.min(1, (N.t - 70) / 45);
+    const intro = N.eclipse ? Math.min(1, N.t / 40) : N.t < 70 ? 0 : Math.min(1, (N.t - 70) / 45);
     o.globalCompositeOperation = 'source-over'; o.fillStyle = `rgba(14,10,46,${(.93 * intro).toFixed(3)})`; o.fillRect(-PX - 50, -H, PW + 2 * PX + 100, mirA() + 2 * H);
     o.globalCompositeOperation = 'destination-out';
     const hole = (x, y, r, a = 1) => { const g = o.createRadialGradient(x, y, r * .15, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.6, `rgba(0,0,0,${(a * .55).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)'); o.fillStyle = g; o.beginPath(); o.arc(x, y, r, 0, TAU2); o.fill(); };
@@ -16815,7 +16812,8 @@ const M7 = (() => {
     for (const f of fl) hole(f.x, f.y, 62, .8);
     /* la lune passe : une bande de lumière douce qui balaie l'écran */
     const per = 330, k = ((N.t + N.moon) % per) / 130;
-    if (k < 1) { const e = k * k * (3 - 2 * k), mx = -110 + e * (PW + 220), my = platY() - 40 - Math.sin(k * Math.PI) * 30; o.save(); o.translate(mx, my); o.scale(1, 1.6); hole(0, 0, 120, .95); o.restore(); }
+    if (N.eclipse) { const B = G.boss; if (B && !B.dead) hole(B.x, B.y, 105, .9); }
+    else if (k < 1) { const e = k * k * (3 - 2 * k), mx = -110 + e * (PW + 220), my = platY() - 40 - Math.sin(k * Math.PI) * 30; o.save(); o.translate(mx, my); o.scale(1, 1.6); hole(0, 0, 120, .95); o.restore(); }
     for (const s of N.st) hole(s.x, s.y, s.warn ? 40 : 54, s.warn ? .5 : .85);
     o.globalCompositeOperation = 'source-over';
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(cv, 0, 0); c.restore();
@@ -16845,11 +16843,207 @@ storyRound = function (lv, L, rng) {
   return p;
 };
 const _newRoundM7 = newRound;
-newRound = function () { _newRoundM7.apply(this, arguments); try { M7.setup(cfg && cfg.mirror && !G.boss ? R.p : null); } catch (e) {} };
+newRound = function () { _newRoundM7.apply(this, arguments); try { M7.setup(cfg && cfg.mirror && (!G.boss || G.boss.type === 'mirror') ? R.p : null); } catch (e) {} };
 const _updateGameM7 = updateGame;
 updateGame = function () { _updateGameM7(); try { if (R && R.m7 && !G.ending) M7.update(); } catch (e) {} };
 const _drawHazardsM7 = drawHazards;
 drawHazards = function (th) { try { M7.draw(ctx); } catch (e) {} _drawHazardsM7(th); try { M7.drawOver(ctx); } catch (e) {} };
+/* =========================================================
+   Monde 7 : le boss Le Reflet en verre (validé le 24/11/2026)
+   Ton propre ballon en verre argenté. 1 : il copie (se place à l'opposé de ton ballon)
+   2 : l'éclipse (nuit + lanterne)  3 : les éclats qui rebondissent sur les bords.
+   Entre les phases il se brise puis se recolle ; à la fin, mille paillettes et un petit « coucou ».
+   ========================================================= */
+const GLASS = (() => {
+  const TAU = Math.PI * 2;
+  const h1 = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const cache = {};
+  function glassSprite(skin, r, t) {
+    const S = Math.ceil(r * 2.6), cv = document.createElement('canvas'); cv.width = cv.height = S * 2; const o = cv.getContext('2d');
+    o.setTransform(2, 0, 0, 2, S, S);
+    paintSkin(o, skin, r, t);
+    const mask = document.createElement('canvas'); mask.width = mask.height = S * 2; mask.getContext('2d').drawImage(cv, 0, 0);
+    /* on enlève la couleur : le skin devient de l'argent (puis on recoupe à la forme du ballon) */
+    o.save(); o.setTransform(1, 0, 0, 1, 0, 0);
+    o.globalCompositeOperation = 'saturation'; o.fillStyle = 'rgb(128,128,128)'; o.fillRect(0, 0, S * 2, S * 2);
+    o.globalCompositeOperation = 'soft-light'; o.fillStyle = 'rgba(255,255,255,0.55)'; o.fillRect(0, 0, S * 2, S * 2);
+    o.globalCompositeOperation = 'destination-in'; o.drawImage(mask, 0, 0); o.restore();
+    o.globalCompositeOperation = 'source-atop';
+    let g = o.createLinearGradient(0, -r, 0, r); g.addColorStop(0, 'rgba(255,255,255,0.7)'); g.addColorStop(.36, 'rgba(225,232,255,0.42)'); g.addColorStop(.58, 'rgba(150,140,235,0.4)'); g.addColorStop(1, 'rgba(110,80,220,0.55)');
+    o.fillStyle = g; o.fillRect(-r * 1.3, -r * 1.3, r * 2.6, r * 2.6);
+    /* le monde qui s'y reflète : un horizon courbé et un ciel clair en haut */
+    o.fillStyle = 'rgba(70,50,170,0.25)'; o.beginPath(); o.ellipse(0, r * .55, r * 1.3, r * .62, 0, Math.PI, TAU); o.lineTo(r * 1.3, r * 1.3); o.lineTo(-r * 1.3, r * 1.3); o.fill();
+    o.fillStyle = 'rgba(255,255,255,0.35)'; o.beginPath(); o.ellipse(-r * .1, -r * .78, r * .75, r * .3, 0, 0, TAU); o.fill();
+    o.globalCompositeOperation = 'source-over';
+    return cv;
+  }
+  function cracksPath(c, r, lvl, seed) {
+    /* fissures qui partent d'un point d'impact (en haut à droite), plus nombreuses à chaque phase */
+    const ix = r * .38, iy = -r * .3, n = [0, 5, 9, 14][lvl];
+    const segs = [];
+    for (let i = 0; i < n; i++) { let a = i / n * TAU + h1(seed + i) * .5, x = ix, y = iy; const pts = [[x, y]]; const L = r * (.45 + h1(seed + i * 3) * .9);
+      for (let s = 0; s < 4; s++) { a += (h1(seed + i * 7 + s) - .5) * .9; x += Math.cos(a) * L / 4; y += Math.sin(a) * L / 4; pts.push([x, y]); }
+      segs.push(pts); }
+    return { segs, ix, iy };
+  }
+  function face(c, r, mood, t) {
+    const blink = (t % 210) > 202;
+    const ey = -r * .1, ex = r * .3, ew = r * .2, eh = r * .22;
+    for (const sd of [-1, 1]) {
+      c.save(); c.translate(sd * ex, ey);
+      /* œil en amande, paupière mi-close du côté moqueur */
+      c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(0, 0, ew, blink ? eh * .12 : eh, 0, 0, TAU); c.fill();
+      if (!blink) { const ig = c.createRadialGradient(-ew * .2, -eh * .3, 1, 0, 0, ew * .7); ig.addColorStop(0, '#c9a8ff'); ig.addColorStop(1, '#5a2fc0');
+        const lx = mood === 'hurt' ? 0 : ew * .28; c.fillStyle = ig; c.beginPath(); c.arc(lx, eh * .15, ew * .62, 0, TAU); c.fill();
+        c.fillStyle = '#1e0f4a'; c.beginPath(); c.arc(lx, eh * .18, ew * .3, 0, TAU); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(lx - ew * .2, -eh * .05, ew * .16, 0, TAU); c.fill();
+        /* paupière lilas (couleur du verre, pas de contour sombre) */
+        const lid = mood === 'angry' ? .62 : mood === 'hurt' ? .2 : sd > 0 ? .5 : .34;
+        c.fillStyle = '#b8b0ea'; c.beginPath(); c.ellipse(0, 0, ew * 1.05, eh * 1.05, 0, Math.PI, TAU); c.lineTo(ew * 1.05, -eh * 1.05 + eh * 2.1 * lid); c.lineTo(-ew * 1.05, -eh * 1.05 + eh * 2.1 * lid); c.closePath();
+        c.save(); c.beginPath(); c.ellipse(0, 0, ew * 1.02, eh * 1.02, 0, 0, TAU); c.clip(); c.fillRect(-ew * 1.1, -eh * 1.2, ew * 2.2, eh * 2.2 * lid); c.restore(); }
+      /* sourcil : un seul relevé (le sourire en coin) */
+      c.strokeStyle = '#4a2aa8'; c.lineCap = 'round'; c.lineWidth = r * .05;
+      const up = mood === 'angry' ? (sd > 0 ? .1 : .1) : sd > 0 ? -.28 : 0, tilt = mood === 'angry' ? -sd * .35 : mood === 'hurt' ? sd * .3 : sd > 0 ? -.15 : .1;
+      c.beginPath(); c.moveTo(-ew * .9, -eh * 1.45 + up * eh + tilt * eh * sd); c.quadraticCurveTo(0, -eh * 1.85 + up * eh, ew * .9, -eh * 1.45 + up * eh - tilt * eh * sd); c.stroke();
+      c.restore();
+    }
+    /* bouche : sourire en coin, avec une petite dent */
+    c.save(); c.translate(r * .04, r * .3);
+    if (mood === 'hurt') { c.fillStyle = '#4a2aa8'; c.beginPath(); c.ellipse(0, r * .02, r * .1, r * .08, 0, 0, TAU); c.fill(); }
+    else {
+      const w = r * (mood === 'angry' ? .3 : .34);
+      c.fillStyle = '#3a1f8a'; c.beginPath(); c.moveTo(-w, -r * .02); c.quadraticCurveTo(-w * .1, r * .07, w, -r * .12); c.quadraticCurveTo(w * .2, r * .2, -w, -r * .02); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.moveTo(w * .25, -r * .045); c.lineTo(w * .55, -r * .075); c.lineTo(w * .42, r * .03); c.closePath(); c.fill();
+      c.fillStyle = 'rgba(255,170,220,0.6)'; c.beginPath(); c.ellipse(w * .05, r * .07, w * .32, r * .035, -.15, 0, TAU); c.fill(); }
+    c.restore();
+  }
+  /* dessin complet. o = { t, crack: 0..3, mood, shatter: 0..1 (éclats qui s'écartent), alpha } */
+  function draw(c, skin, r, o = {}) {
+    const t = o.t || 0, key = skin.id + ':' + r; const sp = cache[key] || (cache[key] = glassSprite(skin, r, 0)); const S = sp.width / 2;
+    const cr = cracksPath(c, r, o.crack || 0, 3);
+    const body = (cc) => {
+      cc.drawImage(sp, -S / 2, -S / 2, S, S);
+      cc.save(); cc.beginPath(); cc.arc(0, 0, r, 0, TAU); cc.clip();
+      /* reflet qui balaie le verre */
+      const sw = ((t * 1.4) % (r * 6)) - r * 3; cc.fillStyle = 'rgba(255,255,255,0.5)'; cc.beginPath(); cc.moveTo(sw - r * .35, -r); cc.lineTo(sw + r * .05, -r); cc.lineTo(sw - r * .55, r); cc.lineTo(sw - r * .95, r); cc.closePath(); cc.fill();
+      cc.fillStyle = 'rgba(255,255,255,0.25)'; cc.beginPath(); cc.moveTo(sw + r * .2, -r); cc.lineTo(sw + r * .32, -r); cc.lineTo(sw - r * .28, r); cc.lineTo(sw - r * .4, r); cc.closePath(); cc.fill();
+      face(cc, r, o.mood || 'smirk', t);
+      /* fissures : trait blanc + ombre lilas décalée, et éclats manquants à la phase 3 */
+      for (const pts of cr.segs) { for (const [col, dx, lw] of [['rgba(70,50,170,0.55)', 1.2, r * .03], ['rgba(255,255,255,0.95)', 0, r * .02]]) { cc.strokeStyle = col; cc.lineWidth = lw; cc.lineJoin = 'round'; cc.beginPath(); pts.forEach(([x, y], i) => i ? cc.lineTo(x + dx, y + dx) : cc.moveTo(x + dx, y + dx)); cc.stroke(); } }
+      cc.restore();
+      /* bord du verre : liseré clair (pas de contour sombre) */
+      const rg = cc.createLinearGradient(-r, -r, r, r); rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(.5, 'rgba(200,190,255,0.5)'); rg.addColorStop(1, 'rgba(160,140,255,0.8)');
+      cc.strokeStyle = rg; cc.lineWidth = r * .045; cc.beginPath(); cc.arc(0, 0, r * .985, 0, TAU); cc.stroke();
+    };
+    c.save(); if (o.alpha != null) c.globalAlpha = o.alpha;
+    /* halo argenté */
+    if (!o.shatter || o.shatter < .15) { const hk = o.shatter ? 1 - o.shatter / .15 : 1; c.globalAlpha *= hk;
+    const hg = c.createRadialGradient(0, 0, r * .9, 0, 0, r * 1.5); hg.addColorStop(0, 'rgba(210,200,255,0.35)'); hg.addColorStop(1, 'rgba(210,200,255,0)'); c.fillStyle = hg; c.beginPath(); c.arc(0, 0, r * 1.5, 0, TAU); c.fill(); c.globalAlpha /= hk || 1; }
+    if (!o.shatter) body(c);
+    else {
+      /* le verre se brise : des morceaux en éventail qui s'écartent et tournent */
+      const k = o.shatter, N = 13;
+      const off = document.createElement('canvas'); off.width = off.height = Math.ceil(r * 2.4) * 2; const oc = off.getContext('2d'); oc.setTransform(2, 0, 0, 2, off.width / 2, off.height / 2); body(oc);
+      for (let i = 0; i < N; i++) { const a0 = i / N * TAU + h1(i) * .2, a1 = (i + 1) / N * TAU + h1(i + 1) * .2, am = (a0 + a1) / 2, ring = i % 2 ? .55 : 0;
+        c.save(); const d = k * r * (1.2 + h1(i * 5) * 1.6); c.translate(Math.cos(am) * d, Math.sin(am) * d + k * k * r * .6); c.rotate((h1(i * 9) - .5) * k * 3);
+        c.beginPath(); c.moveTo(Math.cos(am) * r * ring, Math.sin(am) * r * ring); c.arc(0, 0, r * 1.02, a0, a1); c.closePath(); c.clip();
+        c.drawImage(off, -off.width / 4, -off.height / 4, off.width / 2, off.height / 2);
+        c.strokeStyle = 'rgba(255,255,255,0.8)'; c.lineWidth = 1.2; c.stroke(); c.restore(); }
+    }
+    c.restore();
+  }
+  function sparkle(c, x, y, s, a = 1) { c.save(); c.globalAlpha = a; c.fillStyle = '#fff'; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * .22, y - s * .22); c.lineTo(x + s, y); c.lineTo(x + s * .22, y + s * .22); c.lineTo(x, y + s); c.lineTo(x - s * .22, y + s * .22); c.lineTo(x - s, y); c.lineTo(x - s * .22, y - s * .22); c.closePath(); c.fill(); c.restore(); }
+  return { draw, sparkle, h1 };
+})();
+const GLASS_R = 46;
+function glassSkin() { try { return skinById(S.skin) || SKINS[0]; } catch (e) { return SKINS[0]; } }
+function reflectGlassUpdate(B) {
+  const ab = aimBall(), band = groundY() - H * .27, P = R.plat;
+  if (B.shatT != null && ++B.shatT > 58) B.shatT = null;
+  const busy = B.shatT != null && B.shatT < 50;
+  /* la copie : il vise l'image de ton ballon dans le miroir (l'axe passe par la plateforme) */
+  const fb = R.balls.find(b => b.state === 'fall');
+  const src = ab && ab.enter >= 1 ? ab : fb;
+  let tx;
+  if (src) tx = 2 * P.x - src.x; else { B.ph = (B.ph || 0) + .01; tx = PW / 2 + Math.sin(B.ph) * PW * .3; }
+  tx = clamp(tx, 50, PW - 50);
+  /* il copie avec un temps de retard : la feinte l'emmène loin, puis on a une petite fenêtre */
+  const hist = B.hist || (B.hist = []); hist.push(tx); const lag = [0, 32, 28, 24][B.phase]; while (hist.length > lag) hist.shift();
+  const mx = [0, 3.6, 3.2, 4][B.phase];
+  if (!busy) B.x += clamp((hist[0] - B.x) * .09, -mx, mx);
+  B.y = band + Math.sin(B.t * .03) * 14;
+  /* les éclats (phase 3) : annoncés par un pointillé, puis ils filent et rebondissent sur les bords */
+  B.sh = B.sh || [];
+  if (B.phase >= 3 && !busy && !G.ending) {
+    B.shT = (B.shT == null ? 90 : B.shT) - 1;
+    if (B.shT <= 0) {
+      B.shT = 165 + Math.floor(Math.random() * 40);
+      const sd = Math.random() < .5 ? -1 : 1;
+      for (const k of [0, 1]) {
+        const vx = (k ? -sd : sd) * (2.4 + Math.random() * .8), vy = 1 + Math.random() * .5;
+        const sh = { x: B.x, y: B.y, vx, vy, warn: 52, rot: Math.random() * 6, path: [] };
+        let x = sh.x, y = sh.y, v = vx; for (let i = 0; i < 70 && y < groundY() - 10; i++) { x += v * 2; y += vy * 2; if (x < 12 || x > PW - 12) { v = -v; x = clamp(x, 12, PW - 12); } if (i % 3 === 0) sh.path.push(x, y); }
+        B.sh.push(sh);
+      }
+      sfx.glass();
+    }
+  }
+  for (const sh of B.sh) {
+    if (sh.warn > 0) { sh.warn--; sh.x = B.x; sh.y = B.y; continue; }
+    sh.x += sh.vx; sh.y += sh.vy; sh.rot += .15; sh.life = (sh.life || 0) + 1;
+    if (sh.x < 12 || sh.x > PW - 12) { sh.vx = -sh.vx; sh.x = clamp(sh.x, 12, PW - 12); sh.bounce = 8; }
+    if (sh.bounce) sh.bounce--;
+    if (sh.y > groundY() - 10 || sh.life > 300) { sh.dead = 1; if (sh.y > groundY() - 10) burst(sh.x, sh.y, 6, '#d8ccff'); }
+    for (const b of R.balls.slice()) if (b.state === 'fall' && !sh.dead && Math.hypot(b.x - sh.x, b.y - sh.y) < b.r * .78 + 12) { sh.dead = 1; shards(sh.x, sh.y); burstBall(b, 'Éclat !'); }
+  }
+  B.sh = B.sh.filter(sh => !sh.dead);
+}
+function drawGlassShard(c, x, y, s, a) {
+  c.save(); c.translate(x, y); c.rotate(a); c.scale(s, s);
+  const glow = c.createRadialGradient(0, 0, 3, 0, 0, 26); glow.addColorStop(0, 'rgba(190,240,255,0.55)'); glow.addColorStop(1, 'rgba(190,240,255,0)'); c.fillStyle = glow; c.beginPath(); c.arc(0, 0, 26, 0, TAU); c.fill();
+  const g = c.createLinearGradient(-10, -14, 10, 14); g.addColorStop(0, '#ffffff'); g.addColorStop(.45, '#cfe6ff'); g.addColorStop(1, '#7a6ae0'); c.fillStyle = g;
+  c.beginPath(); c.moveTo(0, -16); c.lineTo(10, -2); c.lineTo(4, 14); c.lineTo(-8, 6); c.lineTo(-8, -6); c.closePath(); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.moveTo(-1, -12); c.lineTo(-5, -3); c.lineTo(-1, -4); c.closePath(); c.fill(); c.restore();
+}
+function drawMirrorBossG(c, B) {
+  const sk = glassSkin(), r = GLASS_R, t = B.t, ez = k => k * k * (3 - 2 * k);
+  /* éclats et leurs trajectoires annoncées (repère du jeu) */
+  for (const sh of B.sh || []) {
+    if (sh.warn > 0) { const a = (52 - sh.warn) / 52; c.save(); c.strokeStyle = `rgba(200,235,255,${(.25 + a * .5).toFixed(3)})`; c.lineWidth = 2.5; c.setLineDash([2, 9]); c.lineCap = 'round'; c.beginPath();
+      const n = Math.max(2, Math.floor(sh.path.length / 2 * Math.min(1, a * 1.6))); for (let i = 0; i < n; i++) i ? c.lineTo(sh.path[i * 2], sh.path[i * 2 + 1]) : c.moveTo(sh.path[0], sh.path[1]); c.stroke(); c.restore(); continue; }
+    drawGlassShard(c, sh.x, sh.y, sh.bounce ? 1.55 : 1.35, sh.rot);
+    if (sh.bounce) GLASS.sparkle(c, sh.x, sh.y, 9, sh.bounce / 8);
+  }
+  c.save(); c.translate(B.x, B.y); if (MIR()) c.scale(1, -1);
+  const crack = Math.min(2, B.phase - 1), hurt = B.hurt % 4 > 1;
+  if (B.dead) {
+    const d = B.deadT, k = d / 26;
+    if (k < 1) GLASS.draw(c, sk, r, { t, crack: 2, mood: 'hurt', shatter: Math.max(.001, ez(Math.min(1, k)) * 1.6), alpha: 1 - Math.max(0, k - .5) * 2 });
+    const n = Math.min(90, d * 6);
+    for (let j = 0; j < n; j++) { const age = d - j / 6; if (age <= 0) continue; const a = GLASS.h1(j) * TAU, sp = 1.2 + GLASS.h1(j * 3) * 3.2, dd = age * sp * (1 - age / 140);
+      const x = Math.cos(a) * dd * 2, y = Math.sin(a) * dd * 1.8 + age * age * .02, al = Math.max(0, 1 - age / 90);
+      if (al <= 0) continue;
+      if (j % 3) { c.fillStyle = ['#ffffff', '#d8ccff', '#bfe9ff', '#ffd6f0'][j % 4]; c.globalAlpha = al; c.save(); c.translate(x, y); c.rotate(a + age * .2); c.fillRect(-3, -1.5, 6, 3); c.restore(); c.globalAlpha = 1; }
+      else GLASS.sparkle(c, x, y, 3 + GLASS.h1(j * 7) * 4 * (.6 + .4 * Math.sin(age * .5)), al); }
+    if (d > 24) { const q = Math.min(1, (d - 24) / 10), out = d > 104 ? Math.min(1, (d - 104) / 10) : 0; c.translate(0, 70 * Math.min(1, (d - 24) / 14));
+      if (out < 1) GLASS.draw(c, sk, 16 * q, { t, crack: 0, mood: 'smirk', alpha: 1 - out });
+      if (q >= 1 && !out) { c.save(); c.translate(20, -14); c.rotate(-.5 + Math.sin(d * .5) * .45); c.fillStyle = '#d8d4ff'; c.beginPath(); c.ellipse(0, -6, 3.2, 6, 0, 0, TAU); c.fill(); c.restore();
+        c.font = '20px "Lilita One"'; c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillText('coucou !', 0, -40); }
+      if (out) for (let j = 0; j < 5; j++) GLASS.sparkle(c, (GLASS.h1(j + 40) - .5) * 40 * out, (GLASS.h1(j + 50) - .5) * 40 * out, 5 * (1 - out) + 1, 1 - out); }
+  } else if (B.shatT != null) {
+    const s = B.shatT;
+    if (s < 6) { GLASS.draw(c, sk, r, { t, crack, mood: 'hurt' }); c.fillStyle = `rgba(255,255,255,${(.6 - s * .1).toFixed(2)})`; c.beginPath(); c.arc(0, 0, r * 1.2, 0, TAU); c.fill(); }
+    else if (s < 28) GLASS.draw(c, sk, r, { t, crack, mood: 'hurt', shatter: ez(Math.min(1, (s - 6) / 16)) });
+    else { const k = 1 - ez(Math.min(1, (s - 28) / 22)); GLASS.draw(c, sk, r, { t, crack, mood: 'angry', shatter: Math.max(.001, k) }); if (k < .05) for (let j = 0; j < 6; j++) GLASS.sparkle(c, Math.cos(j) * r * 1.1, Math.sin(j) * r * 1.1, 6, .8); }
+  } else {
+    GLASS.draw(c, sk, r, { t, crack, mood: hurt ? 'hurt' : B.phase >= 3 ? 'angry' : 'smirk' });
+    if (hurt) { c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); }
+  }
+  c.restore();
+}
+/* l'icône du boss (carte du monde, carnet) : le verre plutôt que l'ancienne sphère */
+const _drawRefletOld = drawReflet;
+drawReflet = function (c, x, y, s, t, hurt, alpha = 1) { try { c.save(); c.translate(x, y); GLASS.draw(c, glassSkin(), GLASS_R * s, { t: t || 0, mood: 'smirk', alpha }); c.restore(); } catch (e) { c.restore(); _drawRefletOld(c, x, y, s, t, hurt, alpha); } };
 requestAnimationFrame(t => { last = t; frame(t); });
 initNet();
 
